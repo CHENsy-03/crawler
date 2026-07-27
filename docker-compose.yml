@@ -18,3 +18,13 @@ services:
   redis:
     image: redis:7-alpine
     ports: ['6379:6379']
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_DATABASE: crawler_db
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports: ['3306:3306']
+    command: --default-authentication-plugin=mysql_native_password

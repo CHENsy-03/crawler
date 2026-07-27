@@ -679,3 +679,68 @@ Go 与 Python 不直接互相导入或调用对方源码，通过 Redis JSON 消
 ### 19.8 状态
 
 completed
+
+## 20. TASK-008：端到端集成验收
+
+### 20.1 任务目标
+
+在本地 Docker 环境中完成整条采集流水线的端到端集成验证，确认全部消息协议、消费者协程和存储写入符合设计。
+
+本任务只做集成验证和必要修复，不扩展新业务功能。
+
+### 20.2 验证范围
+
+```
+API 创建任务 → crawler:search → Python Search Worker → crawler:url
+→ Go 下载 Worker → crawler:html → Python Parser Worker → crawler:result
+→ Go Result Consumer → MySQL Article → API 查询任务最终状态
+```
+
+### 20.3 验证场景
+
+| 场景 | 预期状态 | 关键断言 |
+|------|----------|----------|
+| 全部成功 | completed | Stored == Expected |
+| 部分 URL 失败 | completed_with_errors | Stored > 0, Failed > 0 |
+| 全部 URL 失败 | failed | Stored == 0, Failed > 0 |
+| 搜索无结果 | completed | Expected == 0 |
+
+### 20.4 额外验证项
+
+- Redis 各队列（crawler:search/url/html/result/event/error）最终清空
+- MySQL Article 字段完整且 URL 幂等
+- 同一错误重复消费不会重复增加 Failed
+- 服务重启后不会产生重复文章
+- Parser 只有一个正式消费者
+- 所有 Consumer 都能优雅停止
+- API 不会在结果入库前提前返回 completed
+
+### 20.5 测试文件
+
+```
+tests/integration/
+├── __init__.py
+├── test_success_pipeline.py
+├── test_partial_failure.py
+├── test_all_failed.py
+└── test_empty_search.py
+```
+
+### 20.6 环境要求
+
+- Docker Desktop 或兼容容器运行时
+- 通过 docker-compose 启动 Redis + MySQL
+- Python 依赖：redis, pymysql
+- Go 编译：支持 -mod=mod
+
+### 20.7 验收标准
+
+- 四条场景全部验证通过
+- 额外验证项全部确认
+- 未修改业务协议和数据库结构
+- tests/integration/ 新增文件全部提交
+
+### 20.8 状态
+
+in_progress
+
