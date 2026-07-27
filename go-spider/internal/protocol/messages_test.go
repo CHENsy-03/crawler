@@ -37,7 +37,7 @@ func TestMarshalUnmarshalResult(t *testing.T) {
 func TestMarshalUnmarshalError(t *testing.T) {
 	orig := ErrorMessage{
 		Envelope: Envelope{ProtocolVersion: Version, TaskID: "t1", MessageID: "m3", Timestamp: "now"},
-		Type:     "error", Stage: "download", URL: "https://x.com", ErrorCode: "HTTP_403", Error: "forbidden", Retryable: false,
+		Type:     "error", Site: "bj", Keyword: "kw", Level: 1, Stage: "download", URL: "https://x.com", ErrorCode: "HTTP_403", Error: "forbidden", Retryable: false,
 	}
 	data, _ := json.Marshal(orig)
 	var dec ErrorMessage

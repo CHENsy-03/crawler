@@ -65,7 +65,8 @@ def test_error_message():
     fix = _load_fixture()
     e = fix["_envelope"]
     msg = ErrorMessage(task_id=e["task_id"], message_id="msg-005", timestamp=e["timestamp"],
-                       stage="download", url="https://czj.beijing.gov.cn/art/1.html",
+                       stage="download", site="czj_beijing", keyword="低空经济", level=1,
+                       url="https://czj.beijing.gov.cn/art/1.html",
                        error_code="HTTP_403", error="forbidden", retryable=False)
     _assert_match_expected("error", msg.to_dict(), fix)
 def test_search_done_message():

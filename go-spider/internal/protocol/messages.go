@@ -83,6 +83,9 @@ type SearchDoneMessage struct {
 type ErrorMessage struct {
 	Envelope
 	Type      string `json:"type"`
+	Site      string `json:"site"`
+	Keyword   string `json:"keyword"`
+	Level     int    `json:"level"`
 	Stage     string `json:"stage"`
 	URL       string `json:"url"`
 	ErrorCode string `json:"error_code"`

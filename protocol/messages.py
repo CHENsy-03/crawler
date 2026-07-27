@@ -84,7 +84,10 @@ class SearchDoneMessage(MessageEnvelope):
 @dataclass(frozen=True, kw_only=True)
 class ErrorMessage(MessageEnvelope):
     type: Literal["error"] = "error"
-    stage: str
+    stage: Literal["search", "download", "parse", "store"]
+    site: str
+    keyword: str
+    level: int
     url: str
     error_code: str
     error: str

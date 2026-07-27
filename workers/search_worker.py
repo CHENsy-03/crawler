@@ -76,6 +76,25 @@ def run_worker(redis_addr: str = "localhost:6379"):
                 articles = plugin_search(site_cfg, keyword, max_pages)
             except Exception as e:
                 log.error("[task=%s] Search failed: site=%s keyword=%s error=%s", task_id, site_key, keyword, e)
+                try:
+                    err_msg = json.dumps({
+                        "protocol_version": "1.0",
+                        "task_id": task_id,
+                        "message_id": new_message_id(),
+                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "type": "error",
+                        "stage": "search",
+                        "site": site_key,
+                        "keyword": keyword,
+                        "level": level,
+                        "url": "",
+                        "error_code": "SEARCH_FAILED",
+                        "error": str(e)[:500],
+                        "retryable": True,
+                    }, ensure_ascii=False)
+                    r.lpush("crawler:error", err_msg)
+                except Exception:
+                    log.error("[task=%s] Failed to push search error", task_id)
                 continue
             log.info("[task=%s] Found %d articles for keyword=%s", task_id, len(articles), keyword)
 

@@ -141,3 +141,34 @@ func TestMaxPagesPositive(t *testing.T) {
 		}
 	}
 }
+func TestErrorMessageMarshalUnmarshal(t *testing.T) {
+	msg := map[string]interface{}{
+		"protocol_version": "1.0",
+		"task_id":          "t-001",
+		"message_id":       "m-001",
+		"timestamp":        "2026-07-27T16:00:00Z",
+		"type":             "error",
+		"stage":            "download",
+		"site":             "czj_beijing",
+		"keyword":          "低空经济",
+		"level":            1,
+		"url":              "https://czj.beijing.gov.cn/art/1.html",
+		"error_code":       "HTTP_403",
+		"error":            "forbidden",
+		"retryable":        false,
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("marshal error message: %v", err)
+	}
+	var result map[string]interface{}
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("unmarshal error message: %v", err)
+	}
+	if result["site"] != "czj_beijing" {
+		t.Fatalf("site = %v, want czj_beijing", result["site"])
+	}
+	if result["retryable"] != false {
+		t.Fatalf("retryable = %v, want false", result["retryable"])
+	}
+}

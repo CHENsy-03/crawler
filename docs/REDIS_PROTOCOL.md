@@ -76,6 +76,18 @@
 
 ## 8. ErrorMessage
 
+| 字段 | 类型 | 必填 | 约束 |
+|------|------|------|------|
+| stage | string | 是 | search/download/parse/store |
+| site | string | 是 | 站点 key |
+| keyword | string | 是 | 搜索关键词 |
+| level | int | 否 | 搜索深度 |
+| url | string | 否 | 搜索错误允许空 |
+| error_code | string | 是 | SEARCH_FAILED / DOWNLOAD_FAILED / PARSE_FAILED / STORE_FAILED |
+| error | string | 是 | 可读错误信息 |
+| retryable | bool | 否 | 错误性质标识 |
+队列：crawler:error
+
 | 字段 | 类型 | 必填 |
 |------|------|------|
 | stage | string | 是 |
@@ -83,7 +95,6 @@
 | error_code | string | 是 |
 | error | string | 是 |
 | retryable | bool | 否 |
-队列：crawler:error
 
 ## 9a. SearchDoneMessage
 

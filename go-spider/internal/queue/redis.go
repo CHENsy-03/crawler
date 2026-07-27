@@ -74,6 +74,7 @@ func (rq *RedisQueue) PushHTML(url, title, html, site, keyword string, level int
 	return rq.push(rq.htmlQueue, payload)
 }
 
+// Deprecated: Use PushErrorMessage instead. This function uses the old HTMLPayload format.
 func (rq *RedisQueue) PushError(url, errMsg string) error {
 	payload := HTMLPayload{
 		URL: url, Error: errMsg,
@@ -184,6 +185,29 @@ func (rq *RedisQueue) PopSearchDone() (*protocol.SearchDoneMessage, error) {
 		return nil, err
 	}
 	var msg protocol.SearchDoneMessage
+	if err := json.Unmarshal([]byte(result[1]), &msg); err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+func (rq *RedisQueue) PushErrorMessage(msg *protocol.ErrorMessage) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return rq.client.LPush(ctx, rq.errQueue, data).Err()
+}
+
+func (rq *RedisQueue) PopErrorMessage(timeout time.Duration) (*protocol.ErrorMessage, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	result, err := rq.client.BRPop(ctx, timeout, rq.errQueue).Result()
+	if err != nil {
+		return nil, err
+	}
+	var msg protocol.ErrorMessage
 	if err := json.Unmarshal([]byte(result[1]), &msg); err != nil {
 		return nil, err
 	}

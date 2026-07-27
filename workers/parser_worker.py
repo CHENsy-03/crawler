@@ -52,6 +52,25 @@ def _process_message(raw: dict) -> dict | None:
     site_cfg = _load_site_config(site_key)
     if site_cfg is None:
         log.error("[task=%s] Unknown site: %s (url=%s)", task_id, site_key, url[:60])
+        try:
+            err_msg = json.dumps({
+                "protocol_version": "1.0",
+                "task_id": task_id,
+                "message_id": new_message_id(),
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "type": "error",
+                "stage": "parse",
+                "site": site_key,
+                "keyword": keyword,
+                "level": level,
+                "url": url,
+                "error_code": "PARSE_FAILED",
+                "error": "unknown site: " + site_key,
+                "retryable": False,
+            }, ensure_ascii=False)
+            r.lpush("crawler:error", err_msg)
+        except Exception:
+            log.error("[task=%s] Failed to push parse error", task_id)
         return None
 
     # Extract title, date, and content from raw HTML
