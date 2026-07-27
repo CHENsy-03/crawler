@@ -13,6 +13,7 @@ import (
 	"crawler-platform/internal/api"
 	"crawler-platform/internal/protocol"
 	"crawler-platform/internal/queue"
+	"crawler-platform/internal/store"
 	"crawler-platform/internal/worker"
 )
 
@@ -25,10 +26,18 @@ func main() {
 	maxPages := flag.Int("max-pages", 1, "maximum search pages")
 	flag.Parse()
 
+	var mysqlStore *store.MySQLStore
+	if ms, err := store.NewMySQLStore(""); err == nil {
+		mysqlStore = ms
+		log.Println("[store] MySQL connected")
+	} else {
+		log.Printf("[store] MySQL not available: %v (results will not be persisted)", err)
+	}
+
 	if *apiPort > 0 {
 		redisQueue := queue.NewRedisQueue(*redisAddr)
 		redisQueue.Ping()
-		mgr := worker.NewWorkerManager(*workers, redisQueue)
+		mgr := worker.NewWorkerManager(*workers, redisQueue, mysqlStore)
 		mgr.Start()
 		defer mgr.Stop()
 
@@ -55,7 +64,7 @@ func main() {
 		log.Fatalf("[spider] Redis not available: %v", err)
 	}
 
-	mgr := worker.NewWorkerManager(*workers, redisQueue)
+	mgr := worker.NewWorkerManager(*workers, redisQueue, mysqlStore)
 	mgr.Start()
 	defer mgr.Stop()
 

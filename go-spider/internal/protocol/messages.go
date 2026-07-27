@@ -58,12 +58,26 @@ type HTMLMessage struct {
 
 type ResultMessage struct {
 	Envelope
-	Type        string `json:"type"`
-	URL         string `json:"url"`
-	Title       string `json:"title"`
-	PublishDate string `json:"publish_date"`
-	Content     string `json:"content"`
-	Score       int    `json:"score"`
+	Type        string   `json:"type"`
+	Site        string   `json:"site"`
+	Keyword     string   `json:"keyword"`
+	Level       int      `json:"level"`
+	URL         string   `json:"url"`
+	Title       string   `json:"title"`
+	PublishDate string   `json:"publish_date"`
+	Content     string   `json:"content"`
+	Summary     string   `json:"summary"`
+	Score       int      `json:"score"`
+	MatchedKeywords []string `json:"matched_keywords"`
+}
+
+type SearchDoneMessage struct {
+	Envelope
+	Type     string `json:"type"`
+	Site     string `json:"site"`
+	Keyword  string `json:"keyword"`
+	URLCount int    `json:"url_count"`
+	Level    int    `json:"level"`
 }
 
 type ErrorMessage struct {

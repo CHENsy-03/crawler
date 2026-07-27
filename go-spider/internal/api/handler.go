@@ -1,10 +1,7 @@
 package api
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
-	"net/http"
 	"sync"
 	"time"
 
@@ -134,25 +131,9 @@ func (s *Server) taskStatus(c *gin.Context) {
 }
 
 func (s *Server) listArticles(c *gin.Context) {
-	if s.redis == nil {
-		c.JSON(503, gin.H{"error": "redis not available"})
-		return
-	}
-
-	var articles []map[string]interface{}
-	for i := 0; i < 50; i++ {
-		payload, err := s.redis.PopResult()
-		if err != nil || payload == nil {
-			break
-		}
-		articles = append(articles, map[string]interface{}{
-			"url": payload.URL, "title": payload.Title,
-			"score": payload.Score,
-		})
-	}
-
-	c.JSON(200, gin.H{"count": len(articles), "articles": articles})
-	_ = fmt.Sprintf
+	// Result consumption moved to WorkerManager.StartResultConsumer.
+	// TODO: query articles from MySQL for this endpoint.
+	c.JSON(200, gin.H{"count": 0, "articles": []interface{}{}})
 }
 
 func (s *Server) metrics(c *gin.Context) {
@@ -164,9 +145,4 @@ func (s *Server) listSites(c *gin.Context) {
 		{"key": "czj_beijing", "name": "北京市财政局"},
 		{"key": "czj_hangzhou", "name": "杭州市财政局"},
 	})
-}
-
-func init() {
-	_ = json.Marshal
-	_ = http.StatusOK
 }

@@ -3,12 +3,16 @@ package worker
 import (
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"crawler-platform/internal/client"
 	"crawler-platform/internal/config"
+	"crawler-platform/internal/protocol"
 	"crawler-platform/internal/queue"
+	"crawler-platform/internal/store"
 )
 
 type Task struct {
@@ -28,24 +32,37 @@ type Stats struct {
 	QueueLen  int
 }
 
+type TaskStatus struct {
+	Expected   int
+	Stored     int
+	Failed     int
+	SearchDone bool
+}
+
 type Pool struct {
 	workers   int
 	taskCh    chan Task
 	stopCh    chan struct{}
 	wg        sync.WaitGroup
+	resultWg  sync.WaitGroup
 	redis     *queue.RedisQueue
+	store     *store.MySQLStore
+	taskStatuses map[string]*TaskStatus
+	taskMu       sync.Mutex
 	fetcher   *client.RestyFetcher
 	submitted atomic.Int64
 	completed atomic.Int64
 	failed    atomic.Int64
 }
 
-func NewPool(workerCount int, rq *queue.RedisQueue) *Pool {
+func NewPool(workerCount int, rq *queue.RedisQueue, mysqlStore *store.MySQLStore) *Pool {
 	return &Pool{
 		workers: workerCount,
 		taskCh:  make(chan Task, 1000),
 		stopCh:  make(chan struct{}),
 		redis:   rq,
+		store:   mysqlStore,
+		taskStatuses: make(map[string]*TaskStatus),
 	}
 }
 
@@ -58,12 +75,17 @@ func (p *Pool) Start() {
 	if p.redis != nil {
 		p.StartRedisConsumer()
 	}
+	p.StartEventConsumer()
+	if p.store != nil {
+		p.StartResultConsumer()
+	}
 	log.Printf("[worker] pool started with %d workers", p.workers)
 }
 
 func (p *Pool) Stop() {
 	close(p.stopCh)
 	p.wg.Wait()
+	p.resultWg.Wait()
 	log.Println("[worker] pool stopped")
 }
 
@@ -123,14 +145,151 @@ type WorkerManager struct {
 	pool *Pool
 }
 
-func NewWorkerManager(workerCount int, rq *queue.RedisQueue) *WorkerManager {
-	return &WorkerManager{pool: NewPool(workerCount, rq)}
+func NewWorkerManager(workerCount int, rq *queue.RedisQueue, mysqlStore *store.MySQLStore) *WorkerManager {
+	return &WorkerManager{pool: NewPool(workerCount, rq, mysqlStore)}
+}
+
+func (p *Pool) StartResultConsumer() {
+	p.resultWg.Add(1)
+	go func() {
+		defer p.resultWg.Done()
+		log.Println("[worker] Result consumer started: listening crawler:result")
+		for {
+			select {
+			case <-p.stopCh:
+				log.Println("[worker] Result consumer stopped")
+				return
+			default:
+				msg, err := p.redis.PopResultMessage()
+				if err != nil {
+					continue
+				}
+				if msg == nil {
+					continue
+				}
+				if err := p.consumeResult(msg); err != nil {
+					log.Printf("[result] consume error: %v", err)
+				}
+			}
+		}
+	}()
+}
+
+func (p *Pool) getOrCreateTaskStatus(taskID string) *TaskStatus {
+	if ts, ok := p.taskStatuses[taskID]; ok {
+		return ts
+	}
+	ts := &TaskStatus{}
+	p.taskStatuses[taskID] = ts
+	return ts
+}
+
+func (p *Pool) StartEventConsumer() {
+	p.resultWg.Add(1)
+	go func() {
+		defer p.resultWg.Done()
+		log.Println("[worker] Event consumer started: listening crawler:event")
+		for {
+			select {
+			case <-p.stopCh:
+				log.Println("[worker] Event consumer stopped")
+				return
+			default:
+				sd, err := p.redis.PopSearchDone()
+				if err != nil {
+					continue
+				}
+				if sd == nil {
+					continue
+				}
+				p.handleSearchDone(sd)
+			}
+		}
+	}()
+}
+
+func (p *Pool) handleSearchDone(msg *protocol.SearchDoneMessage) {
+	p.taskMu.Lock()
+	ts := p.getOrCreateTaskStatus(msg.TaskID)
+	ts.SearchDone = true
+	ts.Expected = msg.URLCount
+	done := ts.SearchDone && ts.Stored == ts.Expected
+	p.taskMu.Unlock()
+
+	log.Printf("[task:%s] search_done: expected=%d stored=%d", msg.TaskID, msg.URLCount, ts.Stored)
+
+	if done {
+		log.Printf("[task:%s] completed: stored=%d expected=%d", msg.TaskID, ts.Stored, ts.Expected)
+		if p.store != nil {
+			p.store.UpdateTask(msg.TaskID, "completed", ts.Stored)
+		}
+	}
+}
+
+func (p *Pool) checkTaskCompletion(taskID string) {
+	p.taskMu.Lock()
+	ts, ok := p.taskStatuses[taskID]
+	if !ok {
+		p.taskMu.Unlock()
+		return
+	}
+	done := ts.SearchDone && ts.Stored == ts.Expected
+	p.taskMu.Unlock()
+
+	if done {
+		log.Printf("[task:%s] completed: stored=%d expected=%d", taskID, ts.Stored, ts.Expected)
+		if p.store != nil {
+			p.store.UpdateTask(taskID, "completed", ts.Stored)
+		}
+	}
+}
+
+func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
+	log.Printf("[result] processing: task=%s url=%s score=%d", msg.TaskID, msg.URL[:60], msg.Score)
+
+	var publishTime time.Time
+	if msg.PublishDate != "" {
+		publishTime, _ = time.Parse(time.RFC3339, msg.PublishDate)
+	}
+
+	article := &store.Article{
+		URL:             msg.URL,
+		Title:           msg.Title,
+		Content:         msg.Content,
+		Site:            msg.Site,
+		Keyword:         msg.Keyword,
+		Score:           msg.Score,
+		MatchedKeywords: strings.Join(msg.MatchedKeywords, ";"),
+		PublishTime:     publishTime,
+		CrawlTime:       time.Now(),
+	}
+
+	if err := p.store.SaveArticle(article); err != nil {
+		p.taskMu.Lock()
+		ts := p.getOrCreateTaskStatus(msg.TaskID)
+		ts.Failed++
+		p.taskMu.Unlock()
+		p.checkTaskCompletion(msg.TaskID)
+		return fmt.Errorf("save article: %w", err)
+	}
+
+	p.taskMu.Lock()
+	ts := p.getOrCreateTaskStatus(msg.TaskID)
+	ts.Stored++
+	stored := ts.Stored
+	p.taskMu.Unlock()
+
+	p.store.UpdateTask(msg.TaskID, "running", stored)
+	p.checkTaskCompletion(msg.TaskID)
+	log.Printf("[result] saved: task=%s url=%s score=%d", msg.TaskID, msg.URL[:60], msg.Score)
+	return nil
 }
 
 func (wm *WorkerManager) Start()        { wm.pool.Start() }
 func (wm *WorkerManager) Stop()         { wm.pool.Stop() }
 func (wm *WorkerManager) Submit(t Task) { wm.pool.Submit(t) }
 func (wm *WorkerManager) Stats() Stats  { return wm.pool.Stats() }
+func (wm *WorkerManager) StartResultConsumer() { wm.pool.StartResultConsumer() }
 func (p *Pool) StartRedisConsumer() {
 	go func() {
 		log.Println("[worker] Redis consumer started: listening crawler:url")
@@ -160,3 +319,4 @@ func (p *Pool) StartRedisConsumer() {
 		}
 	}()
 }
+func (wm *WorkerManager) StartEventConsumer()  { wm.pool.StartEventConsumer() }

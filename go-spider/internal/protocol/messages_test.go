@@ -21,7 +21,10 @@ func TestMarshalUnmarshalSearch(t *testing.T) {
 func TestMarshalUnmarshalResult(t *testing.T) {
 	orig := ResultMessage{
 		Envelope: Envelope{ProtocolVersion: Version, TaskID: "t1", MessageID: "m2", Timestamp: "now"},
-		Type:     "result", URL: "https://x.com", Title: "T", PublishDate: "2026-01-01", Content: "C", Score: 85,
+		Type:     "result", Site: "bj", Keyword: "kw", Level: 1,
+		URL: "https://x.com", Title: "T", PublishDate: "2026-01-01",
+		Content: "C", Summary: "S", Score: 85,
+		MatchedKeywords: []string{"kw"},
 	}
 	data, _ := json.Marshal(orig)
 	var dec ResultMessage
@@ -151,5 +154,20 @@ func TestURLMessageWithTitle(t *testing.T) {
 	}
 	if result["type"] != "url" {
 		t.Fatal("type field present")
+	}
+}
+func TestMarshalUnmarshalSearchDone(t *testing.T) {
+	orig := SearchDoneMessage{
+		Envelope: Envelope{ProtocolVersion: Version, TaskID: "t1", MessageID: "m6", Timestamp: "now"},
+		Type:     "search_done", Site: "bj", Keyword: "kw", URLCount: 12, Level: 1,
+	}
+	data, _ := json.Marshal(orig)
+	var dec SearchDoneMessage
+	json.Unmarshal(data, &dec)
+	if dec.URLCount != 12 {
+		t.Fatal("url_count mismatch")
+	}
+	if dec.Type != "search_done" {
+		t.Fatal("type not search_done")
 	}
 }
