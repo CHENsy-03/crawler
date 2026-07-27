@@ -1,0 +1,8 @@
+{
+  "czj_beijing": { "delay": 1.5, "jitter": 0.8 },
+  "czj_hangzhou": { "delay": 2.0, "jitter": 1.0, "selenium_wait": 10 },
+  "sxcs_shaoxing": { "delay": 2.0, "jitter": 1.0, "selenium_wait": 10 },
+  "sc_czt": { "delay": 3.0, "jitter": 1.5, "selenium_wait": 15 },
+  "sd_czt": { "delay": 2.0, "jitter": 1.0 },
+  "_global": { "max_retries": 3, "timeout": 15, "max_pages": 0 }
+}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crawler Platform Dashboard</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+.header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: #fff; padding: 20px 30px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 15px; padding: 20px; }
+.card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.card .value { font-size: 2em; font-weight: bold; color: #1a73e8; }
+.card .label { color: #666; font-size: .9em; margin-top: 5px; }
+.chart-box { background: #fff; border-radius: 8px; padding: 20px; margin: 0 20px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+table { width: 100%; border-collapse: collapse; margin: 20px; }
+th,td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #f5f5f5; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <h1>爬虫平台监控面板</h1>
+    <p>实时抓取数量 | 成功率 | 平均耗时 | 网站状态 | 文章趋势</p>
+  </div>
+  <div class="grid">
+    <div class="card"><div class="value">{{ stats.total }}</div><div class="label">总抓取数</div></div>
+    <div class="card"><div class="value">{{ stats.success }}%</div><div class="label">成功率</div></div>
+    <div class="card"><div class="value">{{ stats.avgLatency }}ms</div><div class="label">平均耗时</div></div>
+    <div class="card"><div class="value">{{ stats.sitesUp }}/{{ stats.sitesTotal }}</div><div class="label">在线站点</div></div>
+  </div>
+  <div class="chart-box"><h3>文章趋势</h3><canvas id="trendChart" height="80"></canvas></div>
+  <div style="padding:0 20px"><h3>最新文章</h3></div>
+  <table><thead><tr><th>标题</th><th>来源</th><th>时间</th><th>评分</th></tr></thead>
+    <tbody><tr v-for="a in articles"><td><a :href="a.url" target="_blank">{{ a.title }}</a></td><td>{{ a.source }}</td><td>{{ a.publish_time }}</td><td>{{ a.score }}</td></tr></tbody>
+  </table>
+</div>
+<script>
+const { createApp, ref, onMounted } = Vue;
+createApp({
+  setup() {
+    const stats = ref({ total: 0, success: 0, avgLatency: 0, sitesUp: 0, sitesTotal: 0 });
+    const articles = ref([]);
+    const API = 'http://localhost:8080';
+    async function refresh() {
+      try {
+        let r = await fetch(API+'/articles');
+        let data = await r.json();
+        articles.value = data.articles || [];
+        stats.value.total = data.count || articles.value.length;
+      } catch(e) {}
+      try {
+        let r = await fetch(API+'/sites');
+        let sites = await r.json();
+        stats.value.sitesTotal = sites.length;
+        stats.value.sitesUp = sites.length;
+      } catch(e) {}
+    }
+    onMounted(() => { refresh(); setInterval(refresh, 10000); });
+    return { stats, articles };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

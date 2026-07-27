@@ -1,0 +1,10 @@
+{
+  "title": "Crawler Platform",
+  "panels": [
+    {"title": "Crawl Rate", "targets": [{"expr": "rate(crawl_total[5m])"}], "type": "graph"},
+    {"title": "Success Rate", "targets": [{"expr": "crawl_success / crawl_total * 100"}], "type": "stat"},
+    {"title": "Avg Latency (ms)", "targets": [{"expr": "rate(crawl_latency_sum[5m]) / rate(crawl_latency_count[5m])"}], "type": "stat"},
+    {"title": "Site Status", "targets": [{"expr": "up{job='go-spider'}"}], "type": "stat"},
+    {"title": "Article Trends", "targets": [{"expr": "articles_total"}], "type": "graph"}
+  ]
+}

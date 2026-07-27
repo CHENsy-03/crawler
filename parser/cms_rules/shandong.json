@@ -1,0 +1,21 @@
+{
+  "name": "Shandong Government",
+  "sites": [
+    "sd_czt"
+  ],
+  "title": [
+    "h1",
+    ".article-title",
+    "title"
+  ],
+  "date": [
+    ".article-date",
+    ".date"
+  ],
+  "content": [
+    ".article-content",
+    ".content",
+    "#UCAP-CONTENT"
+  ],
+  "content_markers": []
+}

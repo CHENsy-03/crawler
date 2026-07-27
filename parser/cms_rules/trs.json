@@ -1,0 +1,24 @@
+{
+  "name": "TRS WCM",
+  "sites": [
+    "czj_beijing",
+    "bj_gov"
+  ],
+  "title": [
+    "h1",
+    "title"
+  ],
+  "date": [
+    "[name=PubDate]",
+    "[name=publishdate]"
+  ],
+  "content": [
+    ".TRS_Editor",
+    "#mainText",
+    "#UCAP-CONTENT"
+  ],
+  "content_markers": [
+    "<!--正文开始-->",
+    "<!--正文内容 begin -->"
+  ]
+}

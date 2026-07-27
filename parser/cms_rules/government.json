@@ -1,0 +1,24 @@
+{
+  "name": "Generic Government",
+  "sites": [],
+  "title": [
+    "h1",
+    ".article-title",
+    "title"
+  ],
+  "date": [
+    ".date",
+    ".time",
+    "[name=PubDate]"
+  ],
+  "content": [
+    ".article-content",
+    ".content",
+    ".main-content",
+    ".TRS_Editor",
+    "#mainText"
+  ],
+  "content_markers": [
+    "<!--正文开始-->"
+  ]
+}

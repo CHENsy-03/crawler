@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'go-spider'
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: /metrics
+
+  - job_name: 'python-parser'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: /metrics
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['localhost:9121']

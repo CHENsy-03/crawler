@@ -1,0 +1,22 @@
+{
+  "name": "JPAAS Zhejiang",
+  "sites": [
+    "czj_hangzhou",
+    "sxcs_shaoxing"
+  ],
+  "title": [
+    "h1",
+    ".article-title",
+    "title"
+  ],
+  "date": [
+    ".article-date",
+    ".date"
+  ],
+  "content": [
+    ".article-content",
+    ".content",
+    ".detail-content"
+  ],
+  "content_markers": []
+}

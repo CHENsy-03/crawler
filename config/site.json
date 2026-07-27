@@ -1,0 +1,73 @@
+{
+  "czj_beijing": {
+    "name": "北京市财政局",
+    "domain": "czj.beijing.gov.cn",
+    "base_url": "https://czj.beijing.gov.cn",
+    "search": {
+      "type": "trs_json",
+      "page_url": "https://czj.beijing.gov.cn/so/s",
+      "api_url": "https://czj.beijing.gov.cn/so/ss/query/s",
+      "params": { "siteCode": "1100000092", "pageSize": 20 }
+    },
+    "extract": { "mode": "trs" }
+  },
+  "czj_hangzhou": {
+    "name": "杭州市财政局",
+    "domain": "czj.hangzhou.gov.cn",
+    "base_url": "https://czj.hangzhou.gov.cn",
+    "search": {
+      "type": "jpaas_jsearch",
+      "page_url": "https://search.zj.gov.cn/api-gateway/jpaas-jsearch-web-server/search",
+      "api_url": "https://search.zj.gov.cn/api-gateway/jpaas-jsearch-web-server/interface/search/app/info",
+      "params": {
+        "serviceId": "YcTOd1ftgC5dxzJ8RhCBN",
+        "websiteid": "330100000000",
+        "webId": "3217",
+        "cateid": "6N89tbnrVTYIQK5jt7q3T",
+        "pos": "title,content,bu11etincontent_701803,content_556463,vc_content"
+      }
+    },
+    "extract": { "mode": "jpaas" }
+  },
+  "sxcs_shaoxing": {
+    "name": "绍兴市财政局",
+    "domain": "sxcs.sx.gov.cn",
+    "base_url": "https://sxcs.sx.gov.cn",
+    "search": {
+      "type": "jpaas_jsearch",
+      "page_url": "https://search.zj.gov.cn/api-gateway/jpaas-jsearch-web-server/search",
+      "api_url": "https://search.zj.gov.cn/api-gateway/jpaas-jsearch-web-server/interface/search/app/info",
+      "params": {
+        "serviceId": "YcTOd1ftgC5dxzJ8RhCBN",
+        "websiteid": "330600000000",
+        "webId": "2959",
+        "cateid": "6N89tbnrVTYIQK5jt7q3T",
+        "pos": "title,content,bu11etincontent_701803,content_556463,vc_content"
+      }
+    },
+    "extract": { "mode": "jpaas" }
+  },
+  "sc_czt": {
+    "name": "四川省财政厅",
+    "domain": "czt.sc.gov.cn",
+    "base_url": "https://czt.sc.gov.cn",
+    "search": {
+      "type": "html",
+      "page_url": "https://czt.sc.gov.cn/guestweb4/s",
+      "params": { "searchWord": "", "siteCode": "5100000092" }
+    },
+    "extract": { "mode": "sichuan" }
+  },
+  "sd_czt": {
+    "name": "山东省财政厅",
+    "domain": "czt.shandong.gov.cn",
+    "base_url": "http://czt.shandong.gov.cn",
+    "search": {
+      "type": "trs_json",
+      "page_url": "http://czt.shandong.gov.cn/so/s",
+      "api_url": "http://czt.shandong.gov.cn/so/ss/query/s",
+      "params": { "siteCode": "", "pageSize": 20 }
+    },
+    "extract": { "mode": "trs" }
+  }
+}

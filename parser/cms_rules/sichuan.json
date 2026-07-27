@@ -1,0 +1,22 @@
+{
+  "name": "Sichuan Government",
+  "sites": [
+    "sc_czt"
+  ],
+  "title": [
+    "h1",
+    ".xxgk-font",
+    ".article-title",
+    "title"
+  ],
+  "date": [
+    ".xxgk-time",
+    ".article-time"
+  ],
+  "content": [
+    ".article-content",
+    ".content-body",
+    ".con_text"
+  ],
+  "content_markers": []
+}

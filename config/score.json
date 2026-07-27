@@ -1,0 +1,26 @@
+{
+  "_global": {
+    "title_weight": 5,
+    "body_weight": 1,
+    "url_weight": 0,
+    "threshold": 2
+  },
+  "czj_beijing": {
+    "title_weight": 5,
+    "body_weight": 1,
+    "url_weight": 0,
+    "threshold": 3
+  },
+  "czj_hangzhou": {
+    "title_weight": 5,
+    "body_weight": 1,
+    "url_weight": 0,
+    "threshold": 2
+  },
+  "sxcs_shaoxing": {
+    "title_weight": 5,
+    "body_weight": 1,
+    "url_weight": 0,
+    "threshold": 2
+  }
+}
