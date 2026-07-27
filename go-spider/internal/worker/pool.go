@@ -1,10 +1,10 @@
 package worker
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"crawler-platform/internal/client"
 	"crawler-platform/internal/config"

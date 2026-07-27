@@ -15,6 +15,9 @@ type HTMLPayload struct {
 	Level   int    `json:"level"`
 	HTML    string `json:"html,omitempty"`
 	Time    string `json:"time"`
+	Title   string `json:"title,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Score   int    `json:"score"`
 }
 
 type RedisQueue struct {

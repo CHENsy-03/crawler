@@ -9,7 +9,7 @@
 任务编号	TASK-002
 任务类型	fix
 优先级	P0
-当前状态	in_progress
+当前状态	completed
 开始日期	2026-07-27
 前置任务	TASK-001
 负责人	待执行
@@ -552,4 +552,19 @@ git diff
 
 ### 18.6 执行记录
 
-待执行。
+已完成以下修改：
+
+1. 在 main.py 补充 xtract_content 导入。
+2. 在 main.py 补充 ilter_by_score 导入。
+3. 为 Go HTMLPayload 增加 Title、Error、Score 字段。
+4. 修复 go-spider/internal/worker/pool.go 中被前序编译错误掩盖的遗留导入问题。
+5. 添加 Python 导入契约回归测试。
+6. 添加 Go JSON 消息契约回归测试。
+
+验证结果：
+
+- python -m pytest -q：8 passed
+- go test ./...：全部通过
+- go vet ./...：全部通过
+- go.mod、go.sum：未修改
+- 	ask-001-go-deps.patch：未应用、未提交

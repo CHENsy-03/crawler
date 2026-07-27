@@ -14,6 +14,8 @@ from scheduler.dispatcher import crawl_url, run_search
 from httpx.fetch import fetch, post_json
 from parser.multi_strategy import clean_text, normalize_date
 from config.keywords import DEFAULT_KEYWORDS
+from extractor.scorer import filter_by_score
+from parser.html_parser import extract_content
 import json
 
 logging.basicConfig(level=logging.DEBUG if os.environ.get('CRAWLER_ENV','')=='dev' else logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
