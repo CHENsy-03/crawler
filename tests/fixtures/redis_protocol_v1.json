@@ -25,14 +25,22 @@
   "result": {
     "protocol_version": "1.0", "task_id": "task-001", "message_id": "msg-004",
     "timestamp": "2026-07-27T16:00:00Z", "type": "result",
+    "site": "czj_beijing", "keyword": "低空经济", "level": 1,
     "url": "https://czj.beijing.gov.cn/art/1.html",
     "title": "低空经济政策解读", "publish_date": "2026-07-27",
-    "content": "正文内容", "score": 85
+    "content": "正文内容", "summary": "",
+    "score": 85, "matched_keywords": []
   },
   "error": {
     "protocol_version": "1.0", "task_id": "task-001", "message_id": "msg-005",
     "timestamp": "2026-07-27T16:00:00Z", "type": "error",
     "stage": "download", "url": "https://czj.beijing.gov.cn/art/1.html",
     "error_code": "HTTP_403", "error": "forbidden", "retryable": false
+  },
+  "search_done": {
+    "protocol_version": "1.0", "task_id": "task-001", "message_id": "msg-006",
+    "timestamp": "2026-07-27T16:00:00Z", "type": "search_done",
+    "site": "czj_beijing", "keyword": "低空经济",
+    "url_count": 12, "level": 1
   }
 }

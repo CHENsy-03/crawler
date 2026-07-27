@@ -60,11 +60,25 @@ class HTMLMessage(MessageEnvelope):
 @dataclass(frozen=True, kw_only=True)
 class ResultMessage(MessageEnvelope):
     type: Literal["result"] = "result"
+    site: str
+    keyword: str
+    level: int
     url: str
     title: str
     publish_date: str
     content: str
+    summary: str
     score: int
+    matched_keywords: list[str]
+
+
+@dataclass(frozen=True, kw_only=True)
+class SearchDoneMessage(MessageEnvelope):
+    type: Literal["search_done"] = "search_done"
+    site: str
+    keyword: str
+    url_count: int
+    level: int
 
 
 @dataclass(frozen=True, kw_only=True)

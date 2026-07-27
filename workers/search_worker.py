@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import redis as _redis
 
-from protocol.messages import SearchMessage
+from protocol.messages import new_message_id, SearchMessage
 from plugins import search as plugin_search
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
@@ -44,7 +44,6 @@ def run_worker(redis_addr: str = "localhost:6379"):
     signal.signal(signal.SIGTERM, shutdown)
 
     log.info("Search Worker started: consuming crawler:search -> producing crawler:url")
-
     while running:
         try:
             result = r.brpop("crawler:search", timeout=3)
@@ -80,6 +79,7 @@ def run_worker(redis_addr: str = "localhost:6379"):
                 continue
             log.info("[task=%s] Found %d articles for keyword=%s", task_id, len(articles), keyword)
 
+            article_count = 0
             for article in articles:
                 url = article.get("url", "")
                 title = article.get("title", "")
@@ -95,7 +95,23 @@ def run_worker(redis_addr: str = "localhost:6379"):
                     "time": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
                 }, ensure_ascii=False)
                 r.lpush("crawler:url", payload)
+                article_count += 1
                 log.info("[task=%s] -> crawler:url: %s [%s]", task_id, url[:80], title[:50] if title else "no title")
+            # Send SearchDoneMessage after all URLs are enqueued
+            sd_msg = {
+                "protocol_version": "1.0",
+                "task_id": task_id,
+                "message_id": new_message_id(),
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "type": "search_done",
+                "site": site_key,
+                "keyword": keyword,
+                "url_count": article_count,
+                "level": level,
+            }
+            r.lpush("crawler:event", json.dumps(sd_msg, ensure_ascii=False))
+            log.info("[task=%s] SearchDone: %d URLs pushed", task_id, article_count)
+
 
             log.info("[task=%s] Search complete: %d URLs enqueued", task_id, len(articles))
 
@@ -108,3 +124,4 @@ def run_worker(redis_addr: str = "localhost:6379"):
 
 if __name__ == "__main__":
     run_worker()
+

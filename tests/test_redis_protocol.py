@@ -2,7 +2,7 @@ import json
 import os
 from protocol.messages import (
     SearchMessage, URLMessage, HTMLMessage,
-    ResultMessage, ErrorMessage,
+    ResultMessage, ErrorMessage, SearchDoneMessage,
 )
 
 FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "fixtures", "redis_protocol_v1.json")
@@ -54,8 +54,10 @@ def test_result_message():
     fix = _load_fixture()
     e = fix["_envelope"]
     msg = ResultMessage(task_id=e["task_id"], message_id="msg-004", timestamp=e["timestamp"],
+                        site="czj_beijing", keyword="低空经济", level=1,
                         url="https://czj.beijing.gov.cn/art/1.html", title="低空经济政策解读",
-                        publish_date="2026-07-27", content="正文内容", score=85)
+                        publish_date="2026-07-27", content="正文内容", summary="",
+                        score=85, matched_keywords=[])
     _assert_match_expected("result", msg.to_dict(), fix)
 
 
@@ -66,3 +68,9 @@ def test_error_message():
                        stage="download", url="https://czj.beijing.gov.cn/art/1.html",
                        error_code="HTTP_403", error="forbidden", retryable=False)
     _assert_match_expected("error", msg.to_dict(), fix)
+def test_search_done_message():
+    fix = _load_fixture()
+    e = fix["_envelope"]
+    msg = SearchDoneMessage(task_id=e["task_id"], message_id="msg-006", timestamp=e["timestamp"],
+                            site="czj_beijing", keyword="低空经济", url_count=12, level=1)
+    _assert_match_expected("search_done", msg.to_dict(), fix)

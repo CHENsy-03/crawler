@@ -96,6 +96,9 @@ if FASTAPI_OK:
 
     @app.on_event('startup')
     async def startup_parser_worker():
+        if os.environ.get('PARSER_WORKER_ENABLED', '').lower() not in ('1', 'true'):
+            log.info('Parser worker disabled (env PARSER_WORKER_ENABLED != true)')
+            return
         threading.Thread(target=_run_parser_worker, daemon=True).start()
         log.info('Parser worker started (bg)')
 

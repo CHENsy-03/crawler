@@ -62,11 +62,16 @@
 
 | 字段 | 类型 | 必填 |
 |------|------|------|
+| site | string | 是 |
+| keyword | string | 是 |
+| level | int | 否 |
 | url | string | 是 |
 | title | string | 否 |
 | publish_date | string | 否 |
 | content | string | 否 |
-| score | int | 否 |
+| summary | string | 否 |
+| score | int | 是 |
+| matched_keywords | array[string] | 是 |
 队列：crawler:result
 
 ## 8. ErrorMessage
@@ -79,6 +84,22 @@
 | error | string | 是 |
 | retryable | bool | 否 |
 队列：crawler:error
+
+## 9a. SearchDoneMessage
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| site | string | 是 | 站点 key |
+| keyword | string | 是 | 搜索关键词 |
+| url_count | int | 是 | 本次搜索推送的 URL 总数 |
+| level | int | 否 | 搜索深度 |
+
+队列：crawler:event
+
+Python Search Worker 在完成所有 URLMessage 推送后，发送一次 SearchDoneMessage，
+通知 Go 侧搜索阶段已结束及预期结果总数。
+当前限制：一个任务严格对应一条 SearchDoneMessage。
+将来一个任务对应多个关键词时，需按 message_id 聚合。
 
 ## 9. 队列与生产消费关系
 
