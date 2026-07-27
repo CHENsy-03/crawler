@@ -5,13 +5,13 @@
 
 1. 任务基本信息
 项目	内容
-任务名称	修复基础契约和已确认的明显错误
-任务编号	TASK-002
+任务名称	确定 Go/Python 运行时职责边界
+任务编号	TASK-003
 任务类型	fix
 优先级	P0
 当前状态	completed
 开始日期	2026-07-27
-前置任务	TASK-001
+前置任务	TASK-002
 负责人	待执行
 执行工具	Codex / PowerShell
 目标项目	workspace/crawler
@@ -568,3 +568,114 @@ git diff
 - go vet ./...：全部通过
 - go.mod、go.sum：未修改
 - 	ask-001-go-deps.patch：未应用、未提交
+
+
+## 19. TASK-003：确定 Go/Python 运行时职责边界
+
+### 19.1 任务目标
+
+调查当前 Go、Python 两套运行时的入口、调用链、重复模块、Redis 消息协议和存储写入关系，确定后续通用爬虫升级的唯一职责边界。
+
+本任务只形成架构决策和迁移约束，不删除或重构现有业务代码。
+
+### 19.2 调查结果
+
+当前系统存在以下正式入口：
+
+- Go CLI：go-spider/main.go
+- Go API：go-spider/main.go --api
+- Python CLI：main.py
+- Python API：pi/server.py
+- Python Worker：parser/redis_worker.py
+
+当前存在以下重复能力：
+
+- 搜索；
+- HTTP 客户端；
+- API 服务；
+- 配置加载；
+- MySQL 存储；
+- Redis 队列访问。
+
+Python 独有且应继续由 Python 负责的能力：
+
+- HTML 正文解析；
+- Readability 抽取；
+- PDF 解析；
+- 关键词评分和过滤；
+- URL、内容去重；
+- DuckDB 本地存储。
+
+### 19.3 最终职责决策
+
+#### Go 负责
+
+1. 正式 CLI 和 API 入口。
+2. 任务创建、状态管理和编排。
+3. Redis 队列管理。
+4. 高并发 HTTP 下载。
+5. 重试、限流、超时和下载错误管理。
+6. MySQL 最终结果写入。
+7. 运行状态和监控指标汇总。
+
+#### Python 负责
+
+1. 搜索源适配和 URL 发现。
+2. TRS、JPAAS、普通 HTML 搜索插件。
+3. HTML 正文解析和 Readability 抽取。
+4. PDF 解析。
+5. 关键词扩展、评分和过滤。
+6. URL 与内容去重。
+7. DuckDB 本地分析和缓存。
+8. 作为 Redis Worker 执行内容处理任务。
+
+### 19.4 运行时通信边界
+
+Go 与 Python 不直接互相导入或调用对方源码，通过 Redis JSON 消息交换任务和结果。
+
+目标队列包括：
+
+- crawler:search
+- crawler:url
+- crawler:html
+- crawler:result
+- crawler:error
+
+所有消息必须：
+
+- 使用明确的 JSON 字段；
+- 包含协议版本；
+- 包含任务 ID；
+- 支持错误信息；
+- 具有对应的 Go 和 Python 契约测试。
+
+### 19.5 存储写入权
+
+- MySQL 最终业务数据：由 Go 写入。
+- DuckDB 本地分析和缓存：由 Python 写入。
+- Redis：Go 管理任务生命周期，Python 只消费或生产协议允许的消息。
+- Python MySQL 写入模块暂时保留，后续迁移完成后再下线。
+
+### 19.6 本任务不包含
+
+- 删除 Python FastAPI；
+- 删除 Python CLI；
+- 删除任意重复模块；
+- 修改 Redis 队列；
+- 调整生产者或消费者；
+- 应用依赖补丁；
+- 执行 go mod tidy；
+- 实现通用站点自动发现。
+
+### 19.7 验收结果
+
+- 已定位 Go、Python 全部运行入口。
+- 已定位 Redis 队列生产者和消费者。
+- 已定位两端重复模块。
+- 已确定目标职责矩阵。
+- 已确定 Redis 为跨运行时通信边界。
+- 未修改业务代码和依赖文件。
+
+### 19.8 状态
+
+completed
