@@ -1,7 +1,17 @@
+import uuid
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
 PROTOCOL_VERSION = "1.0"
+
+
+
+def new_task_id() -> str:
+    return uuid.uuid4().hex[:12]
+
+
+def new_message_id() -> str:
+    return uuid.uuid4().hex[:8]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -23,6 +33,7 @@ class SearchMessage(MessageEnvelope):
     site: str
     keyword: str
     level: int
+    max_pages: int
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -32,6 +43,7 @@ class URLMessage(MessageEnvelope):
     site: str
     keyword: str
     level: int
+    title: str
 
 
 @dataclass(frozen=True, kw_only=True)

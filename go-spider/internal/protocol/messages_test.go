@@ -6,10 +6,10 @@ import (
 )
 
 func TestMarshalUnmarshalSearch(t *testing.T) {
-	m := SearchMessage{
-		Envelope: Envelope{ProtocolVersion: Version, TaskID: "t1", MessageID: "m1", Timestamp: "now"},
-		Type:     "search", Site: "bj", Keyword: "kw", Level: 1,
-	}
+  m := SearchMessage{
+    Envelope: Envelope{ProtocolVersion: Version, TaskID: "t1", MessageID: "m1", Timestamp: "now"},
+    Type:     "search", Site: "bj", Keyword: "kw", Level: 1, MaxPages: 1,
+  }
 	data, _ := json.Marshal(m)
 	var dec SearchMessage
 	json.Unmarshal(data, &dec)
@@ -45,10 +45,10 @@ func TestMarshalUnmarshalError(t *testing.T) {
 }
 
 func TestEnvelopePreservesVersion(t *testing.T) {
-	orig := SearchMessage{
-		Envelope: Envelope{ProtocolVersion: Version, TaskID: "t1", MessageID: "m4", Timestamp: "now"},
-		Type:     "search", Site: "bj", Keyword: "kw", Level: 1,
-	}
+  orig := SearchMessage{
+    Envelope: Envelope{ProtocolVersion: Version, TaskID: "t1", MessageID: "m4", Timestamp: "now"},
+    Type:     "search", Site: "bj", Keyword: "kw", Level: 1, MaxPages: 1,
+  }
 	var result map[string]interface{}
 	data, _ := json.Marshal(orig)
 	json.Unmarshal(data, &result)
@@ -80,7 +80,7 @@ func TestOmitEmptyFieldStillSerialized(t *testing.T) {
 }
 
 func TestFixtureMatchSearch(t *testing.T) {
-	msg := SearchMessage{Envelope: Envelope{ProtocolVersion: "1.0", TaskID: "task-001", MessageID: "msg-001", Timestamp: "2026-07-27T16:00:00Z"}, Type: "search", Site: "czj_beijing", Keyword: "低空经济", Level: 1}
+  msg := SearchMessage{Envelope: Envelope{ProtocolVersion: "1.0", TaskID: "task-001", MessageID: "msg-001", Timestamp: "2026-07-27T16:00:00Z"}, Type: "search", Site: "czj_beijing", Keyword: "低空经济", Level: 1, MaxPages: 1}
 	data, _ := json.Marshal(msg)
 	var result map[string]interface{}
 	json.Unmarshal(data, &result)
@@ -99,5 +99,57 @@ func TestFixtureMatchResult(t *testing.T) {
 	}
 	if result["publish_date"] != "2026-07-27" {
 		t.Fatal("result fixture date mismatch")
+	}
+}
+func TestNewTaskIDNonEmpty(t *testing.T) {
+	id := NewTaskID()
+	if id == "" {
+		t.Fatal("NewTaskID returned empty")
+	}
+}
+
+func TestNewMessageIDNonEmpty(t *testing.T) {
+	id := NewMessageID()
+	if id == "" {
+		t.Fatal("NewMessageID returned empty")
+	}
+}
+
+func TestNewTaskIDUnique(t *testing.T) {
+	seen := make(map[string]bool)
+	for i := 0; i < 100; i++ {
+		id := NewTaskID()
+		if seen[id] {
+			t.Fatalf("duplicate task id: %s", id)
+		}
+		seen[id] = true
+	}
+}
+
+func TestNewMessageIDUnique(t *testing.T) {
+	seen := make(map[string]bool)
+	for i := 0; i < 100; i++ {
+		id := NewMessageID()
+		if seen[id] {
+			t.Fatalf("duplicate message id: %s", id)
+		}
+		seen[id] = true
+	}
+}
+
+func TestURLMessageWithTitle(t *testing.T) {
+	m := URLMessage{
+		Envelope: Envelope{ProtocolVersion: Version, TaskID: "t1", MessageID: "m1", Timestamp: "now"},
+		Type:     "url", URL: "https://x.com", Site: "bj",
+		Keyword: "kw", Level: 1, Title: "示例标题",
+	}
+	var result map[string]interface{}
+	data, _ := json.Marshal(m)
+	json.Unmarshal(data, &result)
+	if result["title"] != "示例标题" {
+		t.Fatalf("title = %v, want 示例标题", result["title"])
+	}
+	if result["type"] != "url" {
+		t.Fatal("type field present")
 	}
 }

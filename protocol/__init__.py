@@ -1,5 +1,7 @@
 from .messages import (
     PROTOCOL_VERSION,
+    new_task_id,
+    new_message_id,
     ErrorMessage,
     HTMLMessage,
     ResultMessage,
@@ -9,6 +11,8 @@ from .messages import (
 
 __all__ = [
     "PROTOCOL_VERSION",
+    "new_task_id",
+    "new_message_id",
     "SearchMessage",
     "URLMessage",
     "HTMLMessage",

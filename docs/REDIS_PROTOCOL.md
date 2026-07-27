@@ -22,12 +22,19 @@
 
 ## 4. SearchMessage
 
-| 字段 | 类型 | 必填 |
-|------|------|------|
-| site | string | 是 |
-| keyword | string | 是 |
-| level | int | 否 |
-队列：crawler:search（目标，尚未实施）
+| 字段 | 类型 | 必填 | 约束 |
+|------|------|------|------|
+| site | string | 是 | |
+| keyword | string | 是 | |
+| level | int | 否 | 搜索深度 |
+| max_pages | int | 否 | 必须为正整数 |
+队列：crawler:search
+
+约束说明：
+- max_pages 必须为正整数，默认值 1。
+- API 请求中传 0 时，在消息产生前规范化为 1。
+- CLI 默认值为 1。
+- 负数请求无效，应在入口层返回 400 Bad Request。
 
 ## 5. URLMessage
 
@@ -77,7 +84,7 @@
 
 | type | 队列 | 生产者 | 消费者 | 状态 |
 |------|------|--------|--------|------|
-| search | crawler:search | Go | Python | 目标未实施 |
+| search | crawler:search | Go | Python | 已实施 |
 | url | crawler:url | Python | Go | 目标未切换 |
 | html | crawler:html | Go | Python | 当前已运行 |
 | result | crawler:result | Python | Go | 当前已运行 |

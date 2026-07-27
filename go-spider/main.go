@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"crawler-platform/internal/client"
 	"crawler-platform/internal/config"
 	"crawler-platform/internal/api"
+	"crawler-platform/internal/protocol"
 	"crawler-platform/internal/queue"
 	"crawler-platform/internal/worker"
 )
@@ -22,6 +22,7 @@ func main() {
 	workers := flag.Int("workers", 4, "worker pool size")
 	apiPort := flag.Int("api", 0, "start API server on port")
 	redisAddr := flag.String("redis", "localhost:6379", "redis address")
+	maxPages := flag.Int("max-pages", 1, "maximum search pages")
 	flag.Parse()
 
 	if *apiPort > 0 {
@@ -48,25 +49,20 @@ func main() {
 	cfg := config.MustLoad(*siteKey, "../config")
 	log.Printf("[spider] site=%s domain=%s workers=%d", cfg.Name, cfg.Domain, *workers)
 
+	taskID := protocol.NewTaskID()
 	redisQueue := queue.NewRedisQueue(*redisAddr)
 	if err := redisQueue.Ping(); err != nil {
-		log.Printf("[spider] Redis not available (%v), using direct mode", err)
-		redisQueue = nil
+		log.Fatalf("[spider] Redis not available: %v", err)
 	}
 
 	mgr := worker.NewWorkerManager(*workers, redisQueue)
 	mgr.Start()
+	defer mgr.Stop()
 
-	articles := client.SearchArticles(cfg, *keywords)
-	log.Printf("[spider] found %d articles for keyword=%s", len(articles), *keywords)
-
-	for _, article := range articles {
-		mgr.Submit(worker.Task{
-			URL:     article.URL,
-			Title:   article.Title,
-			SiteCfg: cfg,
-		})
+	if err := redisQueue.PushSearch(taskID, *siteKey, *keywords, 0, *maxPages); err != nil {
+		log.Fatalf("[spider] PushSearch error: %v", err)
 	}
+	log.Printf("[spider] pushed search: site=%s keyword=%s", *siteKey, *keywords)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -78,11 +74,13 @@ func main() {
 		select {
 		case <-ticker.C:
 			stats := mgr.Stats()
+			if stats.Submitted == 0 {
+				continue
+			}
 			log.Printf("[spider] stats: submitted=%d completed=%d failed=%d queue=%d",
 				stats.Submitted, stats.Completed, stats.Failed, stats.QueueLen)
 			if stats.Completed+stats.Failed >= stats.Submitted && stats.QueueLen == 0 {
-				log.Println("[spider] all tasks completed, shutting down")
-				mgr.Stop()
+				log.Println("[spider] all tasks completed")
 				fmt.Println("Done.")
 				return
 			}

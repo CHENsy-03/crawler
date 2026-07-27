@@ -29,7 +29,7 @@ def test_search_message():
     fix = _load_fixture()
     e = fix["_envelope"]
     msg = SearchMessage(task_id=e["task_id"], message_id=e["message_id"], timestamp=e["timestamp"],
-                        site="czj_beijing", keyword="低空经济", level=1)
+                        site="czj_beijing", keyword="低空经济", level=1, max_pages=1)
     _assert_match_expected("search", msg.to_dict(), fix)
 
 
@@ -37,7 +37,7 @@ def test_url_message():
     fix = _load_fixture()
     e = fix["_envelope"]
     msg = URLMessage(task_id=e["task_id"], message_id="msg-002", timestamp=e["timestamp"],
-                     url="https://czj.beijing.gov.cn/art/1.html", site="czj_beijing", keyword="低空经济", level=1)
+                     url="https://czj.beijing.gov.cn/art/1.html", site="czj_beijing", keyword="低空经济", level=1, title="")
     _assert_match_expected("url", msg.to_dict(), fix)
 
 

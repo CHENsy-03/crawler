@@ -1,6 +1,23 @@
 package protocol
 
+import (
+	"crypto/rand"
+	"fmt"
+)
+
 const Version = "1.0"
+
+func NewTaskID() string {
+	b := make([]byte, 4)
+	rand.Read(b)
+	return fmt.Sprintf("task-%x", b)
+}
+
+func NewMessageID() string {
+	b := make([]byte, 4)
+	rand.Read(b)
+	return fmt.Sprintf("msg-%x", b)
+}
 
 type Envelope struct {
 	ProtocolVersion string `json:"protocol_version"`
@@ -15,6 +32,7 @@ type SearchMessage struct {
 	Site    string `json:"site"`
 	Keyword string `json:"keyword"`
 	Level   int    `json:"level"`
+	MaxPages int    `json:"max_pages"`
 }
 
 type URLMessage struct {
@@ -24,6 +42,7 @@ type URLMessage struct {
 	Site    string `json:"site"`
 	Keyword string `json:"keyword"`
 	Level   int    `json:"level"`
+	Title   string `json:"title"`
 }
 
 type HTMLMessage struct {
