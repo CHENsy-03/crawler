@@ -2,7 +2,7 @@
 
 ## 1. 架构目标
 
-本平台目标为通用、稳定、可维护、可扩展的信息采集平台，支持任意政府网站的政策信息自动发现、搜索、下载、解析、评分和存储。
+本平台目标为通用、稳定、可维护、可扩展的信息采集平台，支持具备搜索入口或可配置发现规则的网站，实现信息的自动发现、搜索、下载、解析、评分和存储。
 
 架构设计遵循以下原则：
 - Python 负责采集执行面（搜索适配、HTML 解析、评分去重）
@@ -13,21 +13,23 @@
 
 采集任务的完整生命周期：
 
-```text
-用户/API 提交任务 (Go Gin API)
-  -> 任务创建和状态管理 (Go)
-  -> 搜索 URL 发现 (Python plugins)
-  -> 高并发 HTML 下载 (Go Worker Pool)
-  -> HTML 推送到 Redis 队列 (Go PushHTML)
-  -> Python Worker 消费 HTML (BRPop)
-  -> HTML 解析、评分、去重 (Python)
-  -> 结果推送到 Redis (Python LPush)
-  -> Go 获取结果 (PopResult)
-  -> MySQL 持久化 (Go GORM)
-  -> 任务完成
+```
+用户/API 提交任务 (Go)
+  -> Go 创建任务并生成 task_id
+  -> crawler:search (Go 生产)
+  -> Python 搜索适配器发现 URL
+  -> crawler:url (Python 生产)
+  -> Go Worker Pool 并发下载
+  -> crawler:html (Go 生产)
+  -> Python Worker 解析、评分、过滤、去重
+  -> crawler:result (Python 生产)
+  -> Go 消费结果并写入 MySQL
+  -> Go 更新任务状态
 ```
 
-Python 同时支持 CLI 模式 (`main.py --site X --keywords Y`) 和 API 模式 (FastAPI)。
+以上为目标运行流程。当前版本尚未实现 `crawler:search`，且 `crawler:url` 仍由 Go 生产并在 Go 内部消费，后续任务将按版本化协议逐步迁移。
+
+Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标正式入口。
 
 ## 3. Go/Python 职责边界
 
@@ -66,6 +68,8 @@ Python 同时支持 CLI 模式 (`main.py --site X --keywords Y`) 和 API 模式 
 
 ## 5. Redis 消息协议
 
+### 5.1 当前消息协议
+
 | 队列 | 生产者 | 消费者 | JSON 字段 |
 |------|--------|--------|---------|
 | crawler:url | Go PushURLTask | Go (内部) | url, site, keyword, level |
@@ -74,6 +78,18 @@ Python 同时支持 CLI 模式 (`main.py --site X --keywords Y`) 和 API 模式 
 | crawler:result | Python LPush | Go PopResult | url, title, score, content |
 
 消息约束：JSON 序列化，字段对应 Go HTMLPayload 与 Python dict，新增字段需两端回归测试。
+
+### 5.2 目标消息协议
+
+| 队列 | 生产者 | 消费者 | 用途 |
+|------|--------|--------|------|
+| crawler:search | Go | Python | 搜索及 URL 发现 |
+| crawler:url | Python | Go | 待下载 URL |
+| crawler:html | Go | Python | 待解析内容 |
+| crawler:result | Python | Go | 结构化采集结果 |
+| crawler:error | Go、Python | Go 监控组件 | 跨阶段错误事件 |
+
+目标消息公共字段：`protocol_version`、`task_id`、`message_id`、`timestamp`。业务字段由具体消息类型定义。目标协议尚未实施，将由 TASK-004 建立消息模型和双端契约测试。
 
 ## 6. 数据存储边界
 
@@ -135,15 +151,26 @@ workspace/crawler/
 | config/system.json | 系统参数 | Python main.py |
 | config/keywords.json | 关键词扩展 | Python search |
 
-Go 端 config.go 读取同路径 Python 配置 (site.json/http.json/score.json)，无需独立格式。
+Go 与 Python 可以读取同一项目配置目录，但只读取各自职责范围内的配置。共享字段必须具有明确的数据结构和版本约束，不允许双方依赖彼此的配置加载代码。
+
+Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负责搜索插件、解析、评分、去重和 DuckDB 配置。
+
+现有配置文件的最终归属将在后续配置契约任务中确定。
 
 ## 9. 错误处理与监控
 
-- Go Worker Pool 通过 CircuitBreaker 管理失败，失败 URL 进入 crawler:error 队列。
-- Python httpx 使用 Retry + RateLimiter + CircuitBreaker。
-- 所有错误日志包含 task_id, stage, url, error_code, retryable, timestamp。
-- Prometheus /metrics 端点 (Go Gin + Python FastAPI)。
-- Grafana 仪表盘配置位于 config/grafana-dashboard.json。
+### 9.1 当前实现
+
+- Go 下载失败通过 crawler:error 写入错误消息。
+- Go、Python 各自保留现有重试、限流和熔断能力。
+- Grafana 配置位于 config/grafana-dashboard.json。
+
+### 9.2 目标要求
+
+- 错误事件统一包含 protocol_version、task_id、stage、url、error_code、retryable 和 timestamp。
+- Go 汇总任务状态、错误和平台级监控指标。
+- Python 上报搜索、解析、评分和去重阶段指标。
+- /metrics 端点及 Grafana 指标必须通过实际运行测试后才能标记为已完成。
 
 ## 10. 当前架构与目标架构差异
 
@@ -157,15 +184,15 @@ Go 端 config.go 读取同路径 Python 配置 (site.json/http.json/score.json)�
 
 ## 11. 迁移顺序
 
-1. 修复基础契约 (已完成 TASK-002)
-2. 确定职责边界 (已完成 TASK-003)
-3. 统一 HTTP 下载能力
-4. 建立标准数据模型
-5. 完善 Go 任务 API 和调度
-6. 串联端到端采集流水线
-7. 收敛冗余模块
-8. 完善前端展示
-9. 端到端验收
+1. 修复基础契约（TASK-002，已完成）
+2. 确定运行时职责边界（TASK-003，已完成）
+3. 定义版本化 Redis 消息协议（TASK-004）
+4. 建立 Go、Python 双端消息模型和契约测试
+5. 新增 crawler:search，调整 crawler:url 的生产消费关系
+6. 串联 Go -> Python -> Go 端到端流水线
+7. 统一正式 API、CLI 和 MySQL 写入入口
+8. 收敛重复搜索、HTTP、API 和存储模块
+9. 完善监控、前端展示和端到端验收
 
 ## 12. 架构约束
 
@@ -174,6 +201,6 @@ Go 端 config.go 读取同路径 Python 配置 (site.json/http.json/score.json)�
 - 搜索能力迭代只在 Python 侧进行。
 - HTML 解析、评分、去重只在 Python 侧实现。
 - 任务状态、MySQL 事务数据只在 Go 侧管理。
-- 同一功能不允许在两端同时存在两份实现。
+- 目标架构不允许同一业务职责长期存在两份正式实现；迁移期间的兼容模块必须标明状态和计划下线任务。
 - 新加模块需先更新本文档，再开始实施。
 - go mod tidy 和 task-001-go-deps.patch 在明确归属后处理。
