@@ -744,3 +744,28 @@ tests/integration/
 
 in_progress
 
+
+
+## TASK-011
+
+
+## TASK-011
+
+### 问题说明
+Python Parser Worker 输出 YYYY-MM-DD 格式的 publish_date，但 Go consumeResult 只使用 time.RFC3339 解析，解析错误被静默忽略，零值日期被替换为 time.Now()，导致缺失或非法发布日期被伪造成抓取时间。
+
+### 修改内容
+1. store/mysql.go：Article.PublishTime 从 time.Time 改为 *time.Time。
+2. worker/pool.go：新增 parsePublishTime 函数，优先解析 YYYY-MM-DD，兼容 RFC3339；空字符串返回 nil；非法值返回 nil+error。
+3. consumeResult 使用 parsePublishTime 替代直接 time.Parse，不再回退到 time.Now()。
+4. 新增 8 个测试覆盖全部日期输入场景。
+
+### 验收结果
+- go test ./internal/worker/：28 passed
+- go test ./...：全包通过
+- go vet./...：无错误
+- python -m pytest -q：35 passed, 7 skipped
+- git diff --check：无错误
+
+### 状态
+completed

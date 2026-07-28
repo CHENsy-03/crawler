@@ -12,22 +12,22 @@ import (
 )
 
 type Article struct {
-	ID              uint      `gorm:"primaryKey" json:"id"`
-	URL             string    `gorm:"type:varchar(1000);not null;uniqueIndex:idx_url_hash,length:32" json:"url"`
-	Title           string    `gorm:"type:varchar(500)" json:"title"`
-	Summary         string    `gorm:"type:text" json:"summary"`
-	Content         string    `gorm:"type:longtext" json:"content"`
-	PublishTime     time.Time `json:"publish_time"`
-	Province        string    `gorm:"type:varchar(100)" json:"province"`
-	Site            string    `gorm:"type:varchar(200)" json:"site"`
-	Keyword         string    `gorm:"type:varchar(200)" json:"keyword"`
-	Score           int       `gorm:"default:0" json:"score"`
-	MatchedKeywords string    `gorm:"type:varchar(500)" json:"matched_keywords"`
-	CrawlTime       time.Time `json:"crawl_time"`
-	DetailFetched   bool      `gorm:"default:false" json:"detail_fetched"`
-	SourceType      string    `gorm:"type:varchar(50)" json:"source_type"`
-	Status          string    `gorm:"type:varchar(20);default:new" json:"status"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID              uint       `gorm:"primaryKey" json:"id"`
+	URL             string     `gorm:"type:varchar(1000);not null;uniqueIndex:idx_url_hash,length:32" json:"url"`
+	Title           string     `gorm:"type:varchar(500)" json:"title"`
+	Summary         string     `gorm:"type:text" json:"summary"`
+	Content         string     `gorm:"type:longtext" json:"content"`
+	PublishTime     *time.Time `json:"publish_time"`
+	Province        string     `gorm:"type:varchar(100)" json:"province"`
+	Site            string     `gorm:"type:varchar(200)" json:"site"`
+	Keyword         string     `gorm:"type:varchar(200)" json:"keyword"`
+	Score           int        `gorm:"default:0" json:"score"`
+	MatchedKeywords string     `gorm:"type:varchar(500)" json:"matched_keywords"`
+	CrawlTime       time.Time  `json:"crawl_time"`
+	DetailFetched   bool       `gorm:"default:false" json:"detail_fetched"`
+	SourceType      string     `gorm:"type:varchar(50)" json:"source_type"`
+	Status          string     `gorm:"type:varchar(20);default:new" json:"status"`
+	CreatedAt       time.Time  `json:"created_at"`
 }
 
 type Task struct {

@@ -72,6 +72,14 @@
 | summary | string | 否 |
 | score | int | 是 |
 | matched_keywords | array[string] | 是 |
+
+### publish_date 字段约束
+
+- 字符串字段，表示文章的**来源发布日期**，与 crawl_time（抓取时间）语义不同。
+- 推荐格式：YYYY-MM-DD（如 2026-07-27）。
+- Go 端同时兼容 RFC3339 格式。
+- 空字符串表示来源页面未提供有效发布日期。
+- 非法格式值不会导致流水线失败，该字段将被视为未知（nil）。
 队列：crawler:result
 
 ## 8. ErrorMessage

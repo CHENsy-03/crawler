@@ -419,3 +419,154 @@ func TestConsumeError_URLLevelDedupedSuccess(t *testing.T) {
 		t.Fatalf("UpdateTask called %d times, want 0", updateCount)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// parsePublishTime
+// ---------------------------------------------------------------------------
+
+func TestParsePublishTime_DateOnly(t *testing.T) {
+	pt, err := parsePublishTime("2026-07-27")
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if pt == nil {
+		t.Fatal("got nil, expected non-nil")
+	}
+	if pt.Year() != 2026 || pt.Month() != 7 || pt.Day() != 27 {
+		t.Fatalf("got %d-%d-%d, want 2026-7-27", pt.Year(), pt.Month(), pt.Day())
+	}
+}
+
+func TestParsePublishTime_RFC3339(t *testing.T) {
+	pt, err := parsePublishTime("2026-07-27T16:00:00Z")
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if pt == nil {
+		t.Fatal("got nil")
+	}
+	if pt.Year() != 2026 || pt.Month() != 7 || pt.Day() != 27 {
+		t.Fatalf("date mismatch")
+	}
+	if pt.Hour() != 16 || pt.Minute() != 0 {
+		t.Fatalf("time mismatch")
+	}
+}
+
+func TestParsePublishTime_Empty(t *testing.T) {
+	pt, err := parsePublishTime("")
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if pt != nil {
+		t.Fatal("expected nil for empty string")
+	}
+}
+
+func TestParsePublishTime_Whitespace(t *testing.T) {
+	pt, err := parsePublishTime("  ")
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if pt != nil {
+		t.Fatal("expected nil for whitespace")
+	}
+}
+
+func TestParsePublishTime_Invalid(t *testing.T) {
+	pt, err := parsePublishTime("not-a-date")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if pt != nil {
+		t.Fatal("expected nil for invalid")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// consumeResult publish_date scenarios
+// ---------------------------------------------------------------------------
+
+func TestConsumeResult_DateOnly(t *testing.T) {
+	var captured *store.Article
+	store := &fakeStore{
+		saveArticle: func(a *store.Article) error { captured = a; return nil },
+		updateTask:  func(id, status string, count int) error { return nil },
+	}
+	p := newTestPool(store)
+	p.getOrCreateTaskStatus("t21").SearchDone = true
+	p.getOrCreateTaskStatus("t21").Expected = 1
+
+	msg := &protocol.ResultMessage{
+		Envelope: protocol.Envelope{TaskID: "t21"},
+		URL:      "http://example.com/art", Site: "test", Keyword: "kw",
+		PublishDate: "2026-07-27", Title: "T", Content: "C", Score: 1,
+	}
+	_ = p.consumeResult(msg)
+	if captured == nil {
+		t.Fatal("SaveArticle not called")
+	}
+	if captured.PublishTime == nil {
+		t.Fatal("PublishTime is nil")
+	}
+	if captured.PublishTime.Year() != 2026 || captured.PublishTime.Month() != 7 || captured.PublishTime.Day() != 27 {
+		t.Fatalf("date mismatch: %v", captured.PublishTime)
+	}
+}
+
+func TestConsumeResult_EmptyPublishDate(t *testing.T) {
+	var captured *store.Article
+	store := &fakeStore{
+		saveArticle: func(a *store.Article) error { captured = a; return nil },
+		updateTask:  func(id, status string, count int) error { return nil },
+	}
+	p := newTestPool(store)
+	p.getOrCreateTaskStatus("t22").SearchDone = true
+	p.getOrCreateTaskStatus("t22").Expected = 1
+
+	msg := &protocol.ResultMessage{
+		Envelope: protocol.Envelope{TaskID: "t22"},
+		URL:      "http://example.com/art2", Site: "test", Keyword: "kw",
+		PublishDate: "", Title: "T", Content: "C", Score: 1,
+	}
+	err := p.consumeResult(msg)
+	if err != nil {
+		t.Fatalf("consumeResult should not fail: %v", err)
+	}
+	if captured == nil {
+		t.Fatal("SaveArticle not called")
+	}
+	if captured.PublishTime != nil {
+		t.Fatal("PublishTime should be nil for empty publish_date")
+	}
+}
+
+func TestConsumeResult_InvalidPublishDate(t *testing.T) {
+	var captured *store.Article
+	store := &fakeStore{
+		saveArticle: func(a *store.Article) error { captured = a; return nil },
+		updateTask:  func(id, status string, count int) error { return nil },
+	}
+	p := newTestPool(store)
+	p.getOrCreateTaskStatus("t23").SearchDone = true
+	p.getOrCreateTaskStatus("t23").Expected = 1
+
+	msg := &protocol.ResultMessage{
+		Envelope: protocol.Envelope{TaskID: "t23"},
+		URL:      "http://example.com/art3", Site: "test", Keyword: "kw",
+		PublishDate: "bad-date", Title: "T", Content: "C", Score: 1,
+	}
+	err := p.consumeResult(msg)
+	if err != nil {
+		t.Fatalf("invalid publish_date should not fail the whole result: %v", err)
+	}
+	if captured == nil {
+		t.Fatal("SaveArticle not called")
+	}
+	if captured.PublishTime != nil {
+		t.Fatal("PublishTime should be nil for bad date")
+	}
+	if captured.CrawlTime.IsZero() {
+		t.Fatal("CrawlTime should be set")
+	}
+}

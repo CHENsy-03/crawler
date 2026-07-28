@@ -328,6 +328,25 @@ func (p *Pool) checkTaskCompletion(taskID string) error {
 	return nil
 }
 
+// parsePublishTime parses a date string from the v1 protocol into a time pointer.
+// Supported formats: YYYY-MM-DD (primary), RFC3339 (fallback).
+// Empty/whitespace-only returns (nil, nil).
+// Invalid input returns (nil, error).
+// It never returns time.Now().
+func parsePublishTime(s string) (*time.Time, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil, nil
+	}
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return &t, nil
+	}
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return &t, nil
+	}
+	return nil, fmt.Errorf("unrecognized date format: %q", s)
+}
+
 func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
 	log.Printf("[result] processing: task=%s url=%s score=%d", msg.TaskID, msg.URL, msg.Score)
 
@@ -344,12 +363,9 @@ func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
 	}
 	p.taskMu.Unlock()
 
-	var publishTime time.Time
-	if msg.PublishDate != "" {
-		publishTime, _ = time.Parse(time.RFC3339, msg.PublishDate)
-	}
-	if publishTime.IsZero() {
-		publishTime = time.Now()
+	publishTime, err := parsePublishTime(msg.PublishDate)
+	if err != nil {
+		log.Printf("[result] invalid publish_date %q for %s: %v", msg.PublishDate, msg.URL, err)
 	}
 
 	article := &store.Article{
