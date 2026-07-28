@@ -742,11 +742,8 @@ tests/integration/
 
 ### 20.8 状态
 
-in_progress
+completed
 
-
-
-## TASK-011
 
 
 ## TASK-011
@@ -766,6 +763,36 @@ Python Parser Worker 输出 YYYY-MM-DD 格式的 publish_date，但 Go consumeRe
 - go vet./...：无错误
 - python -m pytest -q：35 passed, 7 skipped
 - git diff --check：无错误
+
+### 状态
+completed
+
+
+## TASK-012：文档状态与空残留文件清理
+
+### 背景
+- TASK-008 已完成但状态过期（仍为 in_progress）。
+- TASK-011 存在空重复标题。
+- task-001-go-deps.patch 是无内容的历史残留文件。
+
+### 范围
+- 修正 TASK-008 状态为 completed。
+- 删除重复 TASK-011 标题。
+- 删除空 patch。
+
+### 范围外
+- Python/Go 职责收敛。
+- SYSTEM_ARCHITECTURE.md 内容更新。
+- 业务代码、依赖和测试逻辑修改。
+- 远程分支管理。
+
+### 验收结果
+- TASK-008 为 completed。
+- TASK-011 只有一个标题。
+- TASK-012 只有一个标题。
+- 空 patch 已删除。
+- 无业务代码变化。
+- git diff --check 通过。
 
 ### 状态
 completed
