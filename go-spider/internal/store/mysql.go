@@ -12,22 +12,22 @@ import (
 )
 
 type Article struct {
-	ID             uint      `gorm:"primaryKey" json:"id"`
-	URL            string    `gorm:"type:varchar(1000);not null;uniqueIndex:idx_url_hash,length:32" json:"url"`
-	Title          string    `gorm:"type:varchar(500)" json:"title"`
-	Summary        string    `gorm:"type:text" json:"summary"`
-	Content        string    `gorm:"type:longtext" json:"content"`
-	PublishTime    time.Time `json:"publish_time"`
-	Province       string    `gorm:"type:varchar(100)" json:"province"`
-	Site           string    `gorm:"type:varchar(200)" json:"site"`
-	Keyword        string    `gorm:"type:varchar(200)" json:"keyword"`
-	Score          int       `gorm:"default:0" json:"score"`
-	MatchedKeywords string   `gorm:"type:varchar(500)" json:"matched_keywords"`
-	CrawlTime      time.Time `json:"crawl_time"`
-	DetailFetched  bool      `gorm:"default:false" json:"detail_fetched"`
-	SourceType     string    `gorm:"type:varchar(50)" json:"source_type"`
-	Status         string    `gorm:"type:varchar(20);default:new" json:"status"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	URL             string    `gorm:"type:varchar(1000);not null;uniqueIndex:idx_url_hash,length:32" json:"url"`
+	Title           string    `gorm:"type:varchar(500)" json:"title"`
+	Summary         string    `gorm:"type:text" json:"summary"`
+	Content         string    `gorm:"type:longtext" json:"content"`
+	PublishTime     time.Time `json:"publish_time"`
+	Province        string    `gorm:"type:varchar(100)" json:"province"`
+	Site            string    `gorm:"type:varchar(200)" json:"site"`
+	Keyword         string    `gorm:"type:varchar(200)" json:"keyword"`
+	Score           int       `gorm:"default:0" json:"score"`
+	MatchedKeywords string    `gorm:"type:varchar(500)" json:"matched_keywords"`
+	CrawlTime       time.Time `json:"crawl_time"`
+	DetailFetched   bool      `gorm:"default:false" json:"detail_fetched"`
+	SourceType      string    `gorm:"type:varchar(50)" json:"source_type"`
+	Status          string    `gorm:"type:varchar(20);default:new" json:"status"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type Task struct {
@@ -86,16 +86,18 @@ func (s *MySQLStore) SaveTask(t *Task) error {
 	return s.db.Where("id = ?", t.ID).Assign(t).FirstOrCreate(t).Error
 }
 
-func (s *MySQLStore) UpdateTask(id, status string, count int) {
+func (s *MySQLStore) UpdateTask(id, status string, count int) error {
 	result := s.db.Model(&Task{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"status": status, "article_count": count,
 	})
 	if result.Error != nil {
 		log.Printf("[store] UpdateTask error: id=%s status=%s count=%d err=%v", id, status, count, result.Error)
+		return fmt.Errorf("update task %s status=%s: %w", id, status, result.Error)
 	}
 	if result.RowsAffected == 0 {
 		log.Printf("[store] UpdateTask: no rows affected: id=%s status=%s count=%d", id, status, count)
 	}
+	return nil
 }
 
 func (s *MySQLStore) LogCrawl(url string, httpStatus, costMs int, errMsg string) {

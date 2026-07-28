@@ -25,6 +25,13 @@ type Task struct {
 	SiteCfg *config.SiteConfig
 }
 
+// taskStore is the subset of store capabilities used by the worker pool.
+// Production uses taskStore; tests provide a fake.
+type taskStore interface {
+	UpdateTask(id, status string, count int) error
+	SaveArticle(article *store.Article) error
+}
+
 type Stats struct {
 	Submitted int64
 	Completed int64
@@ -48,7 +55,7 @@ type Pool struct {
 	wg           sync.WaitGroup
 	resultWg     sync.WaitGroup
 	redis        *queue.RedisQueue
-	store        *store.MySQLStore
+	store        taskStore
 	taskStatuses map[string]*TaskStatus
 	taskMu       sync.Mutex
 	fetcher      *client.RestyFetcher
@@ -57,7 +64,7 @@ type Pool struct {
 	failed       atomic.Int64
 }
 
-func NewPool(workerCount int, rq *queue.RedisQueue, mysqlStore *store.MySQLStore) *Pool {
+func NewPool(workerCount int, rq *queue.RedisQueue, mysqlStore taskStore) *Pool {
 	return &Pool{
 		workers:      workerCount,
 		taskCh:       make(chan Task, 1000),
@@ -188,7 +195,7 @@ type WorkerManager struct {
 	pool *Pool
 }
 
-func NewWorkerManager(workerCount int, rq *queue.RedisQueue, mysqlStore *store.MySQLStore) *WorkerManager {
+func NewWorkerManager(workerCount int, rq *queue.RedisQueue, mysqlStore taskStore) *WorkerManager {
 	return &WorkerManager{pool: NewPool(workerCount, rq, mysqlStore)}
 }
 
@@ -247,7 +254,9 @@ func (p *Pool) StartEventConsumer() {
 				if sd == nil {
 					continue
 				}
-				p.handleSearchDone(sd)
+				if err := p.handleSearchDone(sd); err != nil {
+					log.Printf("[event] handleSearchDone error: task=%s err=%v", sd.TaskID, err)
+				}
 			}
 		}
 	}()
@@ -275,7 +284,7 @@ func (p *Pool) determineTaskStatus(ts *TaskStatus) string {
 	return ""
 }
 
-func (p *Pool) handleSearchDone(msg *protocol.SearchDoneMessage) {
+func (p *Pool) handleSearchDone(msg *protocol.SearchDoneMessage) error {
 	p.taskMu.Lock()
 	ts := p.getOrCreateTaskStatus(msg.TaskID)
 	ts.SearchDone = true
@@ -286,29 +295,37 @@ func (p *Pool) handleSearchDone(msg *protocol.SearchDoneMessage) {
 	log.Printf("[task:%s] search_done: expected=%d stored=%d", msg.TaskID, msg.URLCount, ts.Stored)
 
 	if status != "" {
-		log.Printf("[task:%s] %s: stored=%d failed=%d expected=%d", msg.TaskID, status, ts.Stored, ts.Failed, ts.Expected)
 		if p.store != nil {
-			p.store.UpdateTask(msg.TaskID, status, ts.Stored)
+			if err := p.store.UpdateTask(msg.TaskID, status, ts.Stored); err != nil {
+				log.Printf("[task:%s] failed to persist final status %s: %v", msg.TaskID, status, err)
+				return err
+			}
 		}
+		log.Printf("[task:%s] %s: stored=%d failed=%d expected=%d", msg.TaskID, status, ts.Stored, ts.Failed, ts.Expected)
 	}
+	return nil
 }
 
-func (p *Pool) checkTaskCompletion(taskID string) {
+func (p *Pool) checkTaskCompletion(taskID string) error {
 	p.taskMu.Lock()
 	ts, ok := p.taskStatuses[taskID]
 	if !ok {
 		p.taskMu.Unlock()
-		return
+		return nil
 	}
 	status := p.determineTaskStatus(ts)
 	p.taskMu.Unlock()
 
 	if status != "" {
-		log.Printf("[task:%s] %s: stored=%d failed=%d expected=%d", taskID, status, ts.Stored, ts.Failed, ts.Expected)
 		if p.store != nil {
-			p.store.UpdateTask(taskID, status, ts.Stored)
+			if err := p.store.UpdateTask(taskID, status, ts.Stored); err != nil {
+				log.Printf("[task:%s] failed to persist completion status %s: %v", taskID, status, err)
+				return err
+			}
 		}
+		log.Printf("[task:%s] %s: stored=%d failed=%d expected=%d", taskID, status, ts.Stored, ts.Failed, ts.Expected)
 	}
+	return nil
 }
 
 func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
@@ -352,7 +369,9 @@ func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
 		ts.failedURLs[msg.URL] = struct{}{}
 		ts.Failed = len(ts.failedURLs)
 		p.taskMu.Unlock()
-		p.checkTaskCompletion(msg.TaskID)
+		if err := p.checkTaskCompletion(msg.TaskID); err != nil {
+			log.Printf("[result] checkTaskCompletion after store error: %v", err)
+		}
 		if p.redis != nil {
 			if pushErr := p.redis.PushErrorMessage(&protocol.ErrorMessage{
 				Envelope: protocol.Envelope{
@@ -383,8 +402,13 @@ func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
 	stored := ts.Stored
 	p.taskMu.Unlock()
 
-	p.store.UpdateTask(msg.TaskID, "running", stored)
-	p.checkTaskCompletion(msg.TaskID)
+	if err := p.store.UpdateTask(msg.TaskID, "running", stored); err != nil {
+		log.Printf("[result] failed to update running status: task=%s err=%v", msg.TaskID, err)
+	}
+	if err := p.checkTaskCompletion(msg.TaskID); err != nil {
+		log.Printf("[result] checkTaskCompletion after saved: task=%s err=%v", msg.TaskID, err)
+		return err
+	}
 	log.Printf("[result] saved: task=%s url=%s score=%d", msg.TaskID, msg.URL, msg.Score)
 	return nil
 }
@@ -442,13 +466,15 @@ func (p *Pool) StartErrorConsumer() {
 				if msg == nil {
 					continue
 				}
-				p.consumeError(msg)
+				if err := p.consumeError(msg); err != nil {
+					log.Printf("[error] consumeError: task=%s err=%v", msg.TaskID, err)
+				}
 			}
 		}
 	}()
 }
 
-func (p *Pool) consumeError(msg *protocol.ErrorMessage) {
+func (p *Pool) consumeError(msg *protocol.ErrorMessage) error {
 	// Search-level errors: task-wide failure, mark as failed directly
 	if msg.Stage == "search" && msg.URL == "" {
 		p.taskMu.Lock()
@@ -459,9 +485,13 @@ func (p *Pool) consumeError(msg *protocol.ErrorMessage) {
 
 		log.Printf("[task:%s] search failed: %s", msg.TaskID, msg.Error)
 		if p.store != nil {
-			p.store.UpdateTask(msg.TaskID, "failed", 0)
+			if err := p.store.UpdateTask(msg.TaskID, "failed", 0); err != nil {
+				combined := fmt.Errorf("search error %q then persist failed status: %w", msg.Error, err)
+				log.Printf("[task:%s] %v", msg.TaskID, combined)
+				return combined
+			}
 		}
-		return
+		return nil
 	}
 
 	// URL-level errors: idempotent failure count
@@ -471,12 +501,12 @@ func (p *Pool) consumeError(msg *protocol.ErrorMessage) {
 	// Success has priority: URL already stored, skip
 	if _, exists := ts.storedURLs[msg.URL]; exists {
 		p.taskMu.Unlock()
-		return
+		return nil
 	}
 	// Duplicate error: URL already failed, skip (idempotent)
 	if _, exists := ts.failedURLs[msg.URL]; exists {
 		p.taskMu.Unlock()
-		return
+		return nil
 	}
 
 	ts.failedURLs[msg.URL] = struct{}{}
@@ -484,7 +514,11 @@ func (p *Pool) consumeError(msg *protocol.ErrorMessage) {
 	p.taskMu.Unlock()
 
 	log.Printf("[task:%s] error: stage=%s url=%s code=%s", msg.TaskID, msg.Stage, msg.URL, msg.ErrorCode)
-	p.checkTaskCompletion(msg.TaskID)
+	if err := p.checkTaskCompletion(msg.TaskID); err != nil {
+		log.Printf("[task:%s] checkTaskCompletion after error failed: %v", msg.TaskID, err)
+		return err
+	}
+	return nil
 }
 
 func (wm *WorkerManager) StartErrorConsumer() { wm.pool.StartErrorConsumer() }
