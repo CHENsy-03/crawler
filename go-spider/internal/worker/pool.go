@@ -42,28 +42,28 @@ type TaskStatus struct {
 }
 
 type Pool struct {
-	workers   int
-	taskCh    chan Task
-	stopCh    chan struct{}
-	wg        sync.WaitGroup
-	resultWg  sync.WaitGroup
-	redis     *queue.RedisQueue
-	store     *store.MySQLStore
+	workers      int
+	taskCh       chan Task
+	stopCh       chan struct{}
+	wg           sync.WaitGroup
+	resultWg     sync.WaitGroup
+	redis        *queue.RedisQueue
+	store        *store.MySQLStore
 	taskStatuses map[string]*TaskStatus
 	taskMu       sync.Mutex
-	fetcher   *client.RestyFetcher
-	submitted atomic.Int64
-	completed atomic.Int64
-	failed    atomic.Int64
+	fetcher      *client.RestyFetcher
+	submitted    atomic.Int64
+	completed    atomic.Int64
+	failed       atomic.Int64
 }
 
 func NewPool(workerCount int, rq *queue.RedisQueue, mysqlStore *store.MySQLStore) *Pool {
 	return &Pool{
-		workers: workerCount,
-		taskCh:  make(chan Task, 1000),
-		stopCh:  make(chan struct{}),
-		redis:   rq,
-		store:   mysqlStore,
+		workers:      workerCount,
+		taskCh:       make(chan Task, 1000),
+		stopCh:       make(chan struct{}),
+		redis:        rq,
+		store:        mysqlStore,
 		taskStatuses: make(map[string]*TaskStatus),
 	}
 }
@@ -121,7 +121,7 @@ func (p *Pool) worker(id int) {
 func (p *Pool) process(id int, task Task) {
 	html, err := p.fetcher.Fetch(task.URL)
 	if err != nil {
-		log.Printf("[worker-%d] FETCH FAIL %s: %v", id, task.URL[:60], err)
+		log.Printf("[worker-%d] FETCH FAIL %s: %v", id, task.URL, err)
 		p.failed.Add(1)
 		if p.redis != nil {
 			if pushErr := p.redis.PushErrorMessage(&protocol.ErrorMessage{
@@ -146,10 +146,10 @@ func (p *Pool) process(id int, task Task) {
 		}
 		return
 	}
-	log.Printf("[worker-%d] FETCHED: %s (%d bytes)", id, task.Title[:40], len(html))
+	log.Printf("[worker-%d] FETCHED: %s (%d bytes)", id, task.Title, len(html))
 
-		if p.redis != nil {
-			if err := p.redis.PushHTML(task.URL, task.Title, html, task.Site, task.Keyword, task.Level, task.TaskID); err != nil {
+	if p.redis != nil {
+		if err := p.redis.PushHTML(task.URL, task.Title, html, task.Site, task.Keyword, task.Level, task.TaskID); err != nil {
 			log.Printf("[worker-%d] REDIS HTML FAIL: %v", id, err)
 			if pushErr := p.redis.PushErrorMessage(&protocol.ErrorMessage{
 				Envelope: protocol.Envelope{
@@ -173,13 +173,14 @@ func (p *Pool) process(id int, task Task) {
 			p.failed.Add(1)
 			return
 		}
-		log.Printf("[worker-%d] -> Redis HTML: %s (%d bytes)", id, task.Title[:40], len(html))
+		log.Printf("[worker-%d] -> Redis HTML: %s (%d bytes)", id, task.Title, len(html))
 	} else {
-		log.Printf("[worker-%d] FETCHED: %s (%d bytes) [no Redis]", id, task.Title[:40], len(html))
+		log.Printf("[worker-%d] FETCHED: %s (%d bytes) [no Redis]", id, task.Title, len(html))
 	}
 
 	p.completed.Add(1)
 }
+
 // WorkerManager: public API wrapping the worker pool
 // Architecture: WorkerManager -> Pool -> N goroutines
 // Each goroutine: Fetch(URL) -> Save HTML -> Push to Redis
@@ -252,7 +253,6 @@ func (p *Pool) StartEventConsumer() {
 	}()
 }
 
-
 func (p *Pool) determineTaskStatus(ts *TaskStatus) string {
 	if !ts.SearchDone {
 		return ""
@@ -312,7 +312,7 @@ func (p *Pool) checkTaskCompletion(taskID string) {
 }
 
 func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
-	log.Printf("[result] processing: task=%s url=%s score=%d", msg.TaskID, msg.URL[:60], msg.Score)
+	log.Printf("[result] processing: task=%s url=%s score=%d", msg.TaskID, msg.URL, msg.Score)
 
 	// URL-level dedup: skip if already stored or failed
 	p.taskMu.Lock()
@@ -330,6 +330,9 @@ func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
 	var publishTime time.Time
 	if msg.PublishDate != "" {
 		publishTime, _ = time.Parse(time.RFC3339, msg.PublishDate)
+	}
+	if publishTime.IsZero() {
+		publishTime = time.Now()
 	}
 
 	article := &store.Article{
@@ -382,14 +385,14 @@ func (p *Pool) consumeResult(msg *protocol.ResultMessage) error {
 
 	p.store.UpdateTask(msg.TaskID, "running", stored)
 	p.checkTaskCompletion(msg.TaskID)
-	log.Printf("[result] saved: task=%s url=%s score=%d", msg.TaskID, msg.URL[:60], msg.Score)
+	log.Printf("[result] saved: task=%s url=%s score=%d", msg.TaskID, msg.URL, msg.Score)
 	return nil
 }
 
-func (wm *WorkerManager) Start()        { wm.pool.Start() }
-func (wm *WorkerManager) Stop()         { wm.pool.Stop() }
-func (wm *WorkerManager) Submit(t Task) { wm.pool.Submit(t) }
-func (wm *WorkerManager) Stats() Stats  { return wm.pool.Stats() }
+func (wm *WorkerManager) Start()               { wm.pool.Start() }
+func (wm *WorkerManager) Stop()                { wm.pool.Stop() }
+func (wm *WorkerManager) Submit(t Task)        { wm.pool.Submit(t) }
+func (wm *WorkerManager) Stats() Stats         { return wm.pool.Stats() }
 func (wm *WorkerManager) StartResultConsumer() { wm.pool.StartResultConsumer() }
 func (p *Pool) StartRedisConsumer() {
 	go func() {
@@ -407,20 +410,20 @@ func (p *Pool) StartRedisConsumer() {
 				if payload == nil {
 					continue
 				}
-			p.submitted.Add(1)
-			p.taskCh <- Task{
-				TaskID:  payload.TaskID,
-				URL:     payload.URL,
-				Title:   payload.Title,
-				Site:    payload.Site,
-				Keyword: payload.Keyword,
-				Level:   payload.Level,
-			}
+				p.submitted.Add(1)
+				p.taskCh <- Task{
+					TaskID:  payload.TaskID,
+					URL:     payload.URL,
+					Title:   payload.Title,
+					Site:    payload.Site,
+					Keyword: payload.Keyword,
+					Level:   payload.Level,
+				}
 			}
 		}
 	}()
 }
-func (wm *WorkerManager) StartEventConsumer()  { wm.pool.StartEventConsumer() }
+func (wm *WorkerManager) StartEventConsumer() { wm.pool.StartEventConsumer() }
 func (p *Pool) StartErrorConsumer() {
 	p.resultWg.Add(1)
 	go func() {
@@ -480,8 +483,8 @@ func (p *Pool) consumeError(msg *protocol.ErrorMessage) {
 	ts.Failed = len(ts.failedURLs)
 	p.taskMu.Unlock()
 
-	log.Printf("[task:%s] error: stage=%s url=%s code=%s", msg.TaskID, msg.Stage, msg.URL[:60], msg.ErrorCode)
+	log.Printf("[task:%s] error: stage=%s url=%s code=%s", msg.TaskID, msg.Stage, msg.URL, msg.ErrorCode)
 	p.checkTaskCompletion(msg.TaskID)
 }
 
-func (wm *WorkerManager) StartErrorConsumer()  { wm.pool.StartErrorConsumer() }
+func (wm *WorkerManager) StartErrorConsumer() { wm.pool.StartErrorConsumer() }

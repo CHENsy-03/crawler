@@ -34,7 +34,7 @@ type Task struct {
 	ID           string    `gorm:"type:varchar(32);primaryKey" json:"id"`
 	Keyword      string    `gorm:"type:varchar(200)" json:"keyword"`
 	Site         string    `gorm:"type:varchar(100)" json:"site"`
-	Status       string    `gorm:"type:varchar(20);default:created" json:"status"`
+	Status       string    `gorm:"type:varchar(32);default:created" json:"status"`
 	ArticleCount int       `gorm:"default:0" json:"article_count"`
 	CreatedAt    time.Time `json:"created_at"`
 }
@@ -87,9 +87,15 @@ func (s *MySQLStore) SaveTask(t *Task) error {
 }
 
 func (s *MySQLStore) UpdateTask(id, status string, count int) {
-	s.db.Model(&Task{}).Where("id = ?", id).Updates(map[string]interface{}{
+	result := s.db.Model(&Task{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"status": status, "article_count": count,
 	})
+	if result.Error != nil {
+		log.Printf("[store] UpdateTask error: id=%s status=%s count=%d err=%v", id, status, count, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		log.Printf("[store] UpdateTask: no rows affected: id=%s status=%s count=%d", id, status, count)
+	}
 }
 
 func (s *MySQLStore) LogCrawl(url string, httpStatus, costMs int, errMsg string) {

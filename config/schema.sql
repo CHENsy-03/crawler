@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS task (
     id          VARCHAR(32) PRIMARY KEY,
     keyword     VARCHAR(200),
     site        VARCHAR(100),
-    status      ENUM('created','running','completed','failed') DEFAULT 'created',
+    status      VARCHAR(32) DEFAULT 'created',
     article_count INT DEFAULT 0,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_status (status),
