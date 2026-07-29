@@ -888,5 +888,28 @@ completed
 - 远程分支清理
 - 修改全部代码.txt
 
+### 实现结果
+- 完成普通 HTML 搜索结果页的配置化 GET 请求。
+- 支持关键词参数、分页上限和相对 URL 转换。
+- 支持无效链接过滤、跨页 URL 去重和空结果。
+- 支持配置化解析及有限搜索端点发现。
+- 新增 9 个使用 HTTP Mock 的单元测试，不访问真实网站。
+- 未修改 TRS、JPAAS、Go、数据库、Redis 和前端。
+
+### 验收结果
+- HTML 插件新增测试：9/9 通过。
+- Python 全量测试：44 passed, 7 skipped。
+- go test ./... -count=1：通过。
+- go vet ./...：通过。
+- go build ./...：通过。
+- PR #8 仅包含 plugins/html.py 和 tests/test_html_plugin.py。
+
+### 关联信息
+- PR #8
+- https://github.com/CHENsy-03/Codex/pull/8
+- 功能提交：5f02aa0
+- 合并提交：830c8b6
+- 完成日期：2026-07-29
+
 ### 状态
-未开始
+completed
