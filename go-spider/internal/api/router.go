@@ -2,24 +2,32 @@ package api
 
 import (
 	"crawler-platform/internal/queue"
+	"crawler-platform/internal/store"
 	"crawler-platform/internal/worker"
 
 	"github.com/gin-gonic/gin"
 )
+
+// articleQuerier is the subset of store.QueryArticles needed by the API.
+type articleQuerier interface {
+	QueryArticles(keyword string, limit int) ([]store.Article, error)
+}
 
 type Server struct {
 	router  *gin.Engine
 	redis   *queue.RedisQueue
 	manager *worker.WorkerManager
 	store   *TaskStore
+	db      articleQuerier
 }
 
-func NewServer(rq *queue.RedisQueue, mgr *worker.WorkerManager) *Server {
+func NewServer(rq *queue.RedisQueue, mgr *worker.WorkerManager, db articleQuerier) *Server {
 	s := &Server{
 		router:  gin.Default(),
 		redis:   rq,
 		manager: mgr,
 		store:   NewTaskStore(),
+		db:      db,
 	}
 	s.routes()
 	return s

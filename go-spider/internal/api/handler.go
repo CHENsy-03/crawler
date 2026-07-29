@@ -1,15 +1,42 @@
 package api
 
 import (
+	"fmt"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
+	"crawler-platform/internal/store"
 	"crawler-platform/internal/worker"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// parseIntParam parses a query parameter as an integer.
+func parseIntParam(s, name string) (int, error) {
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a number", name)
+	}
+	return v, nil
+}
+
+// isDBReady returns true when the underlying database connection is usable.
+// It handles pure nil interfaces, typed nil pointers (e.g. nil *store.MySQLStore),
+// and valid database connections. Test fakes always return true.
+func isDBReady(db articleQuerier) bool {
+	if db == nil {
+		return false
+	}
+	switch v := db.(type) {
+	case *store.MySQLStore:
+		return v != nil
+	default:
+		return true
+	}
+}
 
 type Task struct {
 	ID        string       `json:"id"`
@@ -131,9 +158,37 @@ func (s *Server) taskStatus(c *gin.Context) {
 }
 
 func (s *Server) listArticles(c *gin.Context) {
-	// Result consumption moved to WorkerManager.StartResultConsumer.
-	// TODO: query articles from MySQL for this endpoint.
-	c.JSON(200, gin.H{"count": 0, "articles": []interface{}{}})
+	keyword := c.Query("keyword")
+	limitStr := c.DefaultQuery("limit", "100")
+
+	limit, err := parseIntParam(limitStr, "limit")
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if limit <= 0 {
+		c.JSON(400, gin.H{"error": "limit must be positive"})
+		return
+	}
+	if limit > 1000 {
+		c.JSON(400, gin.H{"error": "limit must not exceed 1000"})
+		return
+	}
+	if !isDBReady(s.db) {
+		c.JSON(503, gin.H{"error": "database not available"})
+		return
+	}
+
+	articles, err := s.db.QueryArticles(keyword, limit)
+	if err != nil {
+		log.Printf("[api] listArticles query error: %v", err)
+		c.JSON(500, gin.H{"error": "internal server error"})
+		return
+	}
+	if articles == nil {
+		articles = []store.Article{}
+	}
+	c.JSON(200, gin.H{"count": len(articles), "articles": articles})
 }
 
 func (s *Server) metrics(c *gin.Context) {

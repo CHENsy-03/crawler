@@ -41,7 +41,7 @@ func main() {
 		mgr.Start()
 		defer mgr.Stop()
 
-		server := api.NewServer(redisQueue, mgr)
+		server := api.NewServer(redisQueue, mgr, mysqlStore)
 		addr := fmt.Sprintf(":%d", *apiPort)
 		log.Printf("[api] Gin server starting on %s", addr)
 		if err := server.Run(addr); err != nil {
