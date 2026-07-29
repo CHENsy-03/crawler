@@ -796,3 +796,97 @@ completed
 
 ### 状态
 completed
+
+
+## TASK-013：实现文章查询接口
+
+### 实现内容
+- 实现 Go API GET /articles 端点，从 MySQL 查询并返回真实文章数据。
+- 支持 keyword 查询参数过滤（透传给 GORM title LIKE 查询）。
+- 支持 limit 参数，默认 100，上限 1000。
+- 非法 limit（非数字、0、负数、超过 1000）返回 HTTP 400，且不调用数据库查询。
+- 参数校验优先于数据库可用性检查。
+- 查询失败返回 HTTP 500，且不泄露内部错误。
+- 数据库不可用时（纯 nil 接口或 typed nil *store.MySQLStore）返回 HTTP 503。
+- 空结果返回 articles: []（非 null）。
+- 新增 articleQuerier 最小接口，解耦 API 与具体 MySQLStore。
+- 新增 13 个 API handler 测试，覆盖正常查询、关键词过滤、limit 校验、空结果、查询错误、数据库不可用、typed nil、参数校验优先级等场景。
+
+### 验收结果
+- internal/api：13/13 PASS
+- go test ./...：通过
+- go vet ./...：通过
+- go build ./...：通过
+- Python：35 passed, 7 skipped
+
+### 关联信息
+- PR #6
+- PR URL：https://github.com/CHENsy-03/Codex/pull/6
+- 功能提交：9cd9f31
+- 合并提交：fde72d2
+
+### 状态
+completed
+
+
+## TASK-014：实现通用 HTML 搜索插件
+
+### 目标
+实现 plugins/html.py，使配置为 search.type: "html" 的站点能够请求普通 HTML 搜索结果页，解析搜索结果，并按现有插件协议输出统一结果。
+
+### 实现范围
+1. 读取站点 HTML 搜索配置（search.api_url、search.params）。
+2. 构造关键词搜索 GET 请求。
+3. 支持 max_pages 分页，且不超过配置页数。
+4. 将相对 URL 转换为绝对 URL。
+5. 提取 title、url、snippet。
+6. 过滤空链接和无效链接。
+7. 对结果 URL 去重，保持首次出现顺序。
+8. 与现有插件调用协议兼容。
+9. 不影响 TRS 和 JPAAS 搜索。
+
+### 关于自动发现
+- 有限策略：当 api_url 未配置时，尝试 site.base_url + 常见搜索路径（如 /search、/s）。
+- 不承诺支持任意搜索表单、POST 表单、JavaScript 搜索或验证码。
+- 复杂自动发现应留给后续独立任务。
+
+### 验收标准
+- search.type 为 html 且 api_url 有效配置时能返回结果。
+- 结果至少包含 title、url、snippet。
+- 正确处理相对链接。
+- 支持 max_pages，且不超过配置页数。
+- 重复 URL 只保留一次。
+- 空结果页返回空列表而不是异常。
+- 非 2xx、超时或页面结构不匹配时遵循现有插件错误协议。
+- 使用本地 HTTP 测试服务或 HTTP mock，不访问真实政府网站。
+- HTML 插件单元测试通过。
+- 现有 TRS、JPAAS 测试不回归。
+- Python 全量测试通过。
+- Go 全量测试、vet、build 通过。
+
+### 允许修改
+- workspace/crawler/plugins/html.py
+- workspace/crawler/tests/test_html_plugin.py
+- workspace/crawler/config/site.json（仅在确需配置示例时）
+
+### 仅经代码证明必需后才可修改
+- workspace/crawler/plugins/__init__.py
+- workspace/crawler/crawler/search/detector.py
+
+### 范围外
+- Go 功能修改
+- 前端
+- 数据库结构
+- Redis 队列
+- JS 动态页面
+- Playwright/Selenium
+- POST 搜索表单
+- 验证码和登录
+- 搜索引擎辅助发现
+- 任意网站完全自动识别
+- TRS/JPAAS 重构
+- 远程分支清理
+- 修改全部代码.txt
+
+### 状态
+未开始
