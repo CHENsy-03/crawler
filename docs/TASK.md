@@ -913,3 +913,112 @@ completed
 
 ### 状态
 completed
+
+
+## TASK-015：建立 URL + 关键词 v2 任务契约与运行时 SearchPlan 模型
+
+### 基本信息
+- 状态：pending
+- 创建日期：2026-07-31
+- 类型：架构与协议
+- 优先级：P0
+- 本任务只定义后续代码实施范围，不在本分支实施业务代码。
+
+### 背景证据
+1. Python CLI、Go CLI、Go API 当前均以预配置 `site/site_key` 为核心。
+2. Redis `SearchMessage v1` 只有 `site`、`keyword`、`level`、`max_pages`，不能表达未知网站的 `target_url`。
+3. 当前协议版本只有 `1.0`。
+4. 目前没有可序列化的运行时 `SearchPlan`。
+5. `detector.py` 和 `planner.py` 尚未接入正式 Search Worker。
+6. 插件仍从静态 `site.json` 获取搜索配置。
+7. TASK-014 的 HTML 插件不等于“URL + 关键词”的自动发现闭环。
+
+### 任务目标
+1. 定义 Go CLI、Go API 的 `target_url + keywords[]` 输入契约。
+2. 定义 Go/Python 一致的 Redis v2 envelope 和 `SearchRequested v2`。
+3. 定义可序列化的 `SearchPlan`、`SearchHit` 及必要枚举和校验规则。
+4. 明确 v1 `site/profile` 兼容模式和显式版本分派。
+5. 建立 Go/Python 共用的 canonical JSON v2 fixture。
+6. 建立两端序列化、反序列化、校验及字段语义一致性测试。
+7. 为 TASK-016 网站分析和 TASK-017 运行时计划生成提供稳定契约。
+
+### SearchPlan 定义范围
+至少覆盖：
+- `plan_id`、协议版本、生命周期状态。
+- 搜索策略。
+- endpoint 和 HTTP method。
+- query 参数或请求体模板。
+- 分页规则。
+- 搜索结果及正文选择器。
+- 域名和采集边界。
+- 发现证据及置信度。
+- 创建来源、创建时间和失效信息。
+
+最终字段命名应在代码实施时遵循现有项目风格，但 Go/Python 字段语义必须完全一致。
+
+### 兼容与校验规则
+- 新入口支持 `target_url`。
+- 旧 `site/profile` 模式暂时保留。
+- `--url` 与 `--site` 的互斥或组合规则必须明确。
+- 禁止静默推断协议版本。
+- `target_url` 只接受 `http` 和 `https`。
+- 非法 URL、空关键词、全空白关键词、重复关键词和冲突参数必须有确定行为。
+- v1 fixture、v1 消息和现有流程必须继续通过回归测试。
+
+### 非目标
+- 不实现完整 Site Analyzer。
+- 不实现搜索表单或接口自动发现。
+- 不实现选择器自动推断。
+- 不接入四川、山东或其他单一站点。
+- 不实现 HTML POST、通用 JSON/XHR 或浏览器后备。
+- 不重构全部插件。
+- 不迁移数据库。
+- 不下线 v1。
+- 不修改前端。
+- 不治理 TASK.md 历史结构。
+- 不实施 TASK-016 或 TASK-017。
+
+### 预计代码实施范围
+```text
+workspace/crawler/go-spider/main.go
+workspace/crawler/go-spider/internal/api/handler.go
+workspace/crawler/go-spider/internal/protocol/messages.go
+workspace/crawler/go-spider/internal/protocol/messages_test.go
+workspace/crawler/protocol/messages.py
+workspace/crawler/protocol/__init__.py
+workspace/crawler/crawler/search/search_plan.py（拟新增）
+workspace/crawler/tests/fixtures/redis_protocol_v2.json（拟新增）
+workspace/crawler/tests/test_redis_protocol.py
+workspace/crawler/docs/REDIS_PROTOCOL.md
+workspace/crawler/docs/SYSTEM_ARCHITECTURE.md
+workspace/crawler/docs/TASK.md
+```
+
+`workspace/crawler/workers/search_worker.py` 仅在“完成最小 v2 消息接收”确有必要且能提供代码证据时，才允许在实施阶段修改；本次文档分支不修改它。
+
+### 验收标准
+1. Go/Python 可读取同一 v2 fixture，字段语义一致。
+2. `target_url` 仅接受 `http/https`。
+3. 空关键词、非法 URL 和冲突参数返回明确错误。
+4. `SearchPlan` 可稳定序列化、反序列化并产生确定性标识。
+5. v1 profile 流程及现有测试继续通过。
+6. v1/v2 使用显式协议版本分派。
+7. Python 全量测试通过。
+8. Go `test`、`vet`、`build` 通过。
+9. `git diff --check` 通过。
+10. 未引入单站点配置、复杂自动发现、数据库迁移或浏览器能力。
+
+### 停止条件
+- 最新代码出现与本定义冲突的 v2 设计。
+- 必须破坏 v1 才能继续。
+- Go/Python 字段语义存在需要用户决定的冲突。
+- 必须迁移数据库或重命名现有 Redis 队列。
+- 实际修改范围明显超出 TASK-015。
+- 用户预存文件发生变化。
+
+### 任务关系
+- TASK-014 提供配置驱动的 HTML 搜索能力。
+- TASK-015 只建立 URL 契约、v2 协议和 SearchPlan 模型。
+- TASK-016 才实现网站分析和搜索入口发现。
+- TASK-017 才实现运行时 SearchPlan 生成、校验、缓存及正式 Worker 接入。
+- downloader 和单站点问题不得取代通用化主线。
