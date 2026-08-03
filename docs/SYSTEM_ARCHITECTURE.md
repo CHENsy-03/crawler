@@ -204,3 +204,46 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 目标架构不允许同一业务职责长期存在两份正式实现；迁移期间的兼容模块必须标明状态和计划下线任务。
 - 新加模块需先更新本文档，再开始实施。
 - go mod tidy 和 task-001-go-deps.patch 在明确归属后处理。
+
+---
+
+## 13. TASK-015 v2 URL + 关键词契约
+
+### 13.1 输入入口
+
+- Go CLI v1：`--site <site_key> --keywords <keyword>`，显式推送 v1 SearchMessage。
+- Go CLI v2：`--url <target_url> --keywords <kw1,kw2>`，显式推送 v2 SearchRequested。
+- `--url` 与 `--site` 互斥。
+- Go API 使用 `protocol_version` 显式分派；缺失版本按旧 v1 兼容入口处理。
+- v2 请求携带 `site`、`profile`、`keyword` 等 v1 专属字段返回冲突错误。
+
+### 13.2 运行时模型
+
+- Redis v2 envelope 新增 `SearchRequested`，字段语义在 Go/Python 完全一致。
+- 新增可序列化 `SearchPlan` 和 `SearchHit` 模型。
+- `plan_id` 由稳定 canonical JSON 的 SHA-256 确定性生成，运行时状态与时间字段不参与计算。
+- Go 与 Python 共用 `workspace/crawler/tests/fixtures/redis_protocol_v2.json` 作为 canonical fixture。
+
+### 13.3 范围边界
+
+- TASK-015 只建立输入契约、协议模型和 SearchPlan/SearchHit。
+- 不实现 Site Analyzer、表单发现、选择器推断、SearchPlan 缓存或正式 Worker v2 执行。
+- TASK-016（网站分析与搜索入口发现）未实施。
+- TASK-017（运行时 SearchPlan 生成与正式 Worker 接入）未实施。
+
+### 13.4 TASK-015 契约规则摘要
+
+- 空集合统一为 `{}`/`[]`，协议 JSON 不输出 `null`。
+- `level` 默认 0、`max_pages` 默认 1；缺失使用默认值，显式 `null` 拒绝。
+- `target_url` 拒绝前后空白、非法端口、缺失 host 和非 http/https scheme。
+- v1/v2 使用显式协议版本分派，未知字段和跨版本字段返回明确错误。
+- 无版本请求只有合法旧 v1 `site` + 字符串 `keywords` 才固定映射 v1；带 `target_url` 或数组 `keywords` 必须显式声明 v2。
+- `plan_id` 使用 SHA-256 canonical JSON；U+2028/U+2029 转义为 `\u2028`/`\u2029`，`<>&` 不转义。
+- TASK-016、TASK-017 仍未实施；正式 Worker v2 执行未实现。
+
+### 13.5 CLI 与 API 输入保护
+
+- CLI 的 `prepareCLIInput` 在任何 Redis 客户端创建、Ping、Worker 启动和消息推送之前完成全部输入校验。
+- API v1 同时出现 `site` 与 `profile` 时返回 400，基于原始 JSON key 判断，null/空值/错误类型不能绕过。
+- `keywords` 必须是 JSON 数组；v1 `site/keyword` 必须是非空字符串。
+- SearchPlan/SearchHit 整数字段显式 `null` 拒绝；畸形 IPv6 统一返回 `INVALID_TARGET_URL`。

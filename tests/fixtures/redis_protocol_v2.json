@@ -1,0 +1,502 @@
+{
+  "_envelope": {
+    "protocol_version": "2.0",
+    "task_id": "task-015",
+    "message_id": "msg-015",
+    "timestamp": "2026-07-31T00:00:00Z"
+  },
+  "search_requested": {
+    "protocol_version": "2.0",
+    "task_id": "task-015",
+    "message_id": "msg-015",
+    "timestamp": "2026-07-31T00:00:00Z",
+    "type": "search_requested",
+    "target_url": "https://example.gov.cn/search",
+    "keywords": [
+      " 低空经济 ",
+      "无人机",
+      "低空经济",
+      "   "
+    ],
+    "level": 1,
+    "max_pages": 5
+  },
+  "search_requested_normalized": {
+    "protocol_version": "2.0",
+    "task_id": "task-015",
+    "message_id": "msg-015",
+    "timestamp": "2026-07-31T00:00:00Z",
+    "type": "search_requested",
+    "target_url": "https://example.gov.cn/search",
+    "keywords": [
+      "低空经济",
+      "无人机"
+    ],
+    "level": 1,
+    "max_pages": 5
+  },
+  "search_plan": {
+    "plan_id": "252cfb7916c6bb897589f90bd503381909172c6f6c142bb398c665f89522e28f",
+    "protocol_version": "2.0",
+    "status": "draft",
+    "strategy": "html_form",
+    "endpoint": "https://example.gov.cn/search",
+    "http_method": "GET",
+    "query_params": {
+      "q": "{keyword}"
+    },
+    "request_body_template": "",
+    "pagination": {
+      "max_pages": 5,
+      "page_param": "page",
+      "page_size_param": "size",
+      "page_size": 10
+    },
+    "selectors": {
+      "result_item": "div.result",
+      "title": "h3 a",
+      "url": "h3 a",
+      "snippet": "p.summary",
+      "body": "div.article-body"
+    },
+    "scope": {
+      "domain": "example.gov.cn",
+      "allowed_path_prefixes": [
+        "/search",
+        "/news"
+      ],
+      "max_depth": 3
+    },
+    "discovery": {
+      "evidence": [
+        "search form found"
+      ],
+      "confidence": 80,
+      "source": "html_form_detection"
+    },
+    "created_from": "task-015",
+    "created_at": "2026-07-31T00:00:00Z",
+    "expires_at": "",
+    "invalid_reason": ""
+  },
+  "search_plan_id": "252cfb7916c6bb897589f90bd503381909172c6f6c142bb398c665f89522e28f",
+  "search_hit": {
+    "hit_id": "hit-001",
+    "plan_id": "252cfb7916c6bb897589f90bd503381909172c6f6c142bb398c665f89522e28f",
+    "url": "https://example.gov.cn/news/1.html",
+    "title": "低空经济政策",
+    "snippet": "北京市发布低空经济管理新政策",
+    "published_at": "2026-07-30",
+    "score": 85,
+    "matched_keywords": [
+      "低空经济"
+    ],
+    "source": "example.gov.cn",
+    "discovered_at": "2026-07-31T00:01:00Z"
+  },
+  "search_requested_minimal": {
+    "protocol_version": "2.0",
+    "task_id": "task-015-min",
+    "message_id": "msg-015-min",
+    "timestamp": "2026-07-31T00:00:00Z",
+    "type": "search_requested",
+    "target_url": "https://example.gov.cn/search",
+    "keywords": [
+      "低空经济"
+    ]
+  },
+  "unicode_plan": {
+    "plan_id": "unicode-plan-id",
+    "protocol_version": "2.0",
+    "status": "draft",
+    "strategy": "html_form",
+    "endpoint": "https://example.gov.cn/search",
+    "http_method": "GET",
+    "query_params": {
+      "q": "低空经济 <>& "
+    },
+    "request_body_template": "",
+    "pagination": {
+      "max_pages": 3,
+      "page_param": "page",
+      "page_size_param": "size",
+      "page_size": 20
+    },
+    "selectors": {
+      "result_item": "div.result",
+      "title": "标题 A&B ",
+      "url": "h3 a",
+      "snippet": "摘要<&>",
+      "body": "article"
+    },
+    "scope": {
+      "domain": "example.gov.cn",
+      "allowed_path_prefixes": [
+        "/search",
+        "/news"
+      ],
+      "max_depth": 2
+    },
+    "discovery": {
+      "evidence": [
+        "search form <found> & ok"
+      ],
+      "confidence": 90,
+      "source": "fixture"
+    },
+    "created_from": "unicode-fixture",
+    "created_at": "2026-07-31T00:00:00Z",
+    "expires_at": "",
+    "invalid_reason": ""
+  },
+  "unicode_plan_json": "{\"created_from\":\"unicode-fixture\",\"discovery\":{\"confidence\":90,\"evidence\":[\"search form <found> & ok\"],\"source\":\"fixture\"},\"endpoint\":\"https://example.gov.cn/search\",\"http_method\":\"GET\",\"pagination\":{\"max_pages\":3,\"page_param\":\"page\",\"page_size\":20,\"page_size_param\":\"size\"},\"protocol_version\":\"2.0\",\"query_params\":{\"q\":\"低空经济\\u2028<>&\\u2029\"},\"request_body_template\":\"\",\"scope\":{\"allowed_path_prefixes\":[\"/search\",\"/news\"],\"domain\":\"example.gov.cn\",\"max_depth\":2},\"selectors\":{\"body\":\"article\",\"result_item\":\"div.result\",\"snippet\":\"摘要<&>\",\"title\":\"标题\\u2028A&B\\u2029\",\"url\":\"h3 a\"},\"strategy\":\"html_form\"}",
+  "unicode_plan_id": "55c3e6671e99118157f6b8f110ae7d4ad84bbe44e8db54922f3e39481d043c16",
+  "empty_collections_plan": {
+    "plan_id": "empty-plan-id",
+    "protocol_version": "2.0",
+    "status": "draft",
+    "strategy": "html_form",
+    "endpoint": "https://example.gov.cn/search",
+    "http_method": "GET",
+    "query_params": null,
+    "request_body_template": "",
+    "pagination": {
+      "max_pages": 1,
+      "page_param": "",
+      "page_size_param": "",
+      "page_size": 10
+    },
+    "selectors": {
+      "result_item": "",
+      "title": "",
+      "url": "",
+      "snippet": "",
+      "body": ""
+    },
+    "scope": {
+      "domain": "example.gov.cn",
+      "allowed_path_prefixes": null,
+      "max_depth": 0
+    },
+    "discovery": {
+      "evidence": null,
+      "confidence": 50,
+      "source": ""
+    },
+    "created_from": "",
+    "created_at": "",
+    "expires_at": "",
+    "invalid_reason": ""
+  },
+  "empty_collections_plan_normalized": {
+    "plan_id": "empty-plan-id",
+    "protocol_version": "2.0",
+    "status": "draft",
+    "strategy": "html_form",
+    "endpoint": "https://example.gov.cn/search",
+    "http_method": "GET",
+    "query_params": {},
+    "request_body_template": "",
+    "pagination": {
+      "max_pages": 1,
+      "page_param": "",
+      "page_size_param": "",
+      "page_size": 10
+    },
+    "selectors": {
+      "result_item": "",
+      "title": "",
+      "url": "",
+      "snippet": "",
+      "body": ""
+    },
+    "scope": {
+      "domain": "example.gov.cn",
+      "allowed_path_prefixes": [],
+      "max_depth": 0
+    },
+    "discovery": {
+      "evidence": [],
+      "confidence": 50,
+      "source": ""
+    },
+    "created_from": "",
+    "created_at": "",
+    "expires_at": "",
+    "invalid_reason": ""
+  },
+  "empty_collections_hit": {
+    "hit_id": "hit-empty",
+    "plan_id": "empty-plan-id",
+    "url": "https://example.gov.cn/news/empty.html",
+    "title": "",
+    "snippet": "",
+    "published_at": "",
+    "score": 0,
+    "matched_keywords": null,
+    "source": "",
+    "discovered_at": ""
+  },
+  "empty_collections_hit_normalized": {
+    "hit_id": "hit-empty",
+    "plan_id": "empty-plan-id",
+    "url": "https://example.gov.cn/news/empty.html",
+    "title": "",
+    "snippet": "",
+    "published_at": "",
+    "score": 0,
+    "matched_keywords": [],
+    "source": "",
+    "discovered_at": ""
+  },
+  "search_plan_null_int": {
+    "plan_id": "null-int-plan",
+    "protocol_version": "2.0",
+    "status": "draft",
+    "strategy": "html_form",
+    "endpoint": "https://example.gov.cn/search",
+    "http_method": "GET",
+    "query_params": {
+      "q": "{keyword}"
+    },
+    "request_body_template": "",
+    "pagination": {
+      "max_pages": 5,
+      "page_param": "page",
+      "page_size_param": "size",
+      "page_size": 10
+    },
+    "selectors": {
+      "result_item": "div.result",
+      "title": "h3 a",
+      "url": "h3 a",
+      "snippet": "p.summary",
+      "body": "div.article-body"
+    },
+    "scope": {
+      "domain": "example.gov.cn",
+      "allowed_path_prefixes": [
+        "/search",
+        "/news"
+      ],
+      "max_depth": 3
+    },
+    "discovery": {
+      "evidence": [
+        "search form found"
+      ],
+      "confidence": null,
+      "source": "html_form_detection"
+    },
+    "created_from": "task-015",
+    "created_at": "2026-07-31T00:00:00Z",
+    "expires_at": "",
+    "invalid_reason": ""
+  },
+  "search_plan_null_pagination": {
+    "plan_id": "null-pagination-plan",
+    "protocol_version": "2.0",
+    "status": "draft",
+    "strategy": "html_form",
+    "endpoint": "https://example.gov.cn/search",
+    "http_method": "GET",
+    "query_params": {
+      "q": "{keyword}"
+    },
+    "request_body_template": "",
+    "pagination": {
+      "max_pages": null,
+      "page_param": "page",
+      "page_size_param": "size",
+      "page_size": 10
+    },
+    "selectors": {
+      "result_item": "div.result",
+      "title": "h3 a",
+      "url": "h3 a",
+      "snippet": "p.summary",
+      "body": "div.article-body"
+    },
+    "scope": {
+      "domain": "example.gov.cn",
+      "allowed_path_prefixes": [
+        "/search",
+        "/news"
+      ],
+      "max_depth": 3
+    },
+    "discovery": {
+      "evidence": [
+        "search form found"
+      ],
+      "confidence": 80,
+      "source": "html_form_detection"
+    },
+    "created_from": "task-015",
+    "created_at": "2026-07-31T00:00:00Z",
+    "expires_at": "",
+    "invalid_reason": ""
+  },
+  "search_hit_null_score": {
+    "hit_id": "hit-null-score",
+    "plan_id": "252cfb7916c6bb897589f90bd503381909172c6f6c142bb398c665f89522e28f",
+    "url": "https://example.gov.cn/news/1.html",
+    "title": "低空经济政策",
+    "snippet": "北京市发布低空经济管理新政策",
+    "published_at": "2026-07-30",
+    "score": null,
+    "matched_keywords": [
+      "低空经济"
+    ],
+    "source": "example.gov.cn",
+    "discovered_at": "2026-07-31T00:01:00Z"
+  },
+  "invalid_v1_cases": [
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": null,
+      "keyword": "k"
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": "",
+      "keyword": "k"
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": "   ",
+      "keyword": "k"
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": 1,
+      "keyword": "k"
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": "s",
+      "keyword": null
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": "s",
+      "keyword": ""
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": "s",
+      "keyword": "   "
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": "s",
+      "keyword": []
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": {},
+      "keyword": "k"
+    },
+    {
+      "protocol_version": "1.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search",
+      "level": 1,
+      "max_pages": 1,
+      "site": "s",
+      "keyword": {}
+    }
+  ],
+  "invalid_keywords_cases": [
+    {
+      "protocol_version": "2.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search_requested",
+      "target_url": "https://x.test",
+      "keywords": [
+        "k",
+        null
+      ]
+    },
+    {
+      "protocol_version": "2.0",
+      "task_id": "t",
+      "message_id": "m",
+      "timestamp": "now",
+      "type": "search_requested",
+      "target_url": "https://x.test",
+      "keywords": [
+        null
+      ]
+    }
+  ],
+  "valid_keywords_null_string": {
+    "protocol_version": "2.0",
+    "task_id": "t",
+    "message_id": "m",
+    "timestamp": "now",
+    "type": "search_requested",
+    "target_url": "https://x.test",
+    "keywords": [
+      "null"
+    ]
+  }
+}

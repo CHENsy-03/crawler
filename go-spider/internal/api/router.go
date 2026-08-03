@@ -13,9 +13,14 @@ type articleQuerier interface {
 	QueryArticles(keyword string, limit int) ([]store.Article, error)
 }
 
+type searchPusher interface {
+	PushSearch(taskID, site, keyword string, level, maxPages int) error
+	PushSearchRequested(taskID, targetURL string, keywords []string, level, maxPages int) error
+}
+
 type Server struct {
 	router  *gin.Engine
-	redis   *queue.RedisQueue
+	redis   searchPusher
 	manager *worker.WorkerManager
 	store   *TaskStore
 	db      articleQuerier

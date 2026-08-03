@@ -918,11 +918,11 @@ completed
 ## TASK-015：建立 URL + 关键词 v2 任务契约与运行时 SearchPlan 模型
 
 ### 基本信息
-- 状态：pending
+- 状态：completed
 - 创建日期：2026-07-31
 - 类型：架构与协议
 - 优先级：P0
-- 本任务只定义后续代码实施范围，不在本分支实施业务代码。
+- 代码实施已在隔离 worktree 分支 `feat/task-015-v2-contract` 完成并验证。
 
 ### 背景证据
 1. Python CLI、Go CLI、Go API 当前均以预配置 `site/site_key` 为核心。
@@ -1015,6 +1015,20 @@ workspace/crawler/docs/TASK.md
 - 必须迁移数据库或重命名现有 Redis 队列。
 - 实际修改范围明显超出 TASK-015。
 - 用户预存文件发生变化。
+
+### 实施结果
+- 新增共用 canonical fixture：`workspace/crawler/tests/fixtures/redis_protocol_v2.json`。
+- Python 全量测试：105 passed, 7 skipped。
+- Go `test ./...`：exit 0。
+- Go `vet ./...`：exit 0。
+- Go `build ./...`：exit 0。
+- `git diff --check`：exit 0。
+- v2 envelope、`SearchRequested`、`SearchPlan`、`SearchHit` 已在 Go/Python 双端实现并保持一致。
+- 空集合统一输出 `{}`/`[]`，不输出 `null`。
+- `level`/`max_pages` 可选，默认分别为 0/1；缺失版本、未知字段、跨版本字段均返回明确错误。
+- `target_url` 拒绝前后空白、非法端口、缺失 host 和畸形 IPv6 authority。
+- `keywords` 必须是 JSON 数组且每个元素必须是字符串，JSON `null` 元素一律拒绝；v1 `site/keyword` 必须为非空字符串；整数字段显式 `null` 拒绝；v1 `site/profile` 互斥；CLI 输入错误先于任何 Redis 资源创建；畸形 IPv6 统一返回 `INVALID_TARGET_URL`。
+- `plan_id` 使用稳定 canonical JSON（键排序、紧凑分隔符、UTF-8）的 SHA-256 十六进制摘要；U+2028/U+2029 转义为 `\u2028`/`\u2029`，`<>&` 不转义；运行时状态与时间字段不参与计算。
 
 ### 任务关系
 - TASK-014 提供配置驱动的 HTML 搜索能力。

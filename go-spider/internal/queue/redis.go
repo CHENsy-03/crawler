@@ -24,13 +24,13 @@ type HTMLPayload struct {
 }
 
 type RedisQueue struct {
-	client    *redis.Client
+	client      *redis.Client
 	searchQueue string
-	eventQueue string
-	urlQueue  string
-	htmlQueue string
-	errQueue  string
-	resQueue  string
+	eventQueue  string
+	urlQueue    string
+	htmlQueue   string
+	errQueue    string
+	resQueue    string
 }
 
 func NewRedisQueue(addr string) *RedisQueue {
@@ -41,13 +41,13 @@ func NewRedisQueue(addr string) *RedisQueue {
 		WriteTimeout: 3 * time.Second,
 	})
 	return &RedisQueue{
-		client:    client,
-		eventQueue: "crawler:event",
+		client:      client,
+		eventQueue:  "crawler:event",
 		searchQueue: "crawler:search",
-		urlQueue:  "crawler:url",
-		htmlQueue: "crawler:html",
-		errQueue:  "crawler:error",
-		resQueue:  "crawler:result",
+		urlQueue:    "crawler:url",
+		htmlQueue:   "crawler:html",
+		errQueue:    "crawler:error",
+		resQueue:    "crawler:result",
 	}
 }
 
@@ -141,6 +141,36 @@ func (rq *RedisQueue) PushSearch(taskID, site, keyword string, level, maxPages i
 	return rq.client.LPush(ctx, rq.searchQueue, data).Err()
 }
 
+func (rq *RedisQueue) PushSearchRequested(taskID, targetURL string, keywords []string, level, maxPages int) error {
+	normalized, err := protocol.NormalizeKeywords(keywords)
+	if err != nil {
+		return err
+	}
+	msg := protocol.SearchRequestedMessage{
+		Envelope: protocol.Envelope{
+			ProtocolVersion: protocol.VersionV2,
+			TaskID:          taskID,
+			MessageID:       protocol.NewMessageID(),
+			Timestamp:       time.Now().Format(time.RFC3339),
+		},
+		Type:      protocol.TypeSearchRequested,
+		TargetURL: targetURL,
+		Keywords:  normalized,
+		Level:     level,
+		MaxPages:  maxPages,
+	}
+	if err := msg.Validate(); err != nil {
+		return err
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return rq.client.LPush(ctx, rq.searchQueue, data).Err()
+}
+
 func (rq *RedisQueue) PopSearch() (*protocol.SearchMessage, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -154,6 +184,21 @@ func (rq *RedisQueue) PopSearch() (*protocol.SearchMessage, error) {
 	}
 	return &msg, nil
 }
+
+func (rq *RedisQueue) PopSearchRequested() (*protocol.SearchRequestedMessage, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	result, err := rq.client.BRPop(ctx, 3*time.Second, rq.searchQueue).Result()
+	if err != nil {
+		return nil, err
+	}
+	var msg protocol.SearchRequestedMessage
+	if err := json.Unmarshal([]byte(result[1]), &msg); err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
 func (rq *RedisQueue) PushResultMessage(msg *protocol.ResultMessage) error {
 	data, err := json.Marshal(msg)
 	if err != nil {

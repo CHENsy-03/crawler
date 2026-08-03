@@ -1,12 +1,16 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"crawler-platform/internal/protocol"
 	"crawler-platform/internal/store"
 	"crawler-platform/internal/worker"
 
@@ -39,12 +43,14 @@ func isDBReady(db articleQuerier) bool {
 }
 
 type Task struct {
-	ID        string       `json:"id"`
-	Site      string       `json:"site"`
-	Keywords  string       `json:"keywords"`
-	Status    string       `json:"status"`
-	CreatedAt time.Time    `json:"created_at"`
-	Stats     worker.Stats `json:"stats"`
+	ID              string       `json:"id"`
+	Site            string       `json:"site"`
+	Keywords        string       `json:"keywords"`
+	ProtocolVersion string       `json:"protocol_version"`
+	TargetURL       string       `json:"target_url"`
+	Status          string       `json:"status"`
+	CreatedAt       time.Time    `json:"created_at"`
+	Stats           worker.Stats `json:"stats"`
 }
 
 type TaskStore struct {
@@ -57,12 +63,22 @@ func NewTaskStore() *TaskStore {
 }
 
 func (ts *TaskStore) Create(site, keywords string) *Task {
+	return ts.create("1.0", site, "", keywords)
+}
+
+func (ts *TaskStore) CreateV2(targetURL string, keywords []string) *Task {
+	return ts.create("2.0", "", targetURL, strings.Join(keywords, ","))
+}
+
+func (ts *TaskStore) create(protocolVersion, site, targetURL, keywords string) *Task {
 	task := &Task{
-		ID:        uuid.New().String()[:8],
-		Site:      site,
-		Keywords:  keywords,
-		Status:    "created",
-		CreatedAt: time.Now(),
+		ID:              uuid.New().String()[:8],
+		Site:            site,
+		Keywords:        keywords,
+		ProtocolVersion: protocolVersion,
+		TargetURL:       targetURL,
+		Status:          "created",
+		CreatedAt:       time.Now(),
 	}
 	ts.mu.Lock()
 	ts.tasks[task.ID] = task
@@ -85,11 +101,36 @@ func (ts *TaskStore) Update(id string, status string, stats worker.Stats) {
 	}
 }
 
-type CreateTaskReq struct {
-	Site     string `json:"site" binding:"required"`
-	Keywords string `json:"keywords" binding:"required"`
+type CreateTaskV1Req struct {
+	Site     string `json:"site"`
+	Profile  string `json:"profile"`
+	Keywords string `json:"keywords"`
 	MaxPages int    `json:"max_pages"`
 	Workers  int    `json:"workers"`
+}
+
+type CreateTaskV2Req struct {
+	ProtocolVersion string   `json:"protocol_version"`
+	TargetURL       string   `json:"target_url"`
+	Keywords        []string `json:"keywords"`
+	MaxPages        int      `json:"max_pages"`
+	Workers         int      `json:"workers"`
+}
+
+type createTaskHeader struct {
+	ProtocolVersion string `json:"protocol_version"`
+	Site            string `json:"site"`
+	TargetURL       string `json:"target_url"`
+}
+
+func normalizeMaxPages(v int) (int, error) {
+	if v < 0 {
+		return 0, fmt.Errorf("max_pages must be >= 0")
+	}
+	if v == 0 {
+		return 1, nil
+	}
+	return v, nil
 }
 
 func (s *Server) health(c *gin.Context) {
@@ -100,47 +141,173 @@ func (s *Server) ready(c *gin.Context) {
 	c.JSON(200, gin.H{"status": "ready"})
 }
 
+func jsonFieldIsArray(raw json.RawMessage) bool {
+	trimmed := bytes.TrimSpace(raw)
+	return len(trimmed) > 0 && trimmed[0] == '['
+}
+
 func (s *Server) createTask(c *gin.Context) {
-	var req CreateTaskReq
-	if err := c.ShouldBindJSON(&req); err != nil {
+	raw, err := c.GetRawData()
+	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if req.Workers == 0 {
-		req.Workers = 4
-	}
-	if req.MaxPages < 0 {
-		c.JSON(400, gin.H{"error": "max_pages must be >= 0"})
+	var header createTaskHeader
+	if err := json.Unmarshal(raw, &header); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if req.MaxPages == 0 {
-		req.MaxPages = 1
+	var rawFields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &rawFields); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
 	}
-
-	task := s.store.Create(req.Site, req.Keywords)
-
-	go func() {
-		if err := s.redis.PushSearch(task.ID, req.Site, req.Keywords, 1, req.MaxPages); err != nil {
-			log.Printf("[task:%s] PushSearch error: %v", task.ID, err)
-			s.store.Update(task.ID, "failed", worker.Stats{})
+	allowedFields := map[string]bool{
+		"protocol_version": true,
+		"site":             true,
+		"profile":          true,
+		"keywords":         true,
+		"keyword":          true,
+		"target_url":       true,
+		"max_pages":        true,
+		"workers":          true,
+	}
+	for field := range rawFields {
+		if !allowedFields[field] {
+			c.JSON(400, gin.H{"error": fmt.Sprintf("unknown field %q", field)})
 			return
 		}
-		log.Printf("[task:%s] pushed search: site=%s keyword=%s max_pages=%d", task.ID, req.Site, req.Keywords, req.MaxPages)
-		s.store.Update(task.ID, "searching", worker.Stats{})
+	}
+	if header.ProtocolVersion != "" && header.ProtocolVersion != "1.0" && header.ProtocolVersion != "2.0" {
+		c.JSON(400, gin.H{"error": fmt.Sprintf("unsupported protocol_version %q", header.ProtocolVersion)})
+		return
+	}
 
-		for {
-			stats := s.manager.Stats()
-			s.store.Update(task.ID, "running", stats)
-			if stats.Completed+stats.Failed >= stats.Submitted && stats.QueueLen == 0 {
-				s.store.Update(task.ID, "completed", stats)
-				log.Printf("[task:%s] completed: %d ok, %d failed", task.ID, stats.Completed, stats.Failed)
+	_, hasTargetURL := rawFields["target_url"]
+	_, hasKeywords := rawFields["keywords"]
+	_, hasSite := rawFields["site"]
+	_, hasProfile := rawFields["profile"]
+	_, hasKeyword := rawFields["keyword"]
+
+	if hasSite && hasProfile {
+		c.JSON(400, gin.H{"error": "site and profile are mutually exclusive"})
+		return
+	}
+
+	switch header.ProtocolVersion {
+	case "":
+		if hasTargetURL || (hasKeywords && jsonFieldIsArray(rawFields["keywords"])) {
+			c.JSON(400, gin.H{"error": "protocol_version required for v2 target_url/keywords requests"})
+			return
+		}
+	case "1.0":
+		if hasTargetURL || (hasKeywords && jsonFieldIsArray(rawFields["keywords"])) {
+			c.JSON(400, gin.H{"error": "target_url and keywords cannot be combined with v1 site/profile requests"})
+			return
+		}
+	case "2.0":
+		if hasSite || hasProfile || hasKeyword {
+			c.JSON(400, gin.H{"error": "site, profile, and keyword cannot be combined with v2 target_url requests"})
+			return
+		}
+	}
+
+	switch header.ProtocolVersion {
+	case "2.0":
+		var req CreateTaskV2Req
+		if err := json.Unmarshal(raw, &req); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		if req.TargetURL == "" {
+			c.JSON(400, gin.H{"error": "target_url is required for v2"})
+			return
+		}
+		if err := protocol.ValidateTargetURL(req.TargetURL); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		normalized, err := protocol.NormalizeKeywords(req.Keywords)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		maxPages, err := normalizeMaxPages(req.MaxPages)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		task := s.store.CreateV2(req.TargetURL, normalized)
+
+		go func() {
+			if err := s.redis.PushSearchRequested(task.ID, req.TargetURL, normalized, 1, maxPages); err != nil {
+				log.Printf("[task:%s] PushSearchRequested error: %v", task.ID, err)
+				s.store.Update(task.ID, "failed", worker.Stats{})
 				return
 			}
-			time.Sleep(3 * time.Second)
-		}
-	}()
+			log.Printf("[task:%s] pushed search_requested: target_url=%s keywords=%v max_pages=%d", task.ID, req.TargetURL, normalized, maxPages)
+			s.store.Update(task.ID, "searching", worker.Stats{})
 
-	c.JSON(202, gin.H{"task_id": task.ID, "status": "created"})
+			for {
+				stats := s.manager.Stats()
+				s.store.Update(task.ID, "running", stats)
+				if stats.Completed+stats.Failed >= stats.Submitted && stats.QueueLen == 0 {
+					s.store.Update(task.ID, "completed", stats)
+					log.Printf("[task:%s] completed: %d ok, %d failed", task.ID, stats.Completed, stats.Failed)
+					return
+				}
+				time.Sleep(3 * time.Second)
+			}
+		}()
+
+		c.JSON(202, gin.H{"task_id": task.ID, "status": "created", "protocol_version": "2.0"})
+
+	case "", "1.0":
+		var req CreateTaskV1Req
+		if err := json.Unmarshal(raw, &req); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		if req.Site == "" && req.Profile != "" {
+			req.Site = req.Profile
+		}
+		if req.Site == "" || req.Keywords == "" {
+			c.JSON(400, gin.H{"error": "site/profile and keywords are required for v1"})
+			return
+		}
+		maxPages, err := normalizeMaxPages(req.MaxPages)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		task := s.store.Create(req.Site, req.Keywords)
+
+		go func() {
+			if err := s.redis.PushSearch(task.ID, req.Site, req.Keywords, 1, maxPages); err != nil {
+				log.Printf("[task:%s] PushSearch error: %v", task.ID, err)
+				s.store.Update(task.ID, "failed", worker.Stats{})
+				return
+			}
+			log.Printf("[task:%s] pushed search: site=%s keyword=%s max_pages=%d", task.ID, req.Site, req.Keywords, maxPages)
+			s.store.Update(task.ID, "searching", worker.Stats{})
+
+			for {
+				stats := s.manager.Stats()
+				s.store.Update(task.ID, "running", stats)
+				if stats.Completed+stats.Failed >= stats.Submitted && stats.QueueLen == 0 {
+					s.store.Update(task.ID, "completed", stats)
+					log.Printf("[task:%s] completed: %d ok, %d failed", task.ID, stats.Completed, stats.Failed)
+					return
+				}
+				time.Sleep(3 * time.Second)
+			}
+		}()
+
+		c.JSON(202, gin.H{"task_id": task.ID, "status": "created", "protocol_version": "1.0"})
+
+	default:
+		c.JSON(400, gin.H{"error": "unsupported protocol_version"})
+	}
 }
 
 func (s *Server) taskStatus(c *gin.Context) {

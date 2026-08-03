@@ -1,5 +1,13 @@
 from .messages import (
     PROTOCOL_VERSION,
+    PROTOCOL_VERSION_V2,
+    MESSAGE_TYPE_SEARCH,
+    MESSAGE_TYPE_SEARCH_REQUESTED,
+    ProtocolError,
+    SearchRequestedMessage,
+    decode_search_request,
+    normalize_keywords,
+    validate_target_url,
     new_task_id,
     new_message_id,
     ErrorMessage,
@@ -12,6 +20,14 @@ from .messages import (
 
 __all__ = [
     "PROTOCOL_VERSION",
+    "PROTOCOL_VERSION_V2",
+    "MESSAGE_TYPE_SEARCH",
+    "MESSAGE_TYPE_SEARCH_REQUESTED",
+    "ProtocolError",
+    "SearchRequestedMessage",
+    "decode_search_request",
+    "normalize_keywords",
+    "validate_target_url",
     "new_task_id",
     "new_message_id",
     "SearchDoneMessage",
