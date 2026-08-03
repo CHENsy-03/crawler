@@ -1036,3 +1036,734 @@ workspace/crawler/docs/TASK.md
 - TASK-016 才实现网站分析和搜索入口发现。
 - TASK-017 才实现运行时 SearchPlan 生成、校验、缓存及正式 Worker 接入。
 - downloader 和单站点问题不得取代通用化主线。
+
+
+## TASK-016：实现网站分析器与搜索候选发现
+
+### 16.1 基本信息
+
+| 项目 | 内容 |
+|---|---|
+| 任务编号 | TASK-016 |
+| 任务名称 | 实现网站分析器与搜索候选发现 |
+| 任务类型 | feature / security |
+| 优先级 | P0 |
+| 当前状态 | pending |
+| 定义日期 | 2026-08-02 |
+| 前置任务 | TASK-015（已通过 PR #11 合入 main） |
+| 后续任务 | TASK-017（SearchPlan 生成、验证、缓存及 Worker v2 接入） |
+| 唯一工作目录 | E:\AI_Projects\Codex\workspace\crawler |
+| 执行工具 | Codex / PowerShell |
+
+本任务必须在上述唯一项目目录中执行，不得创建新 worktree、项目副本或其他工作区。
+
+本节只完成 TASK-016 的任务定义。状态保持 pending；在定义通过独立审查前，不得实施源码、暂存、提交、推送或创建 PR。
+
+### 16.2 当前基线与事实来源
+
+以下内容是定义时的参考基线，实施前必须在唯一项目目录重新核验，不得把历史报告替代真实 Git 和测试输出：
+
+- TASK-015 已合入 main，参考 HEAD 为 d128a592e56d533e819b4dec24f1311707c3ebec。
+- TASK-015 已建立 Go/Python v2 输入契约、SearchRequested、SearchPlan、SearchHit 和确定性 plan_id。
+- TASK-016 尚未实施，也尚未接入正式 Search Worker。
+- 参考 Python 基线为 105 passed、7 skipped。
+- 参考 Go 基线为 go test、go vet、go build 均 exit 0。
+- 当前正式 Search Worker 仍按 v1 site_key → config/site.json → plugin 执行。
+- 当前 downloader 默认自动跟随重定向，尚无逐跳请求前安全校验能力。
+
+实施前必须记录：
+
+- 当前分支和 HEAD；
+- git status --short；
+- 暂存区；
+- 未跟踪文件；
+- Python 和 Go 的真实基线；
+- 与本任务允许文件重叠的用户预存修改。
+
+用户已有删除项、未跟踪 DOCX、全部代码汇总文件和备份文件均不属于 TASK-016，不得删除、恢复、暂存或提交。
+
+### 16.3 真实代码审计结论
+
+定义阶段已根据 TASK-015 后的代码确认：
+
+1. crawler/search/detector.py 中的 SiteDetector 只获取入口页，并对页面字符串和少量 Header 进行 CMS 特征加权；它不分析 form、link、script、meta，不做请求前地址策略，也不生成 SearchCandidate。
+2. crawler/search/planner.py 中的 QueryPlanner 只生成关键词扩展层级，不是 SearchPlanBuilder。
+3. main.py::discover_site 仍是独立旧调试逻辑：直接使用 session.get 探测固定路径、猜测 TRS 配置并打印结果；它绕过正式 Analyzer，也没有完整安全边界。
+4. plugins/html.py、plugins/trs.py 和 plugins/jpaas.py 是搜索执行适配器，不是网站分析器。
+5. plugins/html.py 的 _SEARCH_PATHS 当前未被 search() 用于路径探测；_discover_search_url 只从配置或 base_url 解析 endpoint。
+6. workers/search_worker.py 仍只读取 v1 site、keyword，并通过 site.json 选择插件，不消费 v2 target_url。
+7. crawler/search/search_plan.py 已存在 SearchPlan/SearchHit 模型和校验，但没有 Analyzer 自动生成逻辑。
+8. httpx/fetch.py 使用 requests.Session.get；未显式关闭自动重定向，因此重定向可能在策略检查前已被访问。
+9. 当前 downloader 没有发现阶段统一的最大响应字节、Content-Type、重定向次数和流式中止能力。
+10. 未发现已经实现但未记录的 TASK-016 能力。
+
+如果实施前最新代码与以上任一事实不符，必须先暂停，更新本定义或报告冲突，不得按过期假设编码。
+
+### 16.4 唯一目标和数据流
+
+TASK-016 只实现以下闭环：
+
+~~~text
+target_url
+  → URL 规范化
+  → 最低请求前安全预检
+  → 安全获取入口页
+  → 静态 HTML 分析
+  → SearchCandidate
+  → evidence / diagnostics
+~~~
+
+本任务只回答“入口页上有哪些可能的搜索入口，以及为什么认为它们是候选”。
+
+本任务不回答：
+
+- 候选是否真的能完成搜索；
+- 搜索结果结构是什么；
+- 使用什么选择器或分页规则；
+- 哪个候选足以生成或执行 SearchPlan。
+
+### 16.5 明确非目标
+
+TASK-016 不得实施：
+
+- 候选搜索请求或探测验证；
+- 使用用户关键词提交 GET 或 POST 搜索；
+- 搜索结果选择器推断；
+- 分页推断或第二页验证；
+- 置信度评分和高置信度自动执行；
+- SearchPlan 生成、校验、执行或缓存；
+- Search Worker v2 接入；
+- Redis 消息、队列或协议修改；
+- Go 代码修改；
+- 数据库、迁移、存储或前端修改；
+- HTML/TRS/JPAAS 执行适配器重构；
+- site.json 写入或单站点配置；
+- JavaScript 执行；
+- Playwright、Selenium、Chromium 或浏览器后备；
+- 登录、验证码、付费墙或访问控制绕过；
+- 真实外部网站自动化测试或压力测试；
+- TASK-018、TASK-019、TASK-020、TASK-022 或 TASK-023 的能力。
+
+### 16.6 Python 内部模型
+
+SearchCandidate 与 SiteAnalysisResult 均为 Python 内部模型。
+
+它们不得加入 TASK-015 的 Go/Python 跨语言协议，不得修改 SearchPlan、SearchHit、SearchDiscovery 或相关枚举。
+
+#### 16.6.1 SearchCandidate
+
+SearchCandidate 至少包含：
+
+| 字段 | 要求 |
+|---|---|
+| method | 仅表达静态页面声明的 GET 或 POST；不得因此发起请求 |
+| endpoint | 由 form/action 或静态线索解析出的绝对 http/https URL |
+| keyword_param | 推断出的关键词字段名；不能包含关键词值 |
+| fixed_params | 仅保留公开、非敏感、长度受限的固定参数 |
+| request_encoding | 可选；只描述 form-urlencoded 等静态声明 |
+| source | form、trs_signature、jpaas_signature、internal_link、static_script、meta 或 common_path 等内部来源 |
+| priority | 用于确定性排序的内部优先级 |
+| scope | same_origin 或 requires_scope_validation 等内部范围结论 |
+| evidence | 有界、脱敏、可测试的证据摘要 |
+| status | 只能表达 unverified 或 requires_scope_validation 等未验证状态 |
+
+严格要求：
+
+- 所有返回 Candidate 均未经探测验证。
+- status 不得使用 ready、active、validated、executable 或任何会与 SearchPlan 生命周期混淆的值。
+- POST Candidate 只表示“页面声明了可能的 POST 搜索表单”，不得提交。
+- 跨域 endpoint 不得静默提升为普通同域 Candidate；只能拒绝或标记 requires_scope_validation。
+- Candidate 不得携带完整 HTML、Cookie、Authorization、Session、Token、密码、CSRF 值、签名值或可复用认证材料。
+- Candidate 不得携带用户实际关键词。
+
+Candidate 的稳定去重键至少由 method、规范化 endpoint、keyword_param 和排序后的公开 fixed_params 组成。
+
+#### 16.6.2 SiteAnalysisResult
+
+SiteAnalysisResult 至少包含：
+
+- normalized_url；
+- final_url 或安全停止前最后一个已验证 URL；
+- candidates；
+- diagnostics；
+- 有限 fetch 摘要：状态码、Content-Type、读取字节数、重定向次数；
+- analyzer_version。
+
+SiteAnalysisResult 不得包含：
+
+- 完整页面 HTML；
+- 完整响应 Header；
+- Set-Cookie；
+- Cookie jar；
+- Authorization；
+- 敏感查询值；
+- 表单秘密值；
+- 原始脚本全文。
+
+如果目标 URL 自身包含 token、session、auth、password、signature 等敏感查询字段，必须在请求前按策略拒绝或使用不暴露值的结构化诊断；不得把秘密值复制到结果、日志或 evidence。
+
+#### 16.6.3 诊断结构
+
+每条诊断至少包含：
+
+- code；
+- stage；
+- message；
+- severity；
+- retryable；
+- 有界且脱敏的 details。
+
+网络失败和“成功分析但没有候选”必须是两种不同结果。
+
+### 16.7 URL 规范化
+
+规范化函数必须是无网络、确定性、可单元测试的纯逻辑。
+
+必须：
+
+- 只接受字符串类型的 http/https URL；
+- 不静默 strip；前后空白直接返回 INVALID_TARGET_URL；
+- 拒绝控制字符和 URL 内部非法空白；
+- 拒绝空 host；
+- 拒绝 userinfo，包括 username、password 和 user@host；
+- 拒绝空端口、非法端口、越界端口和畸形 IPv6 authority；
+- 将 scheme 和 hostname 转为小写；
+- 规范化合法 IDN hostname 的 ASCII 表达，失败则拒绝；
+- 移除 http:80 和 https:443 默认端口；
+- 移除 fragment；
+- 保留可能有语义的 path、query、重复 query 键和顺序；
+- 空 path 规范化为 /；
+- 不在本任务中擅自删除跟踪参数或重排 query。
+
+TASK-015 的 validate_target_url 仍保持共享协议的语法校验语义；TASK-016 可以在发现层增加更严格的安全规范化，但不得回写或改变 TASK-015 契约行为。
+
+### 16.8 请求前安全策略
+
+每次真实请求前都必须执行：
+
+1. URL 规范化。
+2. host 解析。
+3. 全部解析地址分类。
+4. 范围和重定向策略校验。
+5. 仅在全部结果安全时发出该次请求。
+
+默认拒绝：
+
+- loopback；
+- private；
+- link-local；
+- multicast；
+- unspecified；
+- reserved；
+- 云 metadata 地址；
+- IPv6 本地地址；
+- IPv4-mapped IPv6 映射出的不安全 IPv4；
+- 任何解析结果中混入上述地址的域名。
+
+安全要求：
+
+- IP literal 必须直接分类，不能绕过 DNS 检查。
+- DNS 返回多个地址时，只要一个地址不安全，整个目标即拒绝。
+- 不得依赖反向 DNS 证明目标安全。
+- resolver、transport 和安全策略必须可显式注入测试。
+- 生产默认策略不得放行 localhost。
+- 不得设置隐藏的 test_mode、环境变量或 hostname 特例绕过生产策略。
+- 被策略拒绝时 downloader 调用次数必须为 0。
+
+TASK-016 只建立最低 SSRF 门禁。DNS rebinding、连接级 IP pinning、完整域名 allowlist/denylist、租户策略和安全可观测性属于 TASK-022；这些残余风险必须在实现报告中明确记录，不得宣称已完成生产级 SSRF 防护。
+
+### 16.9 安全重定向与 downloader 硬门禁
+
+Analyzer 禁止调用当前默认自动重定向的 fetch 行为。
+
+实施时只能采用以下两种路径之一：
+
+1. 向后兼容地增加“单次 GET、不自动跟随重定向、可流式读取”的 downloader 能力，由 Analyzer 自己执行受限重定向循环；或
+2. 如果无法在最小范围内安全实现，立即停止 TASK-016，并先定义独立 downloader 安全前置任务。
+
+不得采用：
+
+- 自动跟随完成后再检查 response.url；
+- Analyzer 直接调用 requests、Session.get 或新建第二套 HTTP 客户端；
+- 在 main.py、detector.py 或插件中旁路统一 downloader；
+- 关闭 TLS 校验；
+- 先请求后校验；
+- 通过捕获异常后返回空 Candidate 隐藏安全失败。
+
+受限重定向循环必须：
+
+- 只处理明确允许的 301、302、303、307、308；
+- 单次请求能力必须把 3xx 和 Location 原样交给 Analyzer，不得在底层把它吞成普通失败；
+- 在读取下一跳 Location 后使用当前 URL 安全解析相对地址；
+- 在下一次请求前重新执行完整规范化、DNS/IP 和范围校验；
+- 检测缺失/非法 Location；
+- 检测循环；
+- 执行集中配置的最大重定向次数；
+- 对 hostname 或 origin 变化执行默认拒绝策略；
+- 最多允许同 host 的 http → https 安全升级，不允许 https → http 降级；
+- 在第二跳指向私网时，保证第二次网络调用尚未发生。
+
+发现阶段的自动重试必须关闭，或明确限制为同一个已经校验的 URL；不得在底层重试过程中改变目标、跟随重定向或隐藏新的请求目的地。
+
+新增 downloader 能力必须是可选、向后兼容的；现有 fetch、post_json、get_json 和插件行为默认保持不变。
+
+### 16.10 入口页获取和资源限制
+
+TASK-016 只对经过安全检查的入口 URL 发起 GET。
+
+所有限制必须集中在可注入、可测试的 DiscoveryLimits 或等价配置模型中，不得散落 Magic Number。
+
+至少包含：
+
+| 限制 | 要求 |
+|---|---|
+| connect/read timeout | 有界，失败返回 FETCH_FAILED |
+| max_redirects | 达到上限后返回 REDIRECT_BLOCKED |
+| max_response_bytes | 流式读取中达到上限立即停止 |
+| allowed_content_types | 默认只允许静态 HTML/XHTML |
+| max_forms | 超限后确定性截断并诊断 |
+| max_inputs_per_form | 防止恶意大表单 |
+| max_candidates | 去重和排序后执行硬上限 |
+| max_script_chars | 限制单个及总静态脚本文本分析量 |
+| max_links_meta | 限制 link、a、meta 线索量 |
+| max_common_paths | 常见路径候选的固定上限 |
+| max_evidence_items / chars | 防止结果和日志膨胀 |
+
+响应大小必须同时处理：
+
+- Content-Length 已超过上限时，在读取正文前停止；
+- 缺少或伪造 Content-Length 时，在流式读取累计达到上限后停止；
+- 压缩响应按实际解压后进入分析器的字节上限控制；
+- 不允许先完整下载到内存再检查大小。
+
+Content-Type 不允许时返回 UNSUPPORTED_CONTENT_TYPE，不得尝试把 PDF、Office、图片或任意二进制内容当作入口 HTML 分析。
+
+### 16.11 静态线索分析
+
+静态分析只处理已经安全获取且大小受限的入口 HTML。
+
+#### 16.11.1 搜索表单
+
+必须分析：
+
+- form action；
+- method，缺失时按 HTML 语义视为 GET；
+- enctype；
+- input、select、textarea 的 name/type；
+- submit 文本；
+- label、placeholder、aria-label；
+- hidden 固定参数。
+
+关键词字段识别应使用集中、可测试的名称和语义规则，不得只硬编码单一 q。
+
+公开 hidden 参数可以保留，例如 siteCode、websiteid、serviceId 等站点标识；敏感名称规则优先于公开规则。
+
+以下字段或等价变体不得进入 Candidate、日志或 evidence：
+
+- csrf；
+- xsrf；
+- token；
+- session；
+- auth；
+- password；
+- passwd；
+- cookie；
+- signature；
+- secret；
+- nonce；
+- captcha；
+- verify_code。
+
+依赖敏感临时值的表单必须拒绝复用并产生 SENSITIVE_FORM_REJECTED。
+
+以下表单不得识别为搜索：
+
+- 登录；
+- 注册；
+- 订阅；
+- 留言；
+- 上传；
+- 支付；
+- 修改资料；
+- 密码重置；
+- 验证码；
+- 具有明显写操作或副作用的表单。
+
+GET 表单可以生成未验证 Candidate。
+
+POST 仅允许对明确的 application/x-www-form-urlencoded 搜索表单生成未验证 Candidate；本任务绝不提交。multipart、文件上传或副作用不明的 POST 表单只产生诊断。
+
+#### 16.11.2 CMS 和静态资源线索
+
+至少支持静态识别：
+
+- TRS 特征；
+- JPAAS 特征；
+- 站内搜索链接；
+- a、script、link、meta 中有限的 search、query、jsearch、so、ss 等线索；
+- 有界的内联脚本文本 URL/参数名线索；
+- 有限常见搜索路径候选。
+
+严格边界：
+
+- 不执行 JavaScript；
+- 不解释任意脚本业务逻辑；
+- 不加载外部 script、CSS、iframe 或其他资源；
+- 不发送 XHR/fetch；
+- 不逐个探测常见路径；
+- CMS 特征只生成 Candidate 和 evidence，不能直接宣布发现成功；
+- base、form action 或链接解析后的跨域 URL必须拒绝或标记待范围验证；
+- 站点地图和栏目页可以作为 evidence，但本任务不抓取它们。
+
+### 16.12 Candidate 排序、去重和诊断优先级
+
+排序必须确定，不能依赖 set、dict 偶然顺序或解析器内部地址。
+
+默认来源优先级：
+
+1. 明确 GET 搜索 form；
+2. GET form + 公开 hidden 固定参数；
+3. 明确 POST form-urlencoded 搜索 form；
+4. TRS/JPAAS 特征；
+5. 站内搜索链接；
+6. 静态 script/link/meta 线索；
+7. 有限 common_path 候选。
+
+同优先级使用 method、规范化 endpoint、keyword_param 和固定参数规范化表示作稳定次序。
+
+去重必须在截断前完成；相同去重键只保留优先级最高且 evidence 合并后仍受上限约束的 Candidate。
+
+失败与空结果的诊断必须确定：
+
+| code | 语义 |
+|---|---|
+| INVALID_TARGET_URL | URL 语法、scheme、authority 或端口不合法 |
+| TARGET_BLOCKED_BY_POLICY | 请求前地址或目标策略拒绝 |
+| FETCH_FAILED | 入口页网络请求失败；不得伪装为空 Candidate |
+| REDIRECT_BLOCKED | 下一跳在请求前被拒绝、Location 非法、循环或超过跳数 |
+| RESPONSE_TOO_LARGE | 入口响应在流式读取中达到上限 |
+| UNSUPPORTED_CONTENT_TYPE | 入口响应不是允许的静态 HTML 类型 |
+| NO_SEARCH_CANDIDATE | 页面成功获取和分析，但没有候选 |
+| LOGIN_OR_CAPTCHA_REQUIRED | 页面或表单要求登录、授权或验证码 |
+| UNSUPPORTED_JS_SEARCH | 搜索入口只能通过 JavaScript 动态获得 |
+| SENSITIVE_FORM_REJECTED | 搜索形态依赖敏感临时值或具有副作用 |
+
+同一页面可以返回多个非致命诊断，但必须有稳定顺序。致命的 URL、安全、重定向、网络、大小和类型错误发生后不得继续静态分析。
+
+### 16.13 预计允许修改范围
+
+实施前必须基于最新代码重新列出精确文件；没有代码证据不得扩大。
+
+预计新增：
+
+~~~text
+workspace/crawler/crawler/site/__init__.py
+workspace/crawler/crawler/site/models.py
+workspace/crawler/crawler/site/normalizer.py
+workspace/crawler/crawler/site/security.py
+workspace/crawler/crawler/site/forms.py
+workspace/crawler/crawler/site/signatures.py
+workspace/crawler/crawler/site/analyzer.py
+workspace/crawler/tests/test_site_normalizer.py
+workspace/crawler/tests/test_site_security.py
+workspace/crawler/tests/test_site_forms.py
+workspace/crawler/tests/test_site_analyzer.py
+workspace/crawler/tests/test_discovery_fetch.py
+workspace/crawler/tests/fixtures/site_discovery/
+~~~
+
+预计最小修改：
+
+~~~text
+workspace/crawler/crawler/search/detector.py
+workspace/crawler/crawler/search/__init__.py
+workspace/crawler/main.py
+workspace/crawler/docs/TASK.md
+~~~
+
+其中：
+
+- detector.py 只能成为新 Analyzer 的兼容薄封装，不得保留第二套发现算法。
+- SiteDetector.analyze 和 auto_configure 的现有调用签名及兼容返回键必须保留；如代码证明确需弃用，必须先单独定义兼容和下线任务。
+- main.py --discover 只能调用同一 Analyzer，并输出脱敏分析结果；不得继续维护固定路径探测和 site.json 配置生成逻辑。
+- crawler/search/__init__.py 只允许做必要导出，不得修改 TASK-015 模型。
+- docs/TASK.md 只允许在实施完成后填写本任务执行记录和状态。
+
+仅当代码证明安全单次请求无法在现有接口上实现时，条件允许修改：
+
+~~~text
+workspace/crawler/crawler/core/downloader.py
+workspace/crawler/crawler/core/__init__.py
+workspace/crawler/httpx/fetch.py
+workspace/crawler/httpx/__init__.py
+workspace/crawler/tests/test_core.py
+workspace/crawler/tests/test_main_imports.py
+workspace/crawler/docs/SYSTEM_ARCHITECTURE.md
+workspace/crawler/README.md
+~~~
+
+其中代码修改只能增加向后兼容的单次不自动重定向、流式受限 GET 能力，不得改变现有调用方的默认行为。文档只在最新内容尚未描述 Analyzer/Candidate 边界或 --discover 调试行为时同步，不得借机整理无关章节。
+
+### 16.14 禁止修改范围
+
+本任务禁止修改：
+
+~~~text
+workspace/crawler/go-spider/
+workspace/crawler/protocol/messages.py
+workspace/crawler/crawler/search/search_plan.py
+workspace/crawler/workers/search_worker.py
+workspace/crawler/plugins/html.py
+workspace/crawler/plugins/trs.py
+workspace/crawler/plugins/jpaas.py
+workspace/crawler/plugins/__init__.py
+workspace/crawler/config/site.json
+workspace/crawler/config/schema.sql
+workspace/crawler/storage/
+workspace/crawler/frontend/
+workspace/crawler/全部代码.txt
+~~~
+
+也禁止：
+
+- 修改 TASK-001 至 TASK-015 历史正文；
+- 修复现有 TASK.md 控制字符或整理历史结构；
+- 改动 Redis 队列、消息版本或 SearchPlan 枚举；
+- 新增单站点配置；
+- 引入大型依赖；
+- 生成或提交缓存、编译产物、DOCX、聚合源码或备份文件；
+- 修改用户预存文件；
+- 自动暂存、提交、推送或创建 PR。
+
+### 16.15 实施顺序
+
+必须逐步执行：
+
+1. 在唯一项目目录读取全部适用 AGENTS.md、DEVELOPMENT_RULES.md、SYSTEM_ARCHITECTURE.md、REDIS_PROTOCOL.md 和本 TASK。
+2. 核对分支、HEAD、工作区、暂存区、未跟踪文件和用户预存修改。
+3. 重新审计所有相关定义和调用方。
+4. 运行并记录 Python、Go test/vet/build 和 git diff --check 基线。
+5. 列出精确修改文件及理由，确认没有越过禁止范围。
+6. 先增加 URL、安全、重定向和敏感数据失败测试。
+7. 实现内部模型和集中资源限制。
+8. 实现纯 URL 规范化和地址策略。
+9. 实现或获得安全单次 downloader 能力；如果门禁失败，停止。
+10. 实现表单、CMS 和静态线索提取。
+11. 实现 Analyzer 编排、确定性排序、去重和诊断。
+12. 将 SiteDetector 和 main.py --discover 收敛为同一 Analyzer 的薄入口。
+13. 运行专项测试和 Python 全量测试。
+14. 运行 Go test、go vet、go build，证明跨语言契约未回归。
+15. 执行 git diff --check、git status、暂存区和未跟踪文件检查。
+16. 只填写真实执行记录；保持未暂存，等待独立代码审查。
+
+不得同时并行修改多个互相依赖的阶段，以免在安全前置能力尚未通过时继续扩展 Analyzer。
+
+### 16.16 专项测试矩阵
+
+全部自动化测试必须使用 Mock、固定 HTML 或显式注入 resolver/transport；不得访问真实外网。
+
+#### URL 规范化
+
+- scheme/host 大小写；
+- 默认端口；
+- fragment；
+- 空 path；
+- path/query 保留；
+- 重复 query；
+- 前后空白；
+- 非 http/https；
+- userinfo；
+- 空/非法/越界端口；
+- 畸形 IPv6；
+- 控制字符；
+- IDN 成功和失败。
+
+#### 地址策略
+
+- IPv4/IPv6 loopback；
+- private；
+- link-local；
+- multicast；
+- unspecified；
+- reserved；
+- metadata；
+- IPv4-mapped IPv6；
+- 安全单地址；
+- 多地址全部安全；
+- 多地址中任一不安全；
+- IP literal。
+
+关键断言：所有不安全目标在 downloader 调用前失败，调用次数为 0。
+
+#### 重定向
+
+- 同 host http → https；
+- https → http 降级；
+- 安全入口 → 私网；
+- 安全入口 → metadata；
+- 跨 host；
+- 相对 Location；
+- Location 缺失或非法；
+- 重定向循环；
+- 最大跳数。
+
+关键断言：重定向至不安全地址时，在第二次请求前停止。
+
+#### 入口响应
+
+- Content-Length 预先超限；
+- 无 Content-Length 的流式超限；
+- 错误 Content-Type；
+- 空 HTML；
+- 畸形但可容错 HTML；
+- 连接失败、超时和受控 HTTP 错误；
+- 重定向响应能够由 Analyzer 读取而不会被底层自动吞掉。
+
+#### Candidate
+
+- GET form；
+- GET form + 公开 hidden 参数；
+- 相对 action；
+- POST form-urlencoded；
+- multipart/file 表单；
+- TRS 特征；
+- JPAAS 特征；
+- 站内搜索链接；
+- script/link/meta 静态线索；
+- 有限 common_path；
+- 重复 Candidate；
+- 超过候选、form、input、script 和 evidence 上限。
+
+关键断言：
+
+- POST 调用次数为 0；
+- common_path 请求次数为 0；
+- CMS 特征不产生 ready SearchPlan；
+- Candidate 排序和去重在重复运行中完全一致。
+
+#### 边界与敏感数据
+
+- 无搜索入口；
+- 登录页；
+- 验证码页；
+- JS-only 空壳；
+- 订阅、留言、支付、上传和密码表单；
+- csrf/token/session/auth/password/cookie/signature/nonce 字段；
+- 敏感值同时出现在 HTML、Candidate、diagnostics 和日志检查样例中。
+
+关键断言：
+
+- 网络失败不是 NO_SEARCH_CANDIDATE；
+- 敏感字段值不出现在结果、日志或 evidence；
+- 登录/验证码和 JS-only 返回各自稳定诊断；
+- 分析失败不抛出未处理异常。
+
+#### 回归
+
+- TASK-015 SearchPlan round-trip；
+- plan_id 确定性；
+- v1/v2 Redis fixture；
+- 现有 HTML/TRS/JPAAS 插件测试；
+- SiteDetector 兼容入口；
+- main.py --discover 只调用 Analyzer；
+- Python 全量测试；
+- Go test、go vet、go build；
+- git diff --check。
+
+### 16.17 验收标准
+
+只有以下条件全部满足，TASK-016 才能标记 completed：
+
+- target_url 规范化行为确定且测试完整。
+- 不安全目标在任何网络调用前被拒绝。
+- 每个重定向目标都在下一跳请求前重新校验。
+- Analyzer 未使用默认自动重定向路径。
+- 响应大小在流式读取过程中受限。
+- 只分析允许的静态 HTML Content-Type。
+- GET、公开 hidden、POST、TRS、JPAAS、链接、静态脚本和 common_path 候选均有测试。
+- 所有 Candidate 均明确为未经探测验证，不可执行。
+- 未生成 SearchPlan，未修改 TASK-015 枚举或 plan_id。
+- 未提交 POST，未执行 JavaScript，未启动浏览器。
+- 未探测 common_path，未写 site.json。
+- 网络失败、空候选、登录/验证码和 JS-only 语义严格区分。
+- 敏感字段和值未进入 Candidate、SiteAnalysisResult、diagnostics、evidence 或日志。
+- 排序、去重和诊断输出确定。
+- SiteDetector 和 main.py --discover 不再维护独立发现算法。
+- 所有新增测试不访问真实外网。
+- Python 全量测试通过。
+- Go test、go vet、go build 通过。
+- git diff --check 通过。
+- Git 差异只包含经批准的 TASK-016 文件。
+- 暂存区为空，未提交、未推送、未创建 PR。
+- 用户预存修改保持不变。
+
+参考基线只能用于比较；最终报告必须填写真实命令、退出码和通过/失败/跳过数量。
+
+### 16.18 强制停止条件
+
+出现任一情况立即停止，不得扩大范围或用不安全降级继续：
+
+- 无法在请求前可靠关闭自动重定向。
+- 必须先访问 URL 才能完成安全判断。
+- 必须绕过统一 downloader。
+- 必须修改 TASK-015 协议、SearchPlan 或 plan_id。
+- 必须修改 Go、Redis、数据库、Worker 或搜索执行插件。
+- 必须执行 JavaScript、启动浏览器或提交候选表单。
+- 必须写入 site.json 或新增单站点配置。
+- 需要生产级 DNS pinning 才能满足当前实现声明。
+- 现有基线测试失败且原因未查明。
+- 用户预存修改与目标文件重叠，无法安全区分。
+- 实际所需文件明显超出允许范围。
+- 最新代码与任务定义冲突。
+- 发现敏感值可能进入结果或日志但无法在本任务范围内消除。
+
+停止报告必须说明：
+
+- 阻断步骤；
+- 代码证据；
+- 已修改文件；
+- 测试状态；
+- Git 状态；
+- 是否产生额外变化；
+- 建议的最小前置任务。
+
+不得把停止写成 completed。
+
+### 16.19 回滚原则
+
+TASK-016 不涉及数据库迁移、Redis 状态、site.json 或外部持久化，因此回滚应只涉及本任务代码和测试。
+
+回滚要求：
+
+- 新增模块可整体移除；
+- downloader 新能力必须是附加接口，移除后现有默认行为不变；
+- detector.py 和 main.py 的兼容改动必须能独立反向应用；
+- 不使用 git reset --hard、git clean、整仓 restore 或其他可能覆盖用户修改的命令；
+- 只按精确差异反向修改 TASK-016 文件；
+- 回滚后重新运行原有 Python/Go 基线；
+- 不删除用户文件、聚合代码、备份或未跟踪文档。
+
+### 16.20 任务关系
+
+任务边界固定为：
+
+| 任务 | 职责 |
+|---|---|
+| TASK-015 | 共享 target_url/keywords 输入和 SearchPlan/SearchHit 契约 |
+| TASK-016 | 安全获取入口页并静态发现未经验证的 SearchCandidate |
+| TASK-017 | 探测 Candidate、推断选择器/分页、生成和验证 SearchPlan、缓存并接入 Worker v2 |
+| TASK-018 | 统一 Adapter，并覆盖 HTML GET/POST、TRS、JPAAS、通用 JSON 的正式执行 |
+| TASK-022 | 生产级 SSRF、连接级地址绑定、域名策略、安全指标、告警和审计 |
+| TASK-023 | JS-only 浏览器后备可行性评审；未批准前不实施 |
+
+TASK-016 完成不代表“输入任意网站即可自动采集”已经完成。只有 TASK-017 之后才可能形成最小 URL + 关键词搜索闭环，TASK-020 通过后才可宣称完成未知站点 MVP 验收。
+
+### 16.21 定义阶段记录
+
+- 当前状态：pending。
+- 本次只向 docs/TASK.md 追加 TASK-016 定义。
+- 未实施 TASK-016 源码、测试、fixture 或配置。
+- 未实施 TASK-017、TASK-018、TASK-022 或浏览器后备。
+- 未修改 Go、Redis、数据库、Worker、插件或 site.json。
+- 未暂存、未提交、未推送、未创建 PR。
+- 下一步：对本定义进行独立审查；通过后才允许发布定义文档，再单独启动代码实施。
