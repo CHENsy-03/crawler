@@ -83,36 +83,16 @@ def run_self_test():
 
 
 def discover_site(url):
-    import re, json
-    from crawler.core.downloader import get_downloader
-    from urllib.parse import urljoin, urlparse
+    """Debug wrapper around the formal TASK-016 analyzer."""
+    import json
+    from crawler.site.analyzer import SiteAnalyzer
     log = logging.getLogger('discover')
     log.info('-- Site discovery: %s --', url)
-    dl = get_downloader()
-    session = dl.session_for(url)
-    session.headers.update({'User-Agent': 'Mozilla/5.0'})
-    for path in ('/so/s', '/search/s', '/site/s', '/search', '/s'):
-        try:
-            resp = session.get(url.rstrip('/') + path + '?q=test', timeout=10)
-            if resp.status_code == 200 and len(resp.text) > 500:
-                log.info('  Found search page: %s', url.rstrip('/') + path)
-                sc = re.search('siteCode\\s*[=:]\\s*(\\d+)', resp.text)
-                site_code = sc.group(0).split('=')[-1].strip('"').strip("'") if sc else ''
-                search_url = urljoin(url, 'so/ss/query/s')
-                cfg = {'name': 'Auto-' + urlparse(url).netloc,
-                       'domain': urlparse(url).netloc,
-                       'base_url': url,
-                       'search_page_url': url.rstrip('/') + path,
-                       'search_api_url': search_url,
-                       'site_code': site_code or 'unknown',
-                       'api_type': 'trs_json'}
-                log.info('  siteCode=%s', site_code or '?')
-                print(); print('-- Generated config (add to sites_config.json) --')
-                print(json.dumps(cfg, ensure_ascii=False, indent=2))
-                return
-        except:
-            continue
-    log.warning('  No search page found')
+    result = SiteAnalyzer().analyze(url)
+    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    return result
+
+
 def main():
     args = parse_args()
     if args.discover:

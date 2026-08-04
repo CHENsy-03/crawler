@@ -39,9 +39,58 @@ def _retry(session, domain, url, rate_cfg, max_retries, timeout, request_fn):
                 log.warning('Failed after %d retries: %s', max_r, url[:50])
     return None
 
+from dataclasses import dataclass
+
+
+@dataclass
+class FetchOnceResult:
+    url: str
+    status_code: int
+    headers: dict
+    content: bytes
+    bytes_read: int
+    too_large: bool = False
+    location: str = ""
+
+    @property
+    def text(self) -> str:
+        return self.content.decode("utf-8", errors="replace")
+
+
 def reset_all_sessions():
     clear_session()
     log.info('All HTTP sessions reset')
+
+
+def fetch_once(url, site_cfg=None, timeout=15, max_bytes=None):
+    """Single request that does not follow redirects and enforces a streaming byte limit."""
+    domain = urlparse(url).netloc
+    session = get_session_for_domain(domain)
+    resp = session.get(url, timeout=timeout, allow_redirects=False, stream=True)
+    status_code = resp.status_code
+    headers = dict(resp.headers)
+    location = headers.get("Location", "")
+
+    content_length = resp.headers.get("Content-Length")
+    if max_bytes is not None and content_length:
+        try:
+            if int(content_length) > max_bytes:
+                resp.close()
+                return FetchOnceResult(url, status_code, headers, b"", 0, True, location)
+        except ValueError:
+            pass
+
+    chunks = []
+    total = 0
+    try:
+        for chunk in resp.iter_content(chunk_size=8192):
+            total += len(chunk)
+            if max_bytes is not None and total > max_bytes:
+                return FetchOnceResult(url, status_code, headers, b"".join(chunks), total, True, location)
+            chunks.append(chunk)
+    finally:
+        resp.close()
+    return FetchOnceResult(url, status_code, headers, b"".join(chunks), total, False, location)
 
 
 def fetch(url, site_cfg=None, max_retries=3, timeout=15):

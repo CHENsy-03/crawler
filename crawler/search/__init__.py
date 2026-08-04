@@ -1,3 +1,6 @@
+from crawler.site.models import SearchCandidate, SiteAnalysisResult
+from crawler.site.analyzer import SiteAnalyzer
+
 from crawler.search.detector import SiteDetector, CMS_SIGNATURES
 from crawler.search.result import normalize_search_result, REQUIRED_FIELDS
 from crawler.search.search_plan import (

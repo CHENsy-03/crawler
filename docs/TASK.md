@@ -1048,7 +1048,7 @@ workspace/crawler/docs/TASK.md
 | 任务名称 | 实现网站分析器与搜索候选发现 |
 | 任务类型 | feature / security |
 | 优先级 | P0 |
-| 当前状态 | pending |
+| 当前状态 | completed |
 | 定义日期 | 2026-08-02 |
 | 前置任务 | TASK-015（已通过 PR #11 合入 main） |
 | 后续任务 | TASK-017（SearchPlan 生成、验证、缓存及 Worker v2 接入） |
@@ -1760,10 +1760,28 @@ TASK-016 完成不代表“输入任意网站即可自动采集”已经完成�
 
 ### 16.21 定义阶段记录
 
-- 当前状态：pending。
+- 当前状态：completed。
 - 本次只向 docs/TASK.md 追加 TASK-016 定义。
 - 未实施 TASK-016 源码、测试、fixture 或配置。
 - 未实施 TASK-017、TASK-018、TASK-022 或浏览器后备。
 - 未修改 Go、Redis、数据库、Worker、插件或 site.json。
 - 未暂存、未提交、未推送、未创建 PR。
 - 下一步：对本定义进行独立审查；通过后才允许发布定义文档，再单独启动代码实施。
+
+### 16.22 实施记录
+
+- 实施分支：feat/task-016-site-analysis。
+- 新增 `crawler/site/`：models、normalizer、security、forms、signatures、analyzer。
+- 新增 `httpx/fetch.py::fetch_once` 与 `Downloader.fetch_once`：单次请求、不自动跟随重定向、流式字节限制。
+- 新增测试：test_site_normalizer、test_site_security、test_site_forms、test_site_analyzer、test_discovery_fetch。
+- 新增 fixture：tests/fixtures/site_discovery/。
+- 兼容改造：SiteDetector 与 main.py --discover 调用正式 Analyzer。
+- Python 全量测试：178 passed, 7 skipped。
+- Go test、go vet、go build：exit 0。
+- 第二轮修复：安全重定向 origin/scheme 策略、HTTP 4xx/5xx 门禁、form class 崩溃、JS-only 诊断、跨域 scope、fatal redirect 早停、DiscoveryLimits 实际执行、form method 白名单。
+- 修复后 TASK-016 专项测试：71 passed；零 evidence 预算边界修复后为 73 passed。
+- 零边界修复：`max_evidence_chars<=0` 或 `max_evidence_items<=0` 时 Candidate evidence 为空元组，空字符串不再进入 evidence。
+- 零边界测试前后行为：
+  - `test_zero_max_evidence_chars_produces_no_evidence`：修复前失败，实际为 `evidence == ("",)`；修复后通过，结果为 `evidence == ()`。
+  - `test_zero_max_evidence_items_produces_no_evidence`：修复前已经通过；修复后仍然通过。
+- TASK-016 只生成未经验证 SearchCandidate；未实施 TASK-017、未修改 Go/Worker/协议/插件/site.json，未访问真实外网。

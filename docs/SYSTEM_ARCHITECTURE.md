@@ -247,3 +247,13 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - API v1 同时出现 `site` 与 `profile` 时返回 400，基于原始 JSON key 判断，null/空值/错误类型不能绕过。
 - `keywords` 必须是 JSON 数组；v1 `site/keyword` 必须是非空字符串。
 - SearchPlan/SearchHit 整数字段显式 `null` 拒绝；畸形 IPv6 统一返回 `INVALID_TARGET_URL`。
+
+## 14. TASK-016 网站分析器与 SearchCandidate
+
+- 新增 Python `crawler/site` 包：URL 规范化、请求前安全策略、表单/签名解析、Analyzer 编排和内部模型。
+- `SearchCandidate` 与 `SiteAnalysisResult` 是 Python 内部模型，不进入 Go/Python 跨语言协议。
+- Analyzer 只生成未经验证的 Candidate；不探测候选、不生成 SearchPlan、不提交 POST。
+- 发现阶段真实请求通过 `Downloader.fetch_once`：单次请求、不自动跟随重定向、流式字节限制；重定向由 Analyzer 逐跳重新校验。
+- `SiteDetector` 和 `main.py --discover` 已收敛为 Analyzer 的兼容/调试入口。
+- 重定向仅允许相同 origin，或同一规范化 host 的 http -> https 升级；https -> http、跨 host、端口变化均拒绝。
+- DiscoveryLimits 中的 candidate、script、evidence 预算已集中执行。

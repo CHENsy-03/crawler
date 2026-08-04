@@ -1,6 +1,6 @@
 import logging
 from urllib.parse import urlparse
-from httpx.fetch import fetch, post_json, get_json, reset_all_sessions
+from httpx.fetch import fetch, fetch_once, post_json, get_json, reset_all_sessions
 from httpx.session_pool import get_session_for_domain
 from httpx.rate_limiter import rate_limiter_manager
 from httpx.circuit_breaker import breaker_manager
@@ -30,6 +30,10 @@ class Downloader:
     def get_json(self, url, params=None, site_cfg=None):
         """GET with JSON response, returns parsed JSON dict."""
         return get_json(url, params, site_cfg, max_retries=self.max_retries, timeout=self.timeout)
+
+    def fetch_once(self, url, timeout=None, max_bytes=None):
+        """Single request without automatic redirects; returns a FetchOnceResult."""
+        return fetch_once(url, timeout=timeout or self.timeout, max_bytes=max_bytes)
 
     def reset_sessions(self):
         reset_all_sessions()

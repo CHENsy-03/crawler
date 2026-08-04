@@ -1,6 +1,6 @@
-import re
 import logging
-from urllib.parse import urljoin
+
+from crawler.site.analyzer import SiteAnalyzer
 
 log = logging.getLogger('crawler.detector')
 
@@ -12,46 +12,30 @@ CMS_SIGNATURES = {
 
 
 class SiteDetector:
-    def __init__(self, downloader=None):
+    """Compatibility entry point for the formal TASK-016 analyzer."""
+
+    def __init__(self, downloader=None, analyzer=None):
         self.downloader = downloader
+        self.analyzer = analyzer or SiteAnalyzer(downloader=downloader)
 
     def analyze(self, base_url):
-        if not self.downloader:
-            from crawler.core.downloader import get_downloader
-            self.downloader = get_downloader()
-        result = {'base_url': base_url, 'detected': None, 'scores': {}, 'evidence': []}
-        try:
-            resp = self.downloader.fetch(base_url, timeout=10)
-            if not resp:
-                return result
-            html = resp.text
-            headers = dict(resp.headers)
-        except Exception as e:
-            log.warning('fetch: %s', e)
-            return result
-        for cms, sig in CMS_SIGNATURES.items():
-            score = 0
-            ev = []
-            for u in sig['urls']:
-                if u in html:
-                    score += 3
-                    ev.append('url:' + u)
-            for m in sig['meta']:
-                if m.lower() in html.lower():
-                    score += 2
-                    ev.append('meta:' + m)
-            for h in sig['headers']:
-                if any(h.lower() in k.lower() for k in headers):
-                    score += 1
-                    ev.append('hdr:' + h)
-            if score > 0:
-                result['scores'][cms] = score
-                result['evidence'].extend(ev)
-        if result['scores']:
-            best = max(result['scores'], key=result['scores'].get)
-            result['detected'] = best
-            log.info('Detector: %s -> %s', base_url, best)
-        return result
+        result = self.analyzer.analyze(base_url)
+        scores = {}
+        evidence = []
+        detected = None
+        for candidate in result.candidates:
+            scores[candidate.source] = scores.get(candidate.source, 0) + 1
+            evidence.extend(candidate.evidence[:2])
+        if scores:
+            detected = max(scores, key=scores.get)
+        return {
+            'base_url': base_url,
+            'detected': detected,
+            'scores': scores,
+            'evidence': evidence[:20],
+            'candidates': [c.to_dict() for c in result.candidates],
+            'diagnostics': [d.to_dict() for d in result.diagnostics],
+        }
 
     def auto_configure(self, base_url):
         a = self.analyze(base_url)
