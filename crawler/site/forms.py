@@ -6,12 +6,14 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from crawler.site.models import Diagnostic, DiscoveryLimits, SearchCandidate
-from crawler.site.normalizer import SiteNormalizationError, normalize_target_url, same_origin
-
-SENSITIVE_RE = re.compile(
-    r"(csrf|xsrf|token|session|auth|password|passwd|cookie|signature|secret|nonce|captcha|verify_code)",
-    re.I,
+from crawler.site.normalizer import (
+    SENSITIVE_NAME_RE,
+    SiteNormalizationError,
+    normalize_target_url,
+    redact_evidence_url,
+    same_origin,
 )
+
 NON_SEARCH_RE = re.compile(
     r"(login|register|signin|signup|subscribe|comment|upload|payment|pay|reset|password|captcha|登录|注册|订阅|留言|上传|支付|密码|验证码)",
     re.I,
@@ -24,7 +26,7 @@ ALLOWED_METHODS = {"get", "post"}
 
 
 def _is_sensitive(name: str) -> bool:
-    return bool(SENSITIVE_RE.search(name or ""))
+    return bool(SENSITIVE_NAME_RE.search(name or ""))
 
 
 def _attr_text(value) -> str:
@@ -127,7 +129,7 @@ def parse_forms(html: str, base_url: str, limits: DiscoveryLimits) -> tuple[list
         scope = _scope_for(normalized_endpoint, base_url)
 
         fixed = _public_fixed_params(inputs)
-        evidence = (f"form method={raw_method} action={action}",)
+        evidence = (f"form method={raw_method} action={redact_evidence_url(action)}",)
         if raw_method == "post":
             enctype = (form.get("enctype", "") or "").lower()
             if enctype and enctype != "application/x-www-form-urlencoded":

@@ -45,10 +45,18 @@ def is_ip_literal(host: str) -> bool:
         return False
 
 
+DNS_RESOLUTION_FAILED = "target hostname could not be resolved"
+
+
 def resolve_host(host: str, resolver=None) -> list[str]:
-    if resolver is not None:
-        return list(resolver(host))
-    return [addr[4][0] for addr in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)]
+    try:
+        if resolver is not None:
+            return list(resolver(host))
+        return [addr[4][0] for addr in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)]
+    except SecurityPolicyError:
+        raise
+    except Exception as exc:
+        raise SecurityPolicyError(DNS_RESOLUTION_FAILED) from exc
 
 
 def security_check(url: str, resolver=None) -> tuple[bool, list[str], str]:

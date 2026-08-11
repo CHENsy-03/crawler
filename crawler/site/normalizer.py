@@ -1,7 +1,9 @@
 """Pure, network-free URL normalization for discovery."""
 
+import ipaddress
+import re
 import idna
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
 
 class SiteNormalizationError(ValueError):
@@ -12,6 +14,13 @@ def effective_port(scheme: str, port: int | None) -> int:
     if port is not None:
         return port
     return 80 if scheme == "http" else 443
+
+
+def _is_ipv6_literal(host: str) -> bool:
+    try:
+        return ipaddress.ip_address(host).version == 6
+    except ValueError:
+        return False
 
 
 def normalized_origin(raw: str) -> tuple[str, str, int]:
@@ -87,9 +96,47 @@ def normalize_target_url(raw: str) -> str:
     if port is not None and (port <= 0 or port > 65535):
         raise SiteNormalizationError("target_url has invalid port")
 
-    netloc = host_ascii
+    host_for_netloc = f"[{host_ascii}]" if _is_ipv6_literal(host_ascii) else host_ascii
+    netloc = host_for_netloc
     if (scheme == "http" and port not in (None, 80)) or (scheme == "https" and port not in (None, 443)):
-        netloc = f"{netloc}:{port}"
+        netloc = f"{host_for_netloc}:{port}"
 
     path = parts.path or "/"
     return urlunsplit((scheme, netloc, path, parts.query, ""))
+
+SENSITIVE_NAME_RE = re.compile(
+    r"(csrf|xsrf|token|session|auth|password|passwd|cookie|signature|secret|nonce|captcha|verify_code)",
+    re.I,
+)
+SENSITIVE_QUERY_RE = re.compile(SENSITIVE_NAME_RE.pattern + r"|code", re.I)
+EVIDENCE_REDACTION = "[REDACTED]"
+
+
+def redact_evidence_url(raw: str) -> str:
+    """Return a display-safe copy of a URL for evidence only.
+
+    The real Candidate endpoint must remain untouched; callers use this
+    helper only when building human-visible evidence strings.
+    """
+    if not isinstance(raw, str):
+        return ""
+    if not raw:
+        return raw
+    try:
+        parts = urlsplit(raw)
+        if not parts.query:
+            return raw
+        redacted_segments = []
+        for segment in parts.query.split("&"):
+            name_part = segment.partition("=")[0]
+            if SENSITIVE_QUERY_RE.search(unquote_plus(name_part)):
+                redacted_segments.append(f"{name_part}={EVIDENCE_REDACTION}")
+            else:
+                redacted_segments.append(segment)
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, "&".join(redacted_segments), parts.fragment))
+    except Exception:
+        try:
+            parts = urlsplit(raw)
+            return urlunsplit((parts.scheme, parts.netloc, parts.path, "", parts.fragment))
+        except Exception:
+            return ""

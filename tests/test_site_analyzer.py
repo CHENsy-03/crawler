@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 
 from crawler.site.analyzer import SiteAnalyzer
-from crawler.site.models import DiscoveryLimits
+from crawler.site.models import DiscoveryLimits, SearchCandidate
 
 FIX = Path(__file__).parent / "fixtures" / "site_discovery"
 
@@ -305,3 +305,238 @@ def test_zero_max_evidence_items_produces_no_evidence():
     form_candidates = [c for c in result.candidates if c.source == "form"]
     assert form_candidates
     assert all(c.evidence == () for c in form_candidates)
+
+
+def test_link_evidence_redacts_sensitive_href_query():
+    html = '<a href="/search?token=SECRET&q=x">search</a>'
+    def fetcher(url, limits):
+        return FakeResponse(text=html)
+    result = SiteAnalyzer(resolver=_fake_safe_resolver, fetcher=fetcher).analyze("http://example.gov.cn/")
+    links = [c for c in result.candidates if c.source == "internal_link"]
+    assert links
+    c = links[0]
+    assert c.endpoint == "http://example.gov.cn/search?token=SECRET&q=x"
+    assert "SECRET" not in str(c.evidence)
+    assert "token=[REDACTED]" in c.evidence[0]
+    assert "q=x" in c.evidence[0]
+
+
+def test_analyzer_form_evidence_redacted_but_endpoint_unchanged():
+    html = '<form action="/search?access_token=SECRET&q=x" method="get"><input name="q"></form>'
+    def fetcher(url, limits):
+        return FakeResponse(text=html)
+    result = SiteAnalyzer(resolver=_fake_safe_resolver, fetcher=fetcher).analyze("http://example.gov.cn/")
+    forms = [c for c in result.candidates if c.source == "form"]
+    assert forms
+    c = forms[0]
+    assert c.endpoint == "http://example.gov.cn/search?access_token=SECRET&q=x"
+    assert "SECRET" not in str(c.evidence)
+    assert "access_token=[REDACTED]" in c.evidence[0]
+    assert "q=x" in c.evidence[0]
+
+
+def test_evidence_plain_query_unchanged_through_analyzer():
+    html = '<a href="/search?q=x&page=2">search</a>'
+    def fetcher(url, limits):
+        return FakeResponse(text=html)
+    result = SiteAnalyzer(resolver=_fake_safe_resolver, fetcher=fetcher).analyze("http://example.gov.cn/")
+    links = [c for c in result.candidates if c.source == "internal_link"]
+    assert links
+    assert "/search?q=x&page=2" in links[0].evidence[0]
+    assert "SECRET" not in str(links[0].evidence)
+
+
+def test_no_sensitive_raw_value_in_any_evidence():
+    html = (
+        '<form action="/callback?code=real-secret&token=abc&q=x" method="get"><input name="q"></form>'
+        '<a href="/search?access_token=xyz&q=x">search</a>'
+    )
+    def fetcher(url, limits):
+        return FakeResponse(text=html)
+    result = SiteAnalyzer(resolver=_fake_safe_resolver, fetcher=fetcher).analyze("http://example.gov.cn/")
+    assert result.candidates
+    for c in result.candidates:
+        for item in c.evidence:
+            assert "real-secret" not in item
+            assert "abc" not in item
+            assert "xyz" not in item
+
+
+def test_analyzer_initial_resolver_failure_returns_diagnostic():
+    calls = []
+    def resolver(host):
+        raise RuntimeError("dns boom")
+    def fetcher(url, limits):
+        calls.append(url)
+        return FakeResponse()
+    result = SiteAnalyzer(resolver=resolver, fetcher=fetcher).analyze("http://example.com/")
+    assert calls == []
+    assert any(d.code == "TARGET_BLOCKED_BY_POLICY" for d in result.diagnostics)
+    assert "dns boom" not in str(result.to_dict())
+
+
+def test_analyzer_redirect_resolver_failure_blocks_second_request():
+    calls = []
+    state = {"count": 0}
+    def resolver(host):
+        state["count"] += 1
+        if state["count"] == 1:
+            return ["8.8.8.8"]
+        raise RuntimeError("dns boom")
+    def fetcher(url, limits):
+        calls.append(url)
+        return FakeResponse(
+            status_code=302,
+            headers={"Location": "/next", "Content-Type": "text/html"},
+            location="/next",
+        )
+    result = SiteAnalyzer(resolver=resolver, fetcher=fetcher).analyze("http://example.gov.cn/")
+    assert len(calls) == 1
+    assert any(d.code == "REDIRECT_BLOCKED" for d in result.diagnostics)
+    assert "dns boom" not in str(result.to_dict())
+
+
+def test_analyzer_fetches_public_ipv6_with_brackets():
+    calls = []
+    def fetcher(url, limits):
+        calls.append(url)
+        return FakeResponse(text=_fixture("no_search.html"))
+    result = SiteAnalyzer(
+        resolver=lambda h: ["2606:4700:4700::1111"],
+        fetcher=fetcher,
+    ).analyze("http://[2606:4700:4700::1111]/")
+    assert calls == ["http://[2606:4700:4700::1111]/"]
+    assert result.normalized_url == "http://[2606:4700:4700::1111]/"
+
+
+def _candidate(method="GET", endpoint="http://example.gov.cn/search", keyword="q", fixed=(), priority=0, source="", evidence=()):
+    return SearchCandidate(
+        method=method,
+        endpoint=endpoint,
+        keyword_param=keyword,
+        fixed_params=tuple(fixed),
+        priority=priority,
+        source=source,
+        evidence=tuple(evidence),
+    )
+
+
+def test_dedupe_merges_different_evidence_same_key():
+    a = _candidate(evidence=("link-evidence",))
+    b = _candidate(evidence=("form-evidence",))
+    out = SiteAnalyzer._dedupe_and_sort([a, b])
+    assert len(out) == 1
+    assert out[0].evidence == ("link-evidence", "form-evidence")
+
+
+def test_dedupe_deduplicates_repeated_evidence():
+    a = _candidate(evidence=("same", "first"))
+    b = _candidate(evidence=("same", "second"))
+    out = SiteAnalyzer._dedupe_and_sort([a, b])
+    assert len(out) == 1
+    assert out[0].evidence == ("same", "first", "second")
+
+
+def test_dedupe_merges_three_candidates():
+    out = SiteAnalyzer._dedupe_and_sort([
+        _candidate(evidence=("e1",)),
+        _candidate(evidence=("e2",)),
+        _candidate(evidence=("e3",)),
+    ])
+    assert len(out) == 1
+    assert out[0].evidence == ("e1", "e2", "e3")
+
+
+def test_dedupe_keeps_existing_multiple_evidence():
+    a = _candidate(evidence=("e1", "e2"))
+    b = _candidate(evidence=("e3",))
+    out = SiteAnalyzer._dedupe_and_sort([a, b])
+    assert out[0].evidence == ("e1", "e2", "e3")
+
+
+def test_dedupe_empty_evidence_does_not_hide_other():
+    a = _candidate(evidence=())
+    b = _candidate(evidence=("form-evidence",))
+    out = SiteAnalyzer._dedupe_and_sort([a, b])
+    assert len(out) == 1
+    assert out[0].evidence == ("form-evidence",)
+
+
+def test_dedupe_identical_candidate_once():
+    a = _candidate(evidence=("same",))
+    out = SiteAnalyzer._dedupe_and_sort([a, _candidate(evidence=("same",))])
+    assert len(out) == 1
+    assert out[0].evidence == ("same",)
+
+
+def test_dedupe_different_keys_not_merged():
+    a = _candidate(endpoint="http://example.gov.cn/search", evidence=("a",))
+    b = _candidate(endpoint="http://example.gov.cn/s", evidence=("b",))
+    out = SiteAnalyzer._dedupe_and_sort([a, b])
+    assert len(out) == 2
+    assert {c.evidence[0] for c in out} == {"a", "b"}
+    assert [c.endpoint for c in out] == [
+        "http://example.gov.cn/s",
+        "http://example.gov.cn/search",
+    ]
+
+
+def test_dedupe_different_method_not_merged():
+    a = _candidate(method="GET", evidence=("get",))
+    b = _candidate(method="POST", evidence=("post",))
+    out = SiteAnalyzer._dedupe_and_sort([a, b])
+    assert len(out) == 2
+
+
+def test_dedupe_winner_fields_preserved_but_evidence_merged():
+    low = _candidate(priority=1, source="common_path", evidence=("low",))
+    high = _candidate(priority=5, source="form", evidence=("high",))
+    out = SiteAnalyzer._dedupe_and_sort([low, high])
+    assert len(out) == 1
+    assert out[0].source == "form"
+    assert out[0].priority == 5
+    assert out[0].evidence == ("low", "high")
+
+
+def test_dedupe_order_stable():
+    candidates = [
+        _candidate(endpoint="http://example.gov.cn/search", evidence=("a",)),
+        _candidate(endpoint="http://example.gov.cn/search", evidence=("b",)),
+        _candidate(endpoint="http://example.gov.cn/s", evidence=("c",)),
+    ]
+    first = SiteAnalyzer._dedupe_and_sort(candidates)
+    second = SiteAnalyzer._dedupe_and_sort(candidates)
+    assert [c.to_dict() for c in first] == [c.to_dict() for c in second]
+
+
+def test_dedupe_empty_input_returns_empty():
+    assert SiteAnalyzer._dedupe_and_sort([]) == []
+
+
+def test_analyzer_form_and_link_same_key_merge_evidence():
+    html = (
+        '<form action="/search" method="get"><input name="q"></form>'
+        '<a href="/search">search</a>'
+    )
+    def fetcher(url, limits):
+        return FakeResponse(text=html)
+    result = SiteAnalyzer(resolver=_fake_safe_resolver, fetcher=fetcher).analyze("http://example.gov.cn/")
+    same = [c for c in result.candidates if c.endpoint == "http://example.gov.cn/search"]
+    assert len(same) == 1
+    joined = " ".join(same[0].evidence)
+    assert "form method=get action=/search" in joined
+    assert "internal_link:/search" in joined
+
+
+def test_analyzer_merged_evidence_stays_redacted():
+    html = (
+        '<form action="/search?token=SECRET" method="get"><input name="q"></form>'
+        '<a href="/search?token=SECRET">search</a>'
+    )
+    def fetcher(url, limits):
+        return FakeResponse(text=html)
+    result = SiteAnalyzer(resolver=_fake_safe_resolver, fetcher=fetcher).analyze("http://example.gov.cn/")
+    same = [c for c in result.candidates if c.endpoint == "http://example.gov.cn/search?token=SECRET"]
+    assert len(same) == 1
+    assert "SECRET" not in " ".join(same[0].evidence)
+    assert "token=[REDACTED]" in " ".join(same[0].evidence)

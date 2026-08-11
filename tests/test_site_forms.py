@@ -79,3 +79,32 @@ def test_empty_method_defaults_get():
     candidates, diags = parse_forms(html, "http://example.gov.cn/", DiscoveryLimits())
     assert len(candidates) == 1
     assert candidates[0].method == "GET"
+
+
+def test_form_evidence_redacts_sensitive_action_query():
+    html = '<form action="/search?token=SECRET&q=x" method="get"><input name="q"></form>'
+    candidates, diags = parse_forms(html, "http://example.gov.cn/", DiscoveryLimits())
+    assert len(candidates) == 1
+    c = candidates[0]
+    assert c.endpoint == "http://example.gov.cn/search?token=SECRET&q=x"
+    assert "SECRET" not in str(c.evidence)
+    assert "token=[REDACTED]" in c.evidence[0]
+    assert "q=x" in c.evidence[0]
+
+
+def test_form_evidence_redacts_code_and_keeps_plain_params():
+    html = '<form action="/callback?code=real-secret&state=abc&q=x" method="get"><input name="q"></form>'
+    candidates, diags = parse_forms(html, "http://example.gov.cn/", DiscoveryLimits())
+    assert len(candidates) == 1
+    c = candidates[0]
+    assert "real-secret" not in str(c.evidence)
+    assert "code=[REDACTED]" in c.evidence[0]
+    assert "state=abc" in c.evidence[0]
+    assert "q=x" in c.evidence[0]
+
+
+def test_form_evidence_plain_query_unchanged():
+    html = '<form action="/search?q=x&page=2" method="get"><input name="q"></form>'
+    candidates, diags = parse_forms(html, "http://example.gov.cn/", DiscoveryLimits())
+    assert len(candidates) == 1
+    assert candidates[0].evidence[0] == "form method=get action=/search?q=x&page=2"

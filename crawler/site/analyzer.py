@@ -12,6 +12,7 @@ from crawler.site.normalizer import (
     SiteNormalizationError,
     normalize_target_url,
     normalized_origin,
+    redact_evidence_url,
     redirect_allowed,
     same_origin,
 )
@@ -184,7 +185,7 @@ class SiteAnalyzer:
                             source=source,
                             priority=2,
                             scope=scope,
-                            evidence=(f"{source}:{href[:120]}",),
+                            evidence=(f"{source}:{redact_evidence_url(href)[:120]}",),
                         )
                     )
         return out
@@ -247,6 +248,8 @@ class SiteAnalyzer:
     @staticmethod
     def _dedupe_and_sort(candidates: list[SearchCandidate]) -> list[SearchCandidate]:
         best: dict[tuple, SearchCandidate] = {}
+        merged_evidence: dict[tuple, list[str]] = {}
+        seen_evidence: dict[tuple, set[str]] = {}
         for c in candidates:
             key = (
                 c.method,
@@ -256,7 +259,16 @@ class SiteAnalyzer:
             )
             if key not in best or c.priority > best[key].priority:
                 best[key] = c
-        ordered = sorted(best.values(), key=lambda c: (-c.priority, c.method, c.endpoint, c.keyword_param))
+            evidence = merged_evidence.setdefault(key, [])
+            seen = seen_evidence.setdefault(key, set())
+            for item in c.evidence:
+                if item not in seen:
+                    seen.add(item)
+                    evidence.append(item)
+        ordered = []
+        for key, candidate in best.items():
+            ordered.append(replace(candidate, evidence=tuple(merged_evidence[key])))
+        ordered.sort(key=lambda c: (-c.priority, c.method, c.endpoint, c.keyword_param))
         return ordered
 
 
