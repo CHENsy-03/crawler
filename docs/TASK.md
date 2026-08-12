@@ -2103,6 +2103,7 @@ TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。�
 - 文件：crawler/search/plan_executor.py、crawler/search/search_orchestrator.py、workers/search_worker.py
 - Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段；跨语言全量契约回归留待 TASK-017F
 - 缓存生命周期：新计划 success/no_results 后写缓存；缓存命中失败删除缓存；publish_failure 不删除合法计划。
+- 删除失败会记录安全 warning，不替换原始 executor 失败。
 
 #### TASK-017F：协议文档与完整离线回归
 

@@ -1,8 +1,10 @@
 """Production orchestration for v2 SearchPlan generation, execution and publishing."""
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.parse import urlsplit
 
 from protocol.messages import SearchRequestedMessage, URLMessage
 
@@ -33,6 +35,8 @@ STATUS_NO_RESULTS = "no_results"
 STATUS_FAILED = "failed"
 
 _EXECUTABLE_STATUSES = {"ready", "active"}
+
+log = logging.getLogger("crawler.search.orchestrator")
 
 
 def _is_reusable_execution(execution: SearchPlanExecutionResult) -> bool:
@@ -97,6 +101,14 @@ class RedisURLMessagePublisher:
     def publish(self, message: URLMessage) -> None:
         payload = json.dumps(message.to_dict(), ensure_ascii=False)
         self._redis.lpush("crawler:url", payload)
+
+
+def _safe_hostname(raw: str) -> str:
+    try:
+        host = urlsplit(raw).hostname
+        return host.lower() if host else "<unknown>"
+    except Exception:
+        return "<unknown>"
 
 
 def _candidate_key(candidate: SearchCandidate) -> tuple[str, ...]:
@@ -177,8 +189,13 @@ def run_v2_search_pipeline(
         if not _is_reusable_execution(execution):
             try:
                 plan_cache.delete(target_url=message.target_url)
-            except Exception:
-                pass
+            except Exception as exc:
+                log.warning(
+                    "search_plan_cache_delete_failed task_id=%s target_host=%s error_type=%s",
+                    message.task_id,
+                    _safe_hostname(message.target_url),
+                    type(exc).__name__,
+                )
         return _publish_execution(message, read.plan, execution, publisher)
 
     try:

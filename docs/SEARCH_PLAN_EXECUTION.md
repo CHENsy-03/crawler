@@ -436,6 +436,7 @@ SearchSelectors("", "", "", "", "")
 - 新构建计划先正式执行，`success/no_results` 后才写入缓存。
 - 新计划其他执行失败不写缓存。
 - 缓存命中计划执行失败时删除对应缓存，本次不重试，下一条独立任务重新分析。
+- 删除失败会记录安全 warning，不替换原始 executor 失败，缓存可能保留到 TTL。
 - `no_results` 表示结构有效但结果为空，计划保留且零发布。
 - `publish_failure` 不使已验证合法计划失效。
 - BRPOP 仍为既有 at-most-once 语义。
