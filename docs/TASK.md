@@ -1800,7 +1800,7 @@ TASK-016 完成不代表“输入任意网站即可自动采集”已经完成�
 | 当前状态 | contract-frozen |
 | 前置任务 | TASK-015、TASK-016 |
 | 后续任务 | TASK-018 及后续执行适配 |
-| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E-R4 已实现受控探测 HTTP 安全基础与候选请求形状；TASK-017E 仍被 R5 阻断；TASK-017F 未实施 |
+| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E-R4 已实现受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 已实现 selector evidence 提取与 PlanBuilder 传递；TASK-017E 主功能未实现；TASK-017F 未实施 |
 
 ### 17.2 正式目标
 

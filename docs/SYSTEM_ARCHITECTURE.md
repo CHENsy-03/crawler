@@ -285,3 +285,9 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 内容：SearchCandidate 请求形状、forms 请求形状映射、SearchProbePolicy、安全请求构造、固定 IP 连接探测、响应门禁
 - 文件：crawler/site/models.py、crawler/site/forms.py、crawler/site/search_probe.py、tests/test_search_probe.py
 - TASK-017E 仍被 R5 selector 证据提取阻断。
+## 18. TASK-017E-R5 Selector Evidence 提取
+
+- 状态：已实现
+- 内容：HTML CSS selector 与 JSON RFC 6901 Pointer 证据提取、同响应重新验证、正式 `probe_search_candidate()`、PlanBuilder 传递
+- 文件：crawler/site/selector_evidence.py、crawler/site/search_probe.py、crawler/search/plan_builder.py
+- TASK-017E 主执行适配器尚未实现。

@@ -13,13 +13,18 @@ from urllib3.exceptions import HTTPError
 from urllib3.poolmanager import PoolManager
 from urllib3.util.connection import create_connection
 
-from crawler.site.models import CandidateRequestShape
+from crawler.site.models import CandidateRequestShape, SearchCandidate
 from crawler.site.normalizer import (
     SiteNormalizationError,
     normalize_target_url,
     same_origin,
 )
 from crawler.site.security import classify_ip, is_ip_literal, resolve_host
+from crawler.site.selector_evidence import (
+    extract_html_selector_evidence,
+    extract_json_selector_evidence,
+    SelectorEvidence,
+)
 
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 _SENSITIVE_PARTS = (
@@ -159,6 +164,20 @@ class ProbeRequestBuildResult:
     request: SearchProbeRequest | None
     rejection: SearchProbeRejection | None
 
+
+
+
+@dataclass(frozen=True)
+class SearchProbeResult:
+    """Formal probe outcome with selector evidence or a safe rejection."""
+
+    candidate_key: tuple[str, ...]
+    selector_evidence: SelectorEvidence | None
+    status: str
+    rejection: SearchProbeRejection | None = None
+
+    def __repr__(self) -> str:
+        return f"SearchProbeResult(status={self.status!r})"
 
 @dataclass(frozen=True)
 class ProbeOutcome:
@@ -597,3 +616,70 @@ class PinnedProbeFetcher:
                 ),
                 None,
             )
+
+def _candidate_key(candidate: SearchCandidate) -> tuple[str, ...]:
+    return (
+        candidate.method,
+        normalize_target_url(candidate.endpoint),
+        candidate.keyword_param,
+        tuple(sorted(candidate.fixed_params)),
+    )
+
+
+def probe_search_candidate(
+    candidate: SearchCandidate,
+    keywords: tuple[str, ...],
+    *,
+    fetcher: SearchProbeFetcher,
+    policy: SearchProbePolicy,
+) -> SearchProbeResult:
+    """Probe one candidate and return the first complete selector evidence."""
+    key = _candidate_key(candidate)
+    if candidate.request_shape is None:
+        return SearchProbeResult(
+            key,
+            None,
+            "not_eligible",
+            SearchProbeRejection("not_eligible", "candidate has no probe request shape"),
+        )
+
+    for keyword in keywords[: policy.max_keywords_per_candidate]:
+        built = build_probe_request(candidate.request_shape, keyword, policy)
+        if built.rejection is not None or built.request is None:
+            return SearchProbeResult(key, None, "rejected", built.rejection)
+        outcome = fetcher.fetch(built.request, policy=policy)
+        if outcome.rejection is not None or outcome.response is None:
+            return SearchProbeResult(key, None, "rejected", outcome.rejection)
+
+        response = outcome.response
+        if response.content_type.startswith("text/html") or response.content_type == "application/xhtml+xml":
+            extraction = extract_html_selector_evidence(
+                response.body.decode("utf-8", errors="ignore"),
+                final_origin=response.final_url,
+                candidate_key=key,
+                evidence_source=candidate.request_shape.evidence_source,
+            )
+        else:
+            extraction = extract_json_selector_evidence(
+                response.body,
+                final_origin=response.final_url,
+                candidate_key=key,
+                evidence_source=candidate.request_shape.evidence_source,
+            )
+
+        if extraction.code == "success" and extraction.evidence is not None:
+            return SearchProbeResult(key, extraction.evidence, "success", None)
+        if extraction.code == "ambiguous":
+            return SearchProbeResult(
+                key,
+                None,
+                "ambiguous",
+                SearchProbeRejection("ambiguous_evidence", "selector evidence is ambiguous"),
+            )
+
+    return SearchProbeResult(
+        key,
+        None,
+        "no_evidence",
+        SearchProbeRejection("no_evidence", "no complete selector evidence found"),
+    )

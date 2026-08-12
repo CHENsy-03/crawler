@@ -584,3 +584,10 @@ TASK-017F：后续集成与跨语言验证
 - 未实现：HTML/JSON selector 推断、PlanBuilder selector 传递、SearchPlan 执行、Worker 集成。
 - R4 不创建 `probe_search_candidate()` 完整入口，该入口归 R5 使用；R4 提供 `build_probe_request()`、`SearchProbePolicy`、`PinnedProbeFetcher` 等基础能力。
 - TASK-017E 仍被 R5 selector 证据提取阻断。
+## 20. TASK-017E-R5 实施状态
+
+- 状态：已实现 HTML/JSON selector evidence 提取与验证。
+- 已实现正式入口 `probe_search_candidate()`。
+- 已实现 PlanBuilder 将已验证 evidence 映射为 `SearchSelectors` 和 `ready` SearchPlan。
+- 未实现：SearchPlan 执行、Worker 集成、缓存写入、URLMessage 发布。
+- TASK-017E 主执行适配器尚未实现。

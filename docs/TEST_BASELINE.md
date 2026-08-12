@@ -58,13 +58,15 @@ py -m pytest -q
 
 结果：
 
-- 收集：423 tests
-- 通过：416
+- 收集：460 tests
+- 通过：453
 - 跳过：7
 - 失败：0
-- 耗时：2.96s
+- 耗时：3.38s
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
+
+TASK-017E-R5 新增 `tests/test_selector_evidence.py`、`tests/test_probe_formal.py`、`tests/test_probe_formal_json.py`、`tests/test_plan_builder_evidence.py`。
 
 跳过项为 `tests/integration/` 下的 E2E 测试，因未设置 `E2E_ENABLED=1` 自动跳过，不会访问 Redis、MySQL 或外部 HTTP 服务。
 

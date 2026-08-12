@@ -11,9 +11,11 @@ from crawler.site.normalizer import (
     normalized_origin,
     same_origin,
 )
+from crawler.site.selector_evidence import SelectorEvidence
 from crawler.site.security import classify_ip, is_ip_literal
 from crawler.search.search_plan import (
     PLAN_STATUS_DRAFT,
+    PLAN_STATUS_READY,
     PROTOCOL_VERSION_V2,
     SEARCH_STRATEGY_HTML_FORM,
     SEARCH_STRATEGY_JSON_API,
@@ -22,6 +24,7 @@ from crawler.search.search_plan import (
     SearchDiscovery,
     SearchPlan,
     SearchScope,
+    SearchSelectors,
     compute_plan_id,
     validate_search_plan,
 )
@@ -110,6 +113,7 @@ class PlanBuilder:
         *,
         target_url: str,
         candidates: Sequence[SearchCandidate],
+        selector_evidence: SelectorEvidence | None = None,
     ) -> PlanBuildResult:
         target_error = _target_error(target_url)
         if target_error is not None:
@@ -129,8 +133,19 @@ class PlanBuilder:
                 rejections.append(rejection)
                 continue
 
+            evidence_error = self._evidence_rejection(candidate, selector_evidence)
+            if evidence_error is not None:
+                rejections.append(
+                    CandidateRejection(
+                        index,
+                        REJECTION_UNSUPPORTED_CANDIDATE,
+                        evidence_error,
+                    )
+                )
+                continue
+
             try:
-                plan = self._build_plan(candidate, target_domain)
+                plan = self._build_plan(candidate, target_domain, selector_evidence)
                 validate_search_plan(plan)
             except ProtocolError:
                 rejections.append(
@@ -272,10 +287,43 @@ class PlanBuilder:
             )
         return None
 
+    @staticmethod
+    def _candidate_key(candidate: SearchCandidate) -> tuple[str, ...]:
+        return (
+            candidate.method,
+            normalize_target_url(candidate.endpoint),
+            candidate.keyword_param,
+            tuple(sorted(candidate.fixed_params)),
+        )
+
+    def _evidence_rejection(
+        self,
+        candidate: SearchCandidate,
+        evidence: SelectorEvidence | None,
+    ) -> str | None:
+        if evidence is None:
+            return None
+        if not isinstance(evidence, SelectorEvidence):
+            return "selector evidence must be a SelectorEvidence object"
+        if not evidence.validated:
+            return "selector evidence is not validated"
+        expected_kind = _SOURCE_STRATEGY.get(
+            candidate.source if isinstance(candidate.source, str) else "",
+            SEARCH_STRATEGY_UNKNOWN,
+        )
+        if evidence.candidate_kind != expected_kind:
+            return "selector evidence kind does not match candidate strategy"
+        if evidence.candidate_key != self._candidate_key(candidate):
+            return "selector evidence does not match candidate identity"
+        if not (evidence.result_item and evidence.title and evidence.url):
+            return "selector evidence is incomplete"
+        return None
+
     def _build_plan(
         self,
         candidate: SearchCandidate,
         target_domain: str,
+        selector_evidence: SelectorEvidence | None = None,
     ) -> SearchPlan:
         method = candidate.method.strip().upper()
         keyword_param = candidate.keyword_param.strip()
@@ -288,15 +336,28 @@ class PlanBuilder:
         strategy = _SOURCE_STRATEGY.get(source, SEARCH_STRATEGY_UNKNOWN)
         evidence = [str(item) for item in candidate.evidence]
 
+        selectors = (
+            SearchSelectors(
+                result_item=selector_evidence.result_item,
+                title=selector_evidence.title,
+                url=selector_evidence.url,
+                snippet=selector_evidence.snippet,
+                body=selector_evidence.body,
+            )
+            if selector_evidence is not None
+            else SearchSelectors("", "", "", "", "")
+        )
+        status = PLAN_STATUS_READY if selector_evidence is not None else PLAN_STATUS_DRAFT
         base_plan = SearchPlan(
             plan_id="",
             endpoint=normalize_target_url(candidate.endpoint),
             protocol_version=PROTOCOL_VERSION_V2,
-            status=PLAN_STATUS_DRAFT,
+            status=status,
             strategy=strategy,
             http_method=method,
             query_params=query_params,
             request_body_template="",
+            selectors=selectors,
             scope=SearchScope(domain=target_domain),
             discovery=SearchDiscovery(
                 evidence=evidence,
