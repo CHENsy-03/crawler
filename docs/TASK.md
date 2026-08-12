@@ -1800,7 +1800,7 @@ TASK-016 完成不代表“输入任意网站即可自动采集”已经完成�
 | 当前状态 | contract-frozen |
 | 前置任务 | TASK-015、TASK-016 |
 | 后续任务 | TASK-018 及后续执行适配 |
-| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E 功能实现仍被阻断；TASK-017F 未实施 |
+| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E-R4 已实现受控探测 HTTP 安全基础与候选请求形状；TASK-017E 仍被 R5 阻断；TASK-017F 未实施 |
 
 ### 17.2 正式目标
 
@@ -2088,6 +2088,13 @@ TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。�
 - 当前状态：契约已冻结，功能未实现
 - 后续拆分：TASK-017E-R4 受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 HTML/JSON selector 证据提取与 PlanBuilder 传递
 - TASK-017E 仍被上游 selector 来源阻断
+
+### 17.17 TASK-017E-R4 受控探测基础
+
+- 状态：已实现
+- 内容：候选请求形状建模、探测资格判定、SearchProbePolicy、安全请求构造、固定 IP 连接的受控 HTTP 获取、响应门禁
+- 文件：crawler/site/models.py、crawler/site/forms.py、crawler/site/search_probe.py、tests/test_search_probe.py
+- 后续：TASK-017E-R5 HTML/JSON selector 证据提取与 PlanBuilder 传递
 
 #### TASK-017F：协议文档与完整离线回归
 

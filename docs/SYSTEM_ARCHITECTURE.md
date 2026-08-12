@@ -279,3 +279,9 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 请求预算、SSRF/DNS/redirect、Content-Type、selector 门禁和 R4/R5 拆分见 `docs/SEARCH_ANALYSIS_PROBE.md`。
 - ADR：`docs/decisions/ADR-004-search-analysis-probe.md`。
 - TASK-017E 仍被上游 selector 来源阻断。
+## 17. TASK-017E-R4 受控探测基础
+
+- 状态：已实现
+- 内容：SearchCandidate 请求形状、forms 请求形状映射、SearchProbePolicy、安全请求构造、固定 IP 连接探测、响应门禁
+- 文件：crawler/site/models.py、crawler/site/forms.py、crawler/site/search_probe.py、tests/test_search_probe.py
+- TASK-017E 仍被 R5 selector 证据提取阻断。

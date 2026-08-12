@@ -578,3 +578,9 @@ TASK-017F：后续集成与跨语言验证
 - 不访问真实网站。
 - 不发送 DNS/HTTP 请求。
 - 不开始 TASK-017E-R4、R5、TASK-017E 或 TASK-017F。
+## 19. TASK-017E-R4 实施状态
+
+- 状态：已实现受控探测安全基础与候选请求形状。
+- 未实现：HTML/JSON selector 推断、PlanBuilder selector 传递、SearchPlan 执行、Worker 集成。
+- R4 不创建 `probe_search_candidate()` 完整入口，该入口归 R5 使用；R4 提供 `build_probe_request()`、`SearchProbePolicy`、`PinnedProbeFetcher` 等基础能力。
+- TASK-017E 仍被 R5 selector 证据提取阻断。

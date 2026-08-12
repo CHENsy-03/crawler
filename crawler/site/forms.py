@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from crawler.site.models import Diagnostic, DiscoveryLimits, SearchCandidate
+from crawler.site.models import CandidateRequestShape, Diagnostic, DiscoveryLimits, SearchCandidate
 from crawler.site.normalizer import (
     SENSITIVE_NAME_RE,
     SiteNormalizationError,
@@ -66,6 +66,32 @@ def _scope_for(endpoint: str, base_url: str) -> str:
         return "same_origin" if same_origin(endpoint, base_url) else "requires_scope_validation"
     except SiteNormalizationError:
         return "requires_scope_validation"
+
+
+
+
+def _request_shape_for_form(
+    method: str,
+    endpoint: str,
+    keyword_param: str,
+    fixed_params: tuple[tuple[str, str], ...],
+    content_type: str,
+    base_url: str,
+) -> CandidateRequestShape:
+    """Build a deterministic internal request shape from form evidence."""
+    is_get = method == "GET"
+    approved = tuple(dict.fromkeys((normalize_target_url(base_url), normalize_target_url(endpoint))))
+    return CandidateRequestShape(
+        method=method,
+        endpoint=endpoint,
+        keyword_location="query" if is_get else "form",
+        keyword_param=keyword_param,
+        fixed_query_params=fixed_params if is_get else (),
+        form_fields=() if is_get else fixed_params,
+        content_type=content_type,
+        evidence_source="form",
+        approved_origins=approved,
+    )
 
 
 def parse_forms(html: str, base_url: str, limits: DiscoveryLimits) -> tuple[list[SearchCandidate], list[Diagnostic]]:
@@ -148,6 +174,14 @@ def parse_forms(html: str, base_url: str, limits: DiscoveryLimits) -> tuple[list
                     priority=3,
                     scope=scope,
                     evidence=evidence,
+                    request_shape=_request_shape_for_form(
+                        raw_method.upper(),
+                        normalized_endpoint,
+                        keyword_param,
+                        tuple(fixed),
+                        "application/x-www-form-urlencoded",
+                        base_url,
+                    ),
                 )
             )
         else:
@@ -161,6 +195,14 @@ def parse_forms(html: str, base_url: str, limits: DiscoveryLimits) -> tuple[list
                     priority=4 if fixed else 5,
                     scope=scope,
                     evidence=evidence,
+                    request_shape=_request_shape_for_form(
+                        "GET",
+                        normalized_endpoint,
+                        keyword_param,
+                        tuple(fixed),
+                        "",
+                        base_url,
+                    ),
                 )
             )
 
