@@ -1,5 +1,6 @@
 {
   "worker": 4,
   "queue_size": 1000,
+  "search_plan_cache_ttl_seconds": 86400,
   "environment": "dev"
 }
