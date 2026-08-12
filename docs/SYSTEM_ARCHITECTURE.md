@@ -229,7 +229,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - TASK-015 只建立输入契约、协议模型和 SearchPlan/SearchHit。
 - 不实现 Site Analyzer、表单发现、选择器推断、SearchPlan 缓存或正式 Worker v2 执行。
 - TASK-016（网站分析与搜索入口发现）未实施。
-- TASK-017（运行时 SearchPlan 生成与正式 Worker 接入）未实施。
+- TASK-017A 至 TASK-017D 已实施；TASK-017E 执行契约已冻结，功能实现被上游 selectors 阻断；TASK-017F 未实施。
 
 ### 13.4 TASK-015 契约规则摘要
 
@@ -239,7 +239,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - v1/v2 使用显式协议版本分派，未知字段和跨版本字段返回明确错误。
 - 无版本请求只有合法旧 v1 `site` + 字符串 `keywords` 才固定映射 v1；带 `target_url` 或数组 `keywords` 必须显式声明 v2。
 - `plan_id` 使用 SHA-256 canonical JSON；U+2028/U+2029 转义为 `\u2028`/`\u2029`，`<>&` 不转义。
-- TASK-016、TASK-017 仍未实施；正式 Worker v2 执行未实现。
+- TASK-016 已实施；TASK-017A 至 TASK-017D 已实施；TASK-017E 功能实现未开始，正式 Worker v2 执行尚未实现。
 
 ### 13.5 CLI 与 API 输入保护
 
@@ -257,3 +257,15 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - `SiteDetector` 和 `main.py --discover` 已收敛为 Analyzer 的兼容/调试入口。
 - 重定向仅允许相同 origin，或同一规范化 host 的 http -> https 升级；https -> http、跨 host、端口变化均拒绝。
 - DiscoveryLimits 中的 candidate、script、evidence 预算已集中执行。
+
+## 15. TASK-017E SearchPlan 执行契约
+
+- SearchPlan 由 Python Search Worker 生成或读取缓存，只在同一 Python Worker 进程内交接。
+- Python 负责执行；Go 不解析、不执行、不消费 SearchPlan。
+- 不新增 SearchPlan Redis 结果消息、计划队列、执行队列或 ACK 队列。
+- SearchPlanCache 仅为生成阶段的内部优化缓存，不是结果交付通道。
+- 执行器冻结路径：`crawler/search/plan_executor.py`；入口：`execute_search_plan(plan, keywords, *, fetcher)`。
+- 只执行 `ready/active` 且 `strategy` 为 `html_form/json_api` 的计划。
+- 成功候选映射为既有 `URLMessage` 并发布到 `crawler:url`；执行错误复用 `SEARCH_FAILED`。
+- 当前 PlanBuilder 的 `SearchSelectors` 为空，TASK-017E 功能实现被上游阻断。
+- 完整契约：`docs/SEARCH_PLAN_EXECUTION.md`；ADR：`docs/decisions/ADR-003-search-plan-execution.md`。

@@ -1797,10 +1797,10 @@ TASK-016 完成不代表“输入任意网站即可自动采集”已经完成�
 |---|---|
 | 任务编号 | TASK-017 |
 | 任务名称 | 搜索计划流水线 |
-| 当前状态 | ready |
+| 当前状态 | contract-frozen |
 | 前置任务 | TASK-015、TASK-016 |
 | 后续任务 | TASK-018 及后续执行适配 |
-| 定义冻结 | TASK-017A 已完成，TASK-017B 至 TASK-017F 未实施 |
+| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E 功能实现被上游 selectors 阻断；TASK-017F 未实施 |
 
 ### 17.2 正式目标
 
@@ -1958,6 +1958,7 @@ TASK-017 不修改任何 Go 文件。若未来确需 Go 执行计划，必须另
 - 不得改变现有评分、详情抓取、存储或 Go Worker 职责。
 - 无法由现有插件安全执行的计划必须明确失败，不能假成功。
 - TASK-017 只处理搜索计划阶段，不扩展为任意 JavaScript 浏览器自动化。
+- 正式执行契约见 `docs/SEARCH_PLAN_EXECUTION.md` 和 `docs/decisions/ADR-003-search-plan-execution.md`；当前 PlanBuilder 的 selectors 为空，TASK-017E 功能实现被上游阻断。
 
 ### 17.10 错误语义
 
@@ -2069,6 +2070,16 @@ tests/test_plan_builder.py
 - 复用标准化及现有输出协议；
 - 验证执行失败和发布失败；
 - 不重写插件。
+
+TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。功能实现尚未开始，且被当前空 selectors 上游缺口阻断。
+
+### 17.15 TASK-017E-R1 契约冻结
+
+- 正式执行契约：`docs/SEARCH_PLAN_EXECUTION.md`
+- ADR：`docs/decisions/ADR-003-search-plan-execution.md`
+- 当前状态：契约已冻结，功能未实现
+- 阻断：Analyzer/PlanBuilder 当前无法生成 `result_item/title/url` selectors
+- 后续要求：先由独立任务修复上游 selector 生成，再实现 TASK-017E
 
 #### TASK-017F：协议文档与完整离线回归
 
