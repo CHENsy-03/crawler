@@ -291,3 +291,9 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 内容：HTML CSS selector 与 JSON RFC 6901 Pointer 证据提取、同响应重新验证、正式 `probe_search_candidate()`、PlanBuilder 传递
 - 文件：crawler/site/selector_evidence.py、crawler/site/search_probe.py、crawler/search/plan_builder.py
 - TASK-017E 主执行适配器尚未实现。
+## 19. TASK-017E SearchPlan 执行器与 Worker v2 主链
+
+- 状态：已实现
+- 内容：plan_executor、search_orchestrator、SearchWorker v2 主链、正式 URLMessage 发布
+- Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段。
+- 本轮未修改 Go 或协议；跨语言全量契约回归留待 TASK-017F。

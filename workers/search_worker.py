@@ -34,9 +34,12 @@ from crawler.search.plan_cache import (
     SearchPlanCache,
     build_plan_cache_key,
 )
+from crawler.search.plan_executor import execute_search_plan
+from crawler.search.search_orchestrator import RedisURLMessagePublisher, run_v2_search_pipeline
 from crawler.search.search_plan import SearchPlan
 from crawler.site.analyzer import SiteAnalyzer
 from crawler.site.models import SearchCandidate, SiteAnalysisResult
+from crawler.site.search_probe import PinnedProbeFetcher, SearchProbePolicy
 from plugins import search as plugin_search
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
@@ -230,6 +233,9 @@ def run_worker(redis_addr: str = "localhost:6379"):
     analyzer = SiteAnalyzer()
     plan_builder = PlanBuilder()
     plan_cache = SearchPlanCache(r, ttl_seconds=_load_plan_cache_ttl())
+    probe_fetcher = PinnedProbeFetcher()
+    probe_policy = SearchProbePolicy()
+    publisher = RedisURLMessagePublisher(r)
 
     running = True
 
@@ -256,16 +262,35 @@ def run_worker(redis_addr: str = "localhost:6379"):
                 log.error("[task=%s] unsupported protocol_version=%s", raw.get("task_id", ""), protocol_version)
                 continue
             if protocol_version == PROTOCOL_VERSION_V2:
-                v2_result = handle_v2_search_message(
-                    data,
+                try:
+                    v2_message = decode_v2_search_request(data)
+                except ProtocolError:
+                    log.error("[task=%s] invalid v2 message", raw.get("task_id", ""))
+                    continue
+                pipeline_result = run_v2_search_pipeline(
+                    v2_message,
                     analyzer=analyzer,
                     plan_builder=plan_builder,
                     plan_cache=plan_cache,
+                    probe_fetcher=probe_fetcher,
+                    policy=probe_policy,
+                    executor=execute_search_plan,
+                    publisher=publisher,
                 )
-                if v2_result.plan is not None:
-                    log.info("[task=%s] v2 SearchPlan ready: plan_id=%s", v2_result.task_id, v2_result.plan.plan_id)
+                if pipeline_result.status == "published":
+                    log.info(
+                        "[task=%s] v2 published %d URLs plan_id=%s",
+                        v2_message.task_id,
+                        pipeline_result.published_count,
+                        pipeline_result.plan_id,
+                    )
                 else:
-                    log.error("[task=%s] v2 plan generation failed: code=%s", v2_result.task_id, v2_result.error_code)
+                    log.error(
+                        "[task=%s] v2 pipeline failed status=%s code=%s",
+                        v2_message.task_id,
+                        pipeline_result.status,
+                        pipeline_result.error_code,
+                    )
                 continue
 
             task_id = raw.get("task_id", "")

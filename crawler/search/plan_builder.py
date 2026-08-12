@@ -105,6 +105,30 @@ def _target_error(raw: str) -> str | None:
     return None
 
 
+def _form_body_template(
+    fields: tuple[tuple[str, str], ...],
+    keyword_param: str,
+) -> str:
+    pairs = [(name, quote(value, safe="")) for name, value in fields]
+    pairs.append((keyword_param, "{keyword}"))
+    return "&".join(f"{name}={value}" for name, value in pairs)
+
+
+def _json_body_template(shape: CandidateRequestShape) -> str:
+    body: dict[str, object] = {}
+    for path, value in shape.json_object_template:
+        node = body
+        for part in path[:-1]:
+            node = node.setdefault(part, {})
+        node[path[-1]] = value
+    if shape.keyword_path:
+        node = body
+        for part in shape.keyword_path[:-1]:
+            node = node.setdefault(part, {})
+        node[shape.keyword_path[-1]] = "{keyword}"
+    return json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
 class PlanBuilder:
     """Convert Analyzer candidates into the first valid SearchPlan."""
 
@@ -327,11 +351,20 @@ class PlanBuilder:
     ) -> SearchPlan:
         method = candidate.method.strip().upper()
         keyword_param = candidate.keyword_param.strip()
-        query_params = {
-            name: value
-            for name, value in candidate.fixed_params
-        }
-        query_params[keyword_param] = KEYWORD_PLACEHOLDER
+        request_shape = candidate.request_shape
+        if request_shape is not None and request_shape.keyword_location in ("form", "json"):
+            query_params = dict(request_shape.fixed_query_params)
+        else:
+            query_params = {
+                name: value
+                for name, value in candidate.fixed_params
+            }
+            query_params[keyword_param] = KEYWORD_PLACEHOLDER
+        request_body_template = ""
+        if request_shape is not None and request_shape.keyword_location == "form":
+            request_body_template = _form_body_template(request_shape.form_fields, keyword_param)
+        elif request_shape is not None and request_shape.keyword_location == "json":
+            request_body_template = _json_body_template(request_shape)
         source = candidate.source if isinstance(candidate.source, str) else ""
         strategy = _SOURCE_STRATEGY.get(source, SEARCH_STRATEGY_UNKNOWN)
         evidence = [str(item) for item in candidate.evidence]
@@ -356,7 +389,7 @@ class PlanBuilder:
             strategy=strategy,
             http_method=method,
             query_params=query_params,
-            request_body_template="",
+            request_body_template=request_body_template,
             selectors=selectors,
             scope=SearchScope(domain=target_domain),
             discovery=SearchDiscovery(

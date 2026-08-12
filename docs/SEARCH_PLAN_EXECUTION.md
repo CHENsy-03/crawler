@@ -425,3 +425,10 @@ SearchSelectors("", "", "", "", "")
 - 不新增任何 Redis 队列、消息类型或协议字段。
 - 不将 SearchPlan 发布到 Redis。
 - 不开始 TASK-017F。
+## 14. TASK-017E 实施状态与 URLMessage 发布
+
+- 状态：TASK-017E 已实现。
+- Python 通过 `protocol.messages.URLMessage.to_dict()` 输出顶层 JSON 并发布到 `crawler:url`。
+- Go 当前通过 `PopURL()` + `json.Unmarshal` 宽松解码共同字段 `task_id/url/site/keyword/level/title`。
+- `protocol_version/message_id/timestamp/type` 当前被 Go 忽略；缺失旧 `time` 不影响当前 worker。
+- 本轮未修改 Go 或消息协议；跨语言全量契约回归留待 TASK-017F。
