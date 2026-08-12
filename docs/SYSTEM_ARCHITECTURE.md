@@ -229,7 +229,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - TASK-015 只建立输入契约、协议模型和 SearchPlan/SearchHit。
 - 不实现 Site Analyzer、表单发现、选择器推断、SearchPlan 缓存或正式 Worker v2 执行。
 - TASK-016（网站分析与搜索入口发现）未实施。
-- TASK-017A 至 TASK-017D 已实施；TASK-017E 执行契约已冻结，功能实现被上游 selectors 阻断；TASK-017F 未实施。
+- TASK-017A 至 TASK-017D 已实施；TASK-017E 执行契约已冻结；受控探测契约已冻结；功能实现仍被上游 selectors 阻断；TASK-017F 未实施。
 
 ### 13.4 TASK-015 契约规则摘要
 
@@ -239,7 +239,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - v1/v2 使用显式协议版本分派，未知字段和跨版本字段返回明确错误。
 - 无版本请求只有合法旧 v1 `site` + 字符串 `keywords` 才固定映射 v1；带 `target_url` 或数组 `keywords` 必须显式声明 v2。
 - `plan_id` 使用 SHA-256 canonical JSON；U+2028/U+2029 转义为 `\u2028`/`\u2029`，`<>&` 不转义。
-- TASK-016 已实施；TASK-017A 至 TASK-017D 已实施；TASK-017E 功能实现未开始，正式 Worker v2 执行尚未实现。
+- TASK-016 已实施；TASK-017A 至 TASK-017D 已实施；TASK-017E-R1/R3 契约已冻结；TASK-017E 功能实现未开始，正式 Worker v2 执行尚未实现。
 
 ### 13.5 CLI 与 API 输入保护
 
@@ -269,3 +269,13 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 成功候选映射为既有 `URLMessage` 并发布到 `crawler:url`；执行错误复用 `SEARCH_FAILED`。
 - 当前 PlanBuilder 的 `SearchSelectors` 为空，TASK-017E 功能实现被上游阻断。
 - 完整契约：`docs/SEARCH_PLAN_EXECUTION.md`；ADR：`docs/decisions/ADR-003-search-plan-execution.md`。
+
+## 16. TASK-017E-R3 受控搜索探测契约
+
+- 受控探测是候选发现后的独立 Python 内部阶段，不属于 SearchPlan 正式执行。
+- 正式模块路径：`crawler/site/search_probe.py`；入口：`probe_search_candidate(candidate, keywords, *, fetcher, policy)`。
+- 探测不发布搜索结果 URL，不进入 legacy `plugin_search()`，不写入 Redis，Go 不消费探测结果。
+- 探测只用于观察响应结构并形成 selector 证据；响应体只在 Python 进程内短暂存在。
+- 请求预算、SSRF/DNS/redirect、Content-Type、selector 门禁和 R4/R5 拆分见 `docs/SEARCH_ANALYSIS_PROBE.md`。
+- ADR：`docs/decisions/ADR-004-search-analysis-probe.md`。
+- TASK-017E 仍被上游 selector 来源阻断。
