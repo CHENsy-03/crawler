@@ -431,4 +431,12 @@ SearchSelectors("", "", "", "", "")
 - Python 通过 `protocol.messages.URLMessage.to_dict()` 输出顶层 JSON 并发布到 `crawler:url`。
 - Go 当前通过 `PopURL()` + `json.Unmarshal` 宽松解码共同字段 `task_id/url/site/keyword/level/title`。
 - `protocol_version/message_id/timestamp/type` 当前被 Go 忽略；缺失旧 `time` 不影响当前 worker。
+
+缓存生命周期：
+- 新构建计划先正式执行，`success/no_results` 后才写入缓存。
+- 新计划其他执行失败不写缓存。
+- 缓存命中计划执行失败时删除对应缓存，本次不重试，下一条独立任务重新分析。
+- `no_results` 表示结构有效但结果为空，计划保留且零发布。
+- `publish_failure` 不使已验证合法计划失效。
+- BRPOP 仍为既有 at-most-once 语义。
 - 本轮未修改 Go 或消息协议；跨语言全量契约回归留待 TASK-017F。

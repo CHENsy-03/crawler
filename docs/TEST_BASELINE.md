@@ -58,17 +58,19 @@ py -m pytest -q
 
 结果：
 
-- 收集：479 tests
-- 通过：472
+- 收集：493 tests
+- 通过：486
 - 跳过：7
 - 失败：0
-- 耗时：3.09s
+- 耗时：3.18s
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
 TASK-017E-R5 新增 `tests/test_selector_evidence.py`、`tests/test_probe_formal.py`、`tests/test_probe_formal_json.py`、`tests/test_plan_builder_evidence.py`。
 
 TASK-017E 新增 `tests/test_plan_executor.py`、`tests/test_search_orchestrator.py`。
+
+TASK-017E 缓存语义修复新增 `tests/test_plan_cache_delete.py`、`tests/test_search_orchestrator_cache.py`。
 
 跳过项为 `tests/integration/` 下的 E2E 测试，因未设置 `E2E_ENABLED=1` 自动跳过，不会访问 Redis、MySQL 或外部 HTTP 服务。
 

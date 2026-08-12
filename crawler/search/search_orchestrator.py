@@ -35,6 +35,10 @@ STATUS_FAILED = "failed"
 _EXECUTABLE_STATUSES = {"ready", "active"}
 
 
+def _is_reusable_execution(execution: SearchPlanExecutionResult) -> bool:
+    return execution.success or execution.failure_code == FAILURE_NO_RESULTS
+
+
 @dataclass(frozen=True)
 class V2PipelineResult:
     status: str
@@ -170,6 +174,11 @@ def run_v2_search_pipeline(
             fetcher=probe_fetcher,
             policy=policy,
         )
+        if not _is_reusable_execution(execution):
+            try:
+                plan_cache.delete(target_url=message.target_url)
+            except Exception:
+                pass
         return _publish_execution(message, read.plan, execution, publisher)
 
     try:
@@ -200,13 +209,14 @@ def run_v2_search_pipeline(
         if built.plan.status not in _EXECUTABLE_STATUSES:
             continue
 
-        plan_cache.put(target_url=message.target_url, plan=built.plan)
         execution = executor(
             built.plan,
             tuple(message.keywords),
             fetcher=probe_fetcher,
             policy=policy,
         )
+        if _is_reusable_execution(execution):
+            plan_cache.put(target_url=message.target_url, plan=built.plan)
         return _publish_execution(message, built.plan, execution, publisher)
 
     return V2PipelineResult(STATUS_FAILED, None, 0, "no_executable_plan")

@@ -49,6 +49,9 @@ class RedisClientProtocol(Protocol):
     def set(self, name: str, value: str | bytes, *, ex: int | None = None) -> Any:
         ...
 
+    def delete(self, name: str) -> Any:
+        ...
+
 
 @dataclass(frozen=True)
 class PlanCacheReadResult:
@@ -265,3 +268,9 @@ class SearchPlanCache:
         except Exception:
             return PlanCacheWriteResult(False, ERROR_PLAN_CACHE_WRITE_FAILED)
         return PlanCacheWriteResult(True, None)
+
+    def delete(self, *, target_url: str) -> bool:
+        """Delete the plan cache entry for a target URL."""
+        normalized = _normalized_safe_target(target_url)
+        key = CACHE_KEY_PREFIX + hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        return bool(self._redis.delete(key))
