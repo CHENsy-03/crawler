@@ -272,3 +272,21 @@ def test_path_prefix_boundary_is_enforced():
     result = HTMLSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_html_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
     assert result.items == ()
+
+
+def test_path_prefix_allows_exact_match():
+    plan = replace(_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
+    plan = replace(plan, plan_id=compute_plan_id(plan))
+    body = "<div class=\"result-item\"><h3><a href=\"/news\">A</a></h3></div>"
+    result = HTMLSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_html_response(body)]), policy=POLICY)
+    assert result.success
+    assert result.items[0].url == "https://example.gov.cn/news"
+
+
+def test_path_prefix_allows_nested_path():
+    plan = replace(_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
+    plan = replace(plan, plan_id=compute_plan_id(plan))
+    body = "<div class=\"result-item\"><h3><a href=\"/news/2026/article.html\">A</a></h3></div>"
+    result = HTMLSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_html_response(body)]), policy=POLICY)
+    assert result.success
+    assert result.items[0].url == "https://example.gov.cn/news/2026/article.html"

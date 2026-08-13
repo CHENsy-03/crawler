@@ -5,6 +5,8 @@ from dataclasses import replace
 
 import pytest
 
+from crawler.search.plan_executor import execute_search_plan
+from crawler.site.search_probe import SearchProbePolicy
 from crawler.search.search_plan import (
     ADAPTER_GENERIC_JSON,
     ADAPTER_HTML,
@@ -31,7 +33,6 @@ from crawler.search.search_plan import (
     compute_plan_id,
     validate_search_plan,
 )
-
 
 def _base_plan(adapter=ADAPTER_HTML, method="GET", request_format=REQUEST_FORMAT_NONE, response_format=RESPONSE_FORMAT_HTML, shape=None):
     return SearchPlan(
@@ -181,3 +182,68 @@ def test_pagination_value_and_page_size_conflict_rejected():
     bad = replace(plan, pagination=pagination, plan_id="")
     with pytest.raises(ProtocolError):
         validate_search_plan(replace(bad, plan_id=compute_plan_id(bad)))
+
+
+def _json_conflict_plan(shape, pagination):
+    base = _base_plan(
+        ADAPTER_GENERIC_JSON,
+        "POST",
+        REQUEST_FORMAT_JSON,
+        RESPONSE_FORMAT_JSON,
+        shape,
+    )
+    bad = replace(base, pagination=pagination, plan_id="")
+    return replace(bad, plan_id=compute_plan_id(bad))
+
+
+def _assert_json_conflict_rejected_before_fetch(shape, pagination):
+    plan = _json_conflict_plan(shape, pagination)
+    with pytest.raises(ProtocolError):
+        validate_search_plan(plan)
+
+    class FakeFetcher:
+        def __init__(self):
+            self.calls = 0
+
+        def fetch(self, request, *, policy):
+            self.calls += 1
+            raise AssertionError("fetch must not be called for invalid plan")
+
+    fetcher = FakeFetcher()
+    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=SearchProbePolicy())
+    assert result.failure_code == "plan_invalid"
+    assert fetcher.calls == 0
+
+
+def test_json_pagination_ancestor_of_fixed_template_rejected():
+    shape = SearchRequestShape(
+        KEYWORD_LOCATION_JSON,
+        ("query", "kw"),
+        json_object_template=((("paging", "current"), {"value": 1}),),
+    )
+    pagination = SearchPagination(
+        enabled=True,
+        location=KEYWORD_LOCATION_JSON,
+        value_path=("paging",),
+        start=1,
+        step=1,
+        max_pages=1,
+    )
+    _assert_json_conflict_rejected_before_fetch(shape, pagination)
+
+
+def test_json_pagination_descendant_of_fixed_template_rejected():
+    shape = SearchRequestShape(
+        KEYWORD_LOCATION_JSON,
+        ("query", "kw"),
+        json_object_template=((("paging",), {"value": 1}),),
+    )
+    pagination = SearchPagination(
+        enabled=True,
+        location=KEYWORD_LOCATION_JSON,
+        value_path=("paging", "current"),
+        start=1,
+        step=1,
+        max_pages=1,
+    )
+    _assert_json_conflict_rejected_before_fetch(shape, pagination)

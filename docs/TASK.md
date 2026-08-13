@@ -2338,7 +2338,7 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 - 完成 TASK-018 全量差异审查、冻结协议一致性审查和生产 Registry/orchestrator/worker 调用链审查。
 - 修复最终门禁发现的冻结范围内缺陷：allowed path prefix 按路径边界比较；JSON 分页路径与固定模板、页码与页大小路径冲突拒绝；Generic JSON 禁用分页可单页执行；JPAAS `mapSearchResult` 错误嵌套类型映射 `selector_mismatch`。
 - 新增回归测试：四类 Adapter path boundary、Generic JSON disabled pagination、JSON pagination conflict、JPAAS malformed nested、`default_v2_components` 与 worker v2 production Registry。
-- 最终 Python 基线：643 collected / 636 passed / 7 skipped / 0 failed。
+- 最终 Python 基线：647 collected / 640 passed / 7 skipped / 0 failed。
 - Go 全量 test/vet、compileall、pip check、git diff --check 通过。
 - 未修改 SearchPlan/cache schema、Redis key/TTL/fingerprint、外部消息协议、错误码、Go 或 legacy 行为。
 - TASK-022 残余安全风险仍存在；TASK-018 不得声称未知站点可自动发现并执行。

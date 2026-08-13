@@ -58,11 +58,11 @@ py -m pytest -q
 
 结果：
 
-- 收集：643 tests
-- 通过：636
+- 收集：647 tests
+- 通过：640
 - 跳过：7
 - 失败：0
-- 最终实际耗时：3.82s（该次运行的观察值，不作为稳定性能门槛）
+- 耗时：不固定记录；测试耗时受机器负载和环境影响，不作为交付或性能门槛
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
@@ -244,11 +244,13 @@ TASK-018H 最终交付门禁已完成；等待人工 pre-push 审查。
 TASK-018H 最终交付门禁新增/更新测试：
 
 - 四类 Adapter 的 allowed path prefix 路径边界测试；
+- allowed path prefix 精确路径与子路径允许测试；
 - Generic JSON 禁用分页单页执行测试；
 - JSON 分页与固定模板、页码与页大小冲突测试；
+- JSON 分页与固定模板祖先/后代冲突及网络前失败测试；
 - JPAAS malformed nested 类型测试；
 - `default_v2_components` 与 worker v2 production Registry 测试。
 
-TASK-018H 最终基线：643 collected / 636 passed / 7 skipped / 0 failed。
+TASK-018H 最终基线：647 collected / 640 passed / 7 skipped / 0 failed。
 Go 全量 test/vet、compileall、pip check、git diff --check 均通过。
 TASK-018 正式关闭等待人工 pre-push 审查；TASK-022 残余风险仍存在。
