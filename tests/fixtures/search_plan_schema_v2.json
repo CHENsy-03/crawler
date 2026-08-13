@@ -1,0 +1,60 @@
+{
+  "search_plan": {
+    "plan_schema_version": 2,
+    "plan_id": "5ace0cdb5b49ca1ff705a2e2584999c61c542aca63740cd5513976cf919afec2",
+    "endpoint": "https://example.gov.cn/search",
+    "protocol_version": "2.0",
+    "status": "draft",
+    "strategy": "html_form",
+    "adapter": "html",
+    "http_method": "GET",
+    "request_format": "none",
+    "response_format": "html",
+    "request_shape": {
+      "keyword_location": "query",
+      "keyword_path": [
+        "q"
+      ],
+      "fixed_query_params": [],
+      "form_fields": [],
+      "json_object_template": []
+    },
+    "pagination": {
+      "enabled": false,
+      "location": "none",
+      "value_path": [],
+      "start": 0,
+      "step": 0,
+      "page_size_path": [],
+      "page_size": null,
+      "max_pages": 1
+    },
+    "selectors": {
+      "result_item": "div.result",
+      "title": "h3 a",
+      "url": "h3 a",
+      "snippet": "p.summary",
+      "body": "div.article-body"
+    },
+    "scope": {
+      "domain": "example.gov.cn",
+      "allowed_path_prefixes": [
+        "/search",
+        "/news"
+      ],
+      "max_depth": 3
+    },
+    "discovery": {
+      "evidence": [
+        "search form found"
+      ],
+      "confidence": 80,
+      "source": "html_form_detection"
+    },
+    "created_from": "task-015",
+    "created_at": "2026-07-31T00:00:00Z",
+    "expires_at": "",
+    "invalid_reason": ""
+  },
+  "search_plan_id": "5ace0cdb5b49ca1ff705a2e2584999c61c542aca63740cd5513976cf919afec2"
+}

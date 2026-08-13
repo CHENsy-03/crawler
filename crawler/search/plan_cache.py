@@ -1,4 +1,4 @@
-"""Redis-backed cache for validated SearchPlan objects."""
+"""Redis-backed cache for validated SearchPlan v2 objects."""
 
 import hashlib
 import json
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from crawler.search.search_plan import (
+    PLAN_SCHEMA_VERSION,
     ProtocolError,
     SearchPlan,
     compute_plan_id,
@@ -19,13 +20,14 @@ from crawler.site.normalizer import (
 )
 from crawler.site.security import classify_ip, is_ip_literal
 
-CACHE_SCHEMA_VERSION = 1
+CACHE_SCHEMA_VERSION = 2
 CACHE_KEY_PREFIX = "crawler:search_plan:v1:"
 DEFAULT_PLAN_CACHE_TTL_SECONDS = 86400
 
 STATUS_HIT = "hit"
 STATUS_MISS = "miss"
 STATUS_CORRUPT = "corrupt"
+STATUS_INCOMPATIBLE = "incompatible"
 STATUS_READ_FAILED = "read_failed"
 
 ERROR_PLAN_CACHE_READ_FAILED = "plan_cache_read_failed"
@@ -38,6 +40,16 @@ _ENVELOPE_FIELDS = {
     "target_fingerprint",
     "plan",
 }
+
+_NEW_PLAN_REQUIRED_FIELDS = {
+    "plan_schema_version",
+    "adapter",
+    "request_format",
+    "response_format",
+    "request_shape",
+    "pagination",
+}
+_OLD_PLAN_FIELDS = {"query_params", "request_body_template"}
 
 
 class RedisClientProtocol(Protocol):
@@ -80,6 +92,10 @@ class PlanCacheWriteResult:
 
 class _CorruptCacheError(ValueError):
     """Internal marker for payloads that cannot be trusted."""
+
+
+class _IncompatibleCacheError(ValueError):
+    """Internal marker for valid-but-old schema payloads."""
 
 
 def _unsafe_host(host: str) -> bool:
@@ -125,19 +141,22 @@ def _decode_cache_envelope(
         raise _CorruptCacheError
     if isinstance(data["cache_schema_version"], bool):
         raise _CorruptCacheError
-    if (
-        not isinstance(data["cache_schema_version"], int)
-        or data["cache_schema_version"] != CACHE_SCHEMA_VERSION
-    ):
-        raise _CorruptCacheError
-    if (
-        not isinstance(data["target_fingerprint"], str)
-        or data["target_fingerprint"] != expected_fingerprint
-    ):
+    if not isinstance(data["cache_schema_version"], int) or data["cache_schema_version"] != CACHE_SCHEMA_VERSION:
+        raise _IncompatibleCacheError
+    if not isinstance(data["target_fingerprint"], str) or data["target_fingerprint"] != expected_fingerprint:
         raise _CorruptCacheError
     plan_data = data["plan"]
     if not isinstance(plan_data, dict):
         raise _CorruptCacheError
+    if _OLD_PLAN_FIELDS.intersection(plan_data):
+        raise _IncompatibleCacheError
+    missing = _NEW_PLAN_REQUIRED_FIELDS - set(plan_data)
+    if missing:
+        raise _IncompatibleCacheError
+    if isinstance(plan_data["plan_schema_version"], bool) or not isinstance(plan_data["plan_schema_version"], int):
+        raise _IncompatibleCacheError
+    if plan_data["plan_schema_version"] != PLAN_SCHEMA_VERSION:
+        raise _IncompatibleCacheError
 
     try:
         plan = SearchPlan.from_dict(plan_data)
@@ -211,6 +230,8 @@ class SearchPlanCache:
 
         try:
             plan = _decode_cache_envelope(text, fingerprint, normalized_target)
+        except _IncompatibleCacheError:
+            return PlanCacheReadResult(None, STATUS_INCOMPATIBLE, None)
         except _CorruptCacheError:
             return PlanCacheReadResult(None, STATUS_CORRUPT, None)
         return PlanCacheReadResult(plan, STATUS_HIT, None)
@@ -261,6 +282,7 @@ class SearchPlanCache:
             sort_keys=True,
             separators=(",", ":"),
             ensure_ascii=False,
+            allow_nan=False,
         ).encode("utf-8")
 
         try:

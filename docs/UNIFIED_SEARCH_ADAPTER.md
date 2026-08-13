@@ -706,3 +706,18 @@ TASK-018B 应：
 - 应进入安全重建路径。
 
 生成新计划并成功执行后，原 key 可被新 schema 缓存覆盖。
+
+
+## 21. TASK-018B 实施记录
+
+- `plan_schema_version=2`，cache envelope schema version 为 2。
+- `CACHE_KEY_PREFIX`、target fingerprint 算法和 TTL 保持不变。
+- 新 schema 不接受、不序列化、不读取 `query_params`/`request_body_template`。
+- `request_shape` 是固定请求参数和关键词位置的唯一来源；`pagination` 是动态分页唯一来源。
+- `plan_id` canonical 包含 `plan_schema_version/strategy/adapter/endpoint/http_method/request_format/response_format/request_shape/pagination/selectors/scope`。
+- 旧 schema 缓存读取返回内部 `incompatible`，不进入 executor，按 cache miss 重建。
+- `execution_models.py` 是统一执行结果唯一模型；`plan_executor.py` 仅 re-export。
+- `adapter.py` 定义 SearchAdapter Protocol；`adapter_registry.py` 实现精确分派，无 fallback，无具体 Adapter 注册。
+- `request_builder.py` 是纯函数式无网络请求构造器。
+- executor 目前只执行 `max_pages=1` 的过渡路径；多页计划返回 `plan_not_executable`。
+- TASK-018C–G 尚未完成；不得声称多页执行或具体 Adapter 已交付。

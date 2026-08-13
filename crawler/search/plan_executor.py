@@ -1,17 +1,28 @@
-"""Execute a validated SearchPlan through the safe probe HTTP foundation."""
+"""Execute a validated SearchPlan v2 through the safe probe HTTP foundation."""
 
 import json
-from dataclasses import dataclass
 from typing import Any
-from urllib.parse import quote, urlencode, urljoin, urlsplit, urlunsplit
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from crawler.search.execution_models import (
+    FAILURE_INVALID_RESULT_URL,
+    FAILURE_NO_RESULTS,
+    FAILURE_PLAN_INVALID,
+    FAILURE_PLAN_NOT_EXECUTABLE,
+    FAILURE_RESPONSE_REJECTED,
+    FAILURE_SELECTOR_MISMATCH,
+    FAILURE_TRANSPORT,
+    SearchPlanExecutionResult,
+    SearchResultItem,
+)
+from crawler.search.request_builder import build_search_request
 from crawler.search.search_plan import (
     PLAN_STATUS_ACTIVE,
     PLAN_STATUS_READY,
-    SEARCH_STRATEGY_HTML_FORM,
-    SEARCH_STRATEGY_JSON_API,
+    RESPONSE_FORMAT_HTML,
+    RESPONSE_FORMAT_JSON,
     ProtocolError,
     SearchPlan,
     compute_plan_id,
@@ -25,122 +36,19 @@ from crawler.site.search_probe import (
     ProbeOutcome,
     SearchProbeFetcher,
     SearchProbePolicy,
-    SearchProbeRequest,
     SearchProbeResponse,
 )
 
 EXECUTION_OK = "ok"
-FAILURE_PLAN_INVALID = "plan_invalid"
-FAILURE_PLAN_NOT_EXECUTABLE = "plan_not_executable"
-FAILURE_TRANSPORT = "transport_failure"
-FAILURE_RESPONSE_REJECTED = "response_rejected"
-FAILURE_SELECTOR_MISMATCH = "selector_mismatch"
-FAILURE_INVALID_RESULT_URL = "invalid_result_url"
-FAILURE_NO_RESULTS = "no_results"
+FAILURE_PLAN_INVALID = FAILURE_PLAN_INVALID
+FAILURE_PLAN_NOT_EXECUTABLE = FAILURE_PLAN_NOT_EXECUTABLE
+FAILURE_TRANSPORT = FAILURE_TRANSPORT
+FAILURE_RESPONSE_REJECTED = FAILURE_RESPONSE_REJECTED
+FAILURE_SELECTOR_MISMATCH = FAILURE_SELECTOR_MISMATCH
+FAILURE_INVALID_RESULT_URL = FAILURE_INVALID_RESULT_URL
+FAILURE_NO_RESULTS = FAILURE_NO_RESULTS
 
 _ALLOWED_STATUSES = {PLAN_STATUS_READY, PLAN_STATUS_ACTIVE}
-
-
-@dataclass(frozen=True)
-class SearchResultItem:
-    title: str
-    url: str
-    snippet: str = ""
-    body: str = ""
-
-    def __repr__(self) -> str:
-        return f"SearchResultItem(url={self.url!r}, title_len={len(self.title)})"
-
-
-@dataclass(frozen=True)
-class SearchPlanExecutionResult:
-    plan_id: str
-    status: str
-    items: tuple[SearchResultItem, ...]
-    response_kind: str
-    failure_code: str | None = None
-    retryable: bool = False
-
-    @property
-    def success(self) -> bool:
-        return self.status == EXECUTION_OK and self.failure_code is None
-
-    def __repr__(self) -> str:
-        return (
-            f"SearchPlanExecutionResult(status={self.status!r}, "
-            f"items={len(self.items)}, failure={self.failure_code!r})"
-        )
-
-
-def _replace_url_query(endpoint: str, params: dict[str, str]) -> str:
-    parts = urlsplit(endpoint)
-    query = urlencode(params, doseq=True)
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, ""))
-
-
-def _replace_placeholders(value: str, keyword: str, page_size: int) -> str:
-    return (
-        value.replace("{keyword}", keyword)
-        .replace("{page}", "1")
-        .replace("{page_size}", str(page_size))
-    )
-
-
-def _replace_json_placeholders(value: str, keyword: str, page_size: int) -> str:
-    keyword_json = json.dumps(keyword, ensure_ascii=False)[1:-1]
-    return (
-        value.replace("{keyword}", keyword_json)
-        .replace("{page}", "1")
-        .replace("{page_size}", str(page_size))
-    )
-
-
-def _build_request(plan: SearchPlan, keyword: str) -> SearchProbeRequest:
-    query_params = {
-        name: _replace_placeholders(value, keyword, plan.pagination.page_size)
-        for name, value in plan.query_params.items()
-    }
-    if plan.pagination.page_param:
-        query_params[plan.pagination.page_param] = "1"
-    if plan.pagination.page_size_param:
-        query_params[plan.pagination.page_size_param] = str(plan.pagination.page_size)
-
-    body: bytes | None = None
-    content_type = "text/html"
-    headers = [("User-Agent", "crawler-platform-probe/1.0")]
-
-    if plan.http_method == "GET":
-        url = _replace_url_query(plan.endpoint, query_params)
-        headers.append(("Accept", "text/html, application/xhtml+xml"))
-    else:
-        if not plan.request_body_template:
-            raise ProtocolError("INVALID_PLAN", "POST plan requires request_body_template")
-        url = _replace_url_query(plan.endpoint, query_params)
-        if plan.strategy == SEARCH_STRATEGY_HTML_FORM:
-            template = _replace_placeholders(plan.request_body_template, quote(keyword, safe=""), plan.pagination.page_size)
-            body = template.encode("utf-8")
-            content_type = "application/x-www-form-urlencoded"
-            headers.append(("Accept", "text/html, application/xhtml+xml"))
-        elif plan.strategy == SEARCH_STRATEGY_JSON_API:
-            template = _replace_json_placeholders(
-                plan.request_body_template,
-                keyword,
-                plan.pagination.page_size,
-            )
-            body = template.encode("utf-8")
-            content_type = "application/json"
-            headers.append(("Accept", "application/json, application/*+json"))
-        else:
-            raise ProtocolError("INVALID_PLAN", "unsupported plan strategy")
-        headers.append(("Content-Type", content_type))
-
-    return SearchProbeRequest(
-        method=plan.http_method,
-        url=url,
-        headers=tuple(headers),
-        body=body,
-        approved_origins=(plan.endpoint,),
-    )
 
 
 def _strict_json(body: bytes) -> Any:
@@ -282,11 +190,12 @@ def execute_search_plan(
             "",
             FAILURE_PLAN_NOT_EXECUTABLE,
             False,
+            "plan_status",
         )
     try:
         validate_search_plan(plan)
     except ProtocolError:
-        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False)
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
     if not (plan.selectors.result_item and plan.selectors.title and plan.selectors.url):
         return SearchPlanExecutionResult(
             plan.plan_id,
@@ -295,10 +204,11 @@ def execute_search_plan(
             "",
             FAILURE_PLAN_NOT_EXECUTABLE,
             False,
+            "plan_validation",
         )
     if plan.plan_id != compute_plan_id(plan):
-        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False)
-    if plan.strategy not in (SEARCH_STRATEGY_HTML_FORM, SEARCH_STRATEGY_JSON_API):
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
+    if plan.pagination.max_pages > 1:
         return SearchPlanExecutionResult(
             plan.plan_id,
             "failed",
@@ -306,14 +216,15 @@ def execute_search_plan(
             "",
             FAILURE_PLAN_NOT_EXECUTABLE,
             False,
+            "pagination",
         )
     if not keywords:
-        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False)
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
 
     try:
-        request = _build_request(plan, keywords[0])
+        request = build_search_request(plan, keywords[0], page_index=0)
     except ProtocolError:
-        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False)
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "request")
 
     try:
         outcome = fetcher.fetch(request, policy=policy)
@@ -325,6 +236,7 @@ def execute_search_plan(
             "",
             FAILURE_TRANSPORT,
             False,
+            "transport",
         )
     if outcome.rejection is not None or outcome.response is None:
         return SearchPlanExecutionResult(
@@ -334,10 +246,11 @@ def execute_search_plan(
             "",
             FAILURE_TRANSPORT,
             False,
+            "transport",
         )
 
     response = outcome.response
-    if plan.strategy == SEARCH_STRATEGY_HTML_FORM and not (
+    if plan.response_format == RESPONSE_FORMAT_HTML and not (
         response.content_type.startswith("text/html") or response.content_type == "application/xhtml+xml"
     ):
         return SearchPlanExecutionResult(
@@ -347,8 +260,9 @@ def execute_search_plan(
             response.content_type,
             FAILURE_RESPONSE_REJECTED,
             False,
+            "response",
         )
-    if plan.strategy == SEARCH_STRATEGY_JSON_API and not (
+    if plan.response_format == RESPONSE_FORMAT_JSON and not (
         response.content_type == "application/json" or (
             response.content_type.startswith("application/") and response.content_type.endswith("+json")
         )
@@ -360,9 +274,10 @@ def execute_search_plan(
             response.content_type,
             FAILURE_RESPONSE_REJECTED,
             False,
+            "response",
         )
     try:
-        if response.content_type.startswith("text/html") or response.content_type == "application/xhtml+xml":
+        if plan.response_format == RESPONSE_FORMAT_HTML:
             items = _extract_html_items(response, plan)
         else:
             items = _extract_json_items(response, plan)
@@ -374,6 +289,7 @@ def execute_search_plan(
             response.content_type,
             FAILURE_SELECTOR_MISMATCH,
             False,
+            "parse",
         )
 
     normalized_items = _dedupe(items)
@@ -385,6 +301,7 @@ def execute_search_plan(
             response.content_type,
             FAILURE_NO_RESULTS,
             False,
+            "parse",
         )
     return SearchPlanExecutionResult(
         plan.plan_id,
@@ -393,4 +310,5 @@ def execute_search_plan(
         response.content_type,
         None,
         False,
+        "parse",
     )

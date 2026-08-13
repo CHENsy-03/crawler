@@ -4,10 +4,13 @@ from crawler.site.analyzer import SiteAnalyzer
 from crawler.search.detector import SiteDetector, CMS_SIGNATURES
 from crawler.search.result import normalize_search_result, REQUIRED_FIELDS
 from crawler.search.search_plan import (
+    ADAPTERS,
+    PLAN_SCHEMA_VERSION,
     SearchDiscovery,
     SearchHit,
     SearchPagination,
     SearchPlan,
+    SearchRequestShape,
     SearchScope,
     SearchSelectors,
     canonical_plan_json,
@@ -15,6 +18,10 @@ from crawler.search.search_plan import (
     validate_search_hit,
     validate_search_plan,
 )
+from crawler.search.execution_models import SearchPlanExecutionResult, SearchResultItem
+from crawler.search.adapter import SearchAdapter
+from crawler.search.adapter_registry import AdapterRegistry
+from crawler.search.request_builder import build_search_request
 from crawler.search.plan_builder import (
     CandidateRejection,
     PlanBuildResult,

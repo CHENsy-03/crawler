@@ -1,12 +1,19 @@
 """Offline tests for the v2 production search orchestrator."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from protocol.messages import SearchRequestedMessage, URLMessage
 
 import crawler.search.search_orchestrator as orch
 from crawler.search.plan_builder import PlanBuildResult
 from crawler.search.search_plan import (
+    ADAPTER_HTML,
+    KEYWORD_LOCATION_QUERY,
+    REQUEST_FORMAT_NONE,
+    RESPONSE_FORMAT_HTML,
+    SearchPagination,
+    SearchRequestShape,
+
     PLAN_STATUS_READY,
     PROTOCOL_VERSION_V2,
     SEARCH_STRATEGY_HTML_FORM,
@@ -40,25 +47,18 @@ def _ready_plan():
         protocol_version=PROTOCOL_VERSION_V2,
         status=PLAN_STATUS_READY,
         strategy=SEARCH_STRATEGY_HTML_FORM,
+        adapter=ADAPTER_HTML,
         http_method="GET",
-        query_params={"q": "{keyword}"},
+        request_format=REQUEST_FORMAT_NONE,
+        response_format=RESPONSE_FORMAT_HTML,
+        request_shape=SearchRequestShape(
+            keyword_location=KEYWORD_LOCATION_QUERY,
+            keyword_path=("q",),
+        ),
+        pagination=SearchPagination(),
         scope=SearchScope(domain="example.gov.cn"),
     )
-    return SearchPlan(
-        plan_id=compute_plan_id(base),
-        endpoint=base.endpoint,
-        protocol_version=base.protocol_version,
-        status=base.status,
-        strategy=base.strategy,
-        http_method=base.http_method,
-        query_params=base.query_params,
-        request_body_template=base.request_body_template,
-        pagination=base.pagination,
-        selectors=base.selectors,
-        scope=base.scope,
-        discovery=base.discovery,
-        created_from=base.created_from,
-    )
+    return replace(base, plan_id=compute_plan_id(base))
 
 
 class FakeCache:
@@ -194,8 +194,15 @@ def test_draft_cache_is_not_treated_as_hit(monkeypatch):
         protocol_version=PROTOCOL_VERSION_V2,
         status="draft",
         strategy=SEARCH_STRATEGY_HTML_FORM,
+        adapter=ADAPTER_HTML,
         http_method="GET",
-        query_params={"q": "{keyword}"},
+        request_format=REQUEST_FORMAT_NONE,
+        response_format=RESPONSE_FORMAT_HTML,
+        request_shape=SearchRequestShape(
+            keyword_location=KEYWORD_LOCATION_QUERY,
+            keyword_path=("q",),
+        ),
+        pagination=SearchPagination(),
         scope=SearchScope(domain="example.gov.cn"),
     )
     cache = FakeCache(orch.PlanCacheReadResult(plan, "hit", None))

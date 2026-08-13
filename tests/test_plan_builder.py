@@ -9,7 +9,6 @@ from crawler.search.plan_builder import (
     ERROR_NO_CANDIDATES,
     ERROR_NO_EXECUTABLE_PLAN,
     ERROR_UNSAFE_TARGET,
-    KEYWORD_PLACEHOLDER,
     PlanBuildResult,
     PlanBuilder,
     REJECTION_CROSS_ORIGIN_URL,
@@ -21,6 +20,14 @@ from crawler.search.plan_builder import (
     REJECTION_UNSUPPORTED_METHOD,
 )
 from crawler.search.search_plan import (
+    ADAPTER_HTML,
+    ADAPTER_TRS,
+    KEYWORD_LOCATION_QUERY,
+    REQUEST_FORMAT_NONE,
+    RESPONSE_FORMAT_HTML,
+    RESPONSE_FORMAT_JSON,
+    SearchPagination,
+    SearchRequestShape,
     PLAN_STATUS_DRAFT,
     PROTOCOL_VERSION_V2,
     SEARCH_STRATEGY_HTML_FORM,
@@ -74,7 +81,11 @@ def test_single_valid_candidate_creates_valid_plan():
     assert result.plan.http_method == "GET"
     assert result.plan.endpoint == "https://example.gov.cn/search"
     assert result.plan.scope.domain == "example.gov.cn"
-    assert result.plan.query_params == {"q": KEYWORD_PLACEHOLDER}
+    assert result.plan.adapter == ADAPTER_HTML
+    assert result.plan.request_format == REQUEST_FORMAT_NONE
+    assert result.plan.response_format == RESPONSE_FORMAT_HTML
+    assert result.plan.request_shape.keyword_location == KEYWORD_LOCATION_QUERY
+    assert result.plan.request_shape.keyword_path == ("q",)
 
 
 def test_repeated_build_is_deterministic():
@@ -195,19 +206,20 @@ def test_fixed_params_are_mapped_without_invention():
         candidates=(_candidate(fixed_params=(("siteCode", "abc"),)),),
     )
     assert result.plan is not None
-    assert result.plan.query_params == {"q": KEYWORD_PLACEHOLDER, "siteCode": "abc"}
+    assert dict(result.plan.request_shape.fixed_query_params) == {"siteCode": "abc"}
+    assert result.plan.request_shape.keyword_path == ("q",)
 
 
-def test_unknown_source_uses_unknown_strategy():
+def test_unknown_source_is_rejected_without_adapter():
     result = PlanBuilder().build(
         target_url=TARGET,
         candidates=(_candidate(source="common_path"),),
     )
-    assert result.plan is not None
-    assert result.plan.strategy == SEARCH_STRATEGY_UNKNOWN
+    assert result.plan is None
+    assert result.rejections[0].code == REJECTION_UNSUPPORTED_CANDIDATE
 
 
-def test_trs_signature_maps_to_json_api_strategy():
+def test_trs_signature_without_request_shape_is_rejected():
     result = PlanBuilder().build(
         target_url=TARGET,
         candidates=(
@@ -217,8 +229,38 @@ def test_trs_signature_maps_to_json_api_strategy():
             ),
         ),
     )
+    assert result.plan is None
+    assert result.rejections[0].code == REJECTION_UNSUPPORTED_CANDIDATE
+
+
+def test_trs_signature_with_request_shape_maps_to_trs_adapter():
+    from crawler.site.models import CandidateRequestShape
+
+    result = PlanBuilder().build(
+        target_url=TARGET,
+        candidates=(
+            _candidate(
+                source="trs_signature",
+                endpoint="https://example.gov.cn/so/ss/query/s",
+                method="POST",
+                fixed_params=(("siteCode", "abc"),),
+                request_shape=CandidateRequestShape(
+                    method="POST",
+                    endpoint="https://example.gov.cn/so/ss/query/s",
+                    keyword_location="form",
+                    keyword_param="q",
+                    form_fields=(("siteCode", "abc"),),
+                    content_type="application/x-www-form-urlencoded",
+                    approved_origins=(TARGET, "https://example.gov.cn"),
+                ),
+            ),
+        ),
+    )
     assert result.plan is not None
+    assert result.plan.adapter == ADAPTER_TRS
     assert result.plan.strategy == SEARCH_STRATEGY_JSON_API
+    assert result.plan.request_format == "form_urlencoded"
+    assert result.plan.response_format == RESPONSE_FORMAT_JSON
 
 
 def test_plan_validation_failure_is_controlled():
@@ -308,11 +350,37 @@ def test_build_does_not_call_network_or_dns():
 
 def test_default_pagination_and_selectors_are_not_invented():
     result = PlanBuilder().build(target_url=TARGET, candidates=(_candidate(),))
-    default_plan = SearchPlan(
-        plan_id="",
-        endpoint=TARGET,
-        scope=SearchScope(domain="example.gov.cn"),
-    )
     assert result.plan is not None
-    assert result.plan.pagination == default_plan.pagination
-    assert result.plan.selectors == default_plan.selectors
+    assert result.plan.pagination == SearchPagination()
+    assert result.plan.selectors.result_item == ""
+    assert result.plan.selectors.title == ""
+    assert result.plan.selectors.url == ""
+
+
+def test_endpoint_query_is_moved_to_fixed_query_params():
+    result = PlanBuilder().build(
+        target_url=TARGET,
+        candidates=(_candidate(endpoint="https://example.gov.cn/search?siteCode=abc"),),
+    )
+    assert result.success
+    assert result.plan is not None
+    assert result.plan.endpoint == "https://example.gov.cn/search"
+    assert dict(result.plan.request_shape.fixed_query_params) == {"siteCode": "abc"}
+
+
+def test_endpoint_duplicate_query_is_rejected():
+    result = PlanBuilder().build(
+        target_url=TARGET,
+        candidates=(_candidate(endpoint="https://example.gov.cn/search?a=1&a=2"),),
+    )
+    assert result.plan is None
+    assert result.rejections[0].code == REJECTION_PLAN_VALIDATION_FAILED
+
+
+def test_endpoint_fragment_is_rejected():
+    result = PlanBuilder().build(
+        target_url=TARGET,
+        candidates=(_candidate(endpoint="https://example.gov.cn/search#frag"),),
+    )
+    assert result.plan is None
+    assert result.rejections[0].code == REJECTION_PLAN_VALIDATION_FAILED

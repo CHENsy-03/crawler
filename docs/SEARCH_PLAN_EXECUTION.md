@@ -443,3 +443,10 @@ SearchSelectors("", "", "", "", "")
 - 本轮未修改 Go 或消息协议；TASK-017F 已完成 Python/Go 全量离线回归与生产解码契约验证。
 - 共享 fixture：`tests/fixtures/url_message_contract.json` 由 Python 正式 `URLMessage.to_dict()` 约束；Go 契约测试通过 go-redis hook 拦截 BRPOP 并注入 fixture，实际调用 `RedisQueue.PopURL()`，经 `pop()` 中的生产 `json.Unmarshal` 解码为生产 `HTMLPayload`。
 - `failed`/`no_results` 零发布；`publish_failure` 保留实际 `published_count`；SearchPlan 不进入 `crawler:url`。
+
+
+## 15. TASK-018B 内部 schema 实施说明
+
+TASK-018B 已将 SearchPlan 内部 schema 提升到 `plan_schema_version=2`，并引入结构化 `request_shape`、新 `pagination`、`adapter/request_format/response_format`。旧 `query_params/request_body_template` 不再属于新 schema。
+
+当前 executor 仅提供单页过渡执行；`max_pages>1` 返回 `plan_not_executable`。多页、TRS、JPAAS 和 Generic JSON 的正式执行由 TASK-018C–G 完成，不在本轮交付。

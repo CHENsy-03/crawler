@@ -58,11 +58,11 @@ py -m pytest -q
 
 结果：
 
-- 收集：499 tests
-- 通过：492
+- 收集：525 tests
+- 通过：518
 - 跳过：7
 - 失败：0
-- 最终实际耗时：3.71s（该次运行的观察值，不作为稳定性能门槛）
+- 最终实际耗时：3.20s（该次运行的观察值，不作为稳定性能门槛）
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
@@ -192,3 +192,17 @@ go vet -mod=readonly ./...
 - `trafilatura` 为可选依赖，未安装时解析器回退为空字符串
 - `openai` 仅在 AI parser 注释示例中出现，当前不是实际 import
 - E2E 集成测试需要显式设置 `E2E_ENABLED=1` 并具备 Redis/MySQL 环境，不作为默认离线基线
+
+
+TASK-018B 新增 `tests/test_search_plan_schema_v2.py`、`tests/test_request_builder.py`、`tests/test_adapter_registry.py` 和 `tests/fixtures/search_plan_schema_v2.json`，并迁移现有 SearchPlan 相关测试到 schema v2。
+
+TASK-018B 产品范围：
+
+- `plan_schema_version=2`，cache envelope schema version=2；
+- 新 schema 不含 `query_params/request_body_template`；
+- 旧缓存 `incompatible` 不进入 executor，按 cache miss 重建；
+- AdapterRegistry 未注册真实 Adapter；
+- RequestBuilder 无网络；
+- executor 仅单页过渡路径。
+
+TASK-018C–G 尚未完成。

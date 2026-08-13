@@ -1,7 +1,7 @@
 """Offline tests for v2 SearchPlan generation in the search worker."""
 
 import json
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from unittest.mock import patch
 
 import pytest
@@ -16,6 +16,13 @@ from crawler.search.plan_cache import (
     PlanCacheWriteResult,
 )
 from crawler.search.search_plan import (
+    ADAPTER_HTML,
+    KEYWORD_LOCATION_QUERY,
+    REQUEST_FORMAT_NONE,
+    RESPONSE_FORMAT_HTML,
+    SearchPagination,
+    SearchRequestShape,
+
     PLAN_STATUS_DRAFT,
     PROTOCOL_VERSION_V2,
     SEARCH_STRATEGY_HTML_FORM,
@@ -41,25 +48,18 @@ def _valid_plan():
         protocol_version=PROTOCOL_VERSION_V2,
         status=PLAN_STATUS_DRAFT,
         strategy=SEARCH_STRATEGY_HTML_FORM,
+        adapter=ADAPTER_HTML,
         http_method="GET",
-        query_params={"q": "{keyword}"},
+        request_format=REQUEST_FORMAT_NONE,
+        response_format=RESPONSE_FORMAT_HTML,
+        request_shape=SearchRequestShape(
+            keyword_location=KEYWORD_LOCATION_QUERY,
+            keyword_path=("q",),
+        ),
+        pagination=SearchPagination(),
         scope=SearchScope(domain="example.gov.cn"),
     )
-    return SearchPlan(
-        plan_id=compute_plan_id(base),
-        endpoint=base.endpoint,
-        protocol_version=base.protocol_version,
-        status=base.status,
-        strategy=base.strategy,
-        http_method=base.http_method,
-        query_params=base.query_params,
-        request_body_template=base.request_body_template,
-        pagination=base.pagination,
-        selectors=base.selectors,
-        scope=base.scope,
-        discovery=base.discovery,
-        created_from=base.created_from,
-    )
+    return replace(base, plan_id=compute_plan_id(base))
 
 
 def _candidate(index=0):

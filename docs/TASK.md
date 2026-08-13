@@ -2259,6 +2259,19 @@ P0（TASK-017 后执行）。
 
 TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 
+### TASK-018B 实施记录
+
+- 状态：基础层已实现；TASK-018C–G 尚未完成。
+- `plan_schema_version=2`，cache envelope schema version 提升为 2。
+- 新 SearchPlan 不再包含 `query_params` 或 `request_body_template`。
+- 新增结构化 `request_shape`、新 `pagination`、`adapter/request_format/response_format`。
+- 新增模块：`crawler/search/execution_models.py`、`adapter.py`、`adapter_registry.py`、`request_builder.py`。
+- AdapterRegistry 未注册任何真实 Adapter；具体 Adapter 由 TASK-018C–F 实现。
+- RequestBuilder 完全无网络，只根据结构化字段构造请求。
+- executor 保持单页过渡路径；`max_pages>1` 返回 `plan_not_executable`。
+- 旧 schema 缓存读取返回 `incompatible`，按 cache miss 安全重建。
+- TASK-018 整体未完成；不得声称 TRS/JPAAS/Generic JSON 已正式接入。
+
 ### 后续顺序
 
 正式冻结：
