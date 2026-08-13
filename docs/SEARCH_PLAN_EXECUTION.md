@@ -440,6 +440,6 @@ SearchSelectors("", "", "", "", "")
 - `no_results` 表示结构有效但结果为空，计划保留且零发布。
 - `publish_failure` 不使已验证合法计划失效。
 - BRPOP 仍为既有 at-most-once 语义。
-- 本轮未修改 Go 或消息协议；TASK-017F 已完成 Python/Go 全量离线回归与共享契约验证。
-- 共享 fixture：`tests/fixtures/url_message_contract.json` 由 Python 正式 `URLMessage.to_dict()` 约束，Go 使用生产 `HTMLPayload`/`json.Unmarshal` 解码共同字段。
+- 本轮未修改 Go 或消息协议；TASK-017F 已完成 Python/Go 全量离线回归与生产解码契约验证。
+- 共享 fixture：`tests/fixtures/url_message_contract.json` 由 Python 正式 `URLMessage.to_dict()` 约束；Go 契约测试通过 go-redis hook 拦截 BRPOP 并注入 fixture，实际调用 `RedisQueue.PopURL()`，经 `pop()` 中的生产 `json.Unmarshal` 解码为生产 `HTMLPayload`。
 - `failed`/`no_results` 零发布；`publish_failure` 保留实际 `published_count`；SearchPlan 不进入 `crawler:url`。

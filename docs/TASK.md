@@ -1800,7 +1800,7 @@ TASK-016 完成不代表“输入任意网站即可自动采集”已经完成�
 | 当前状态 | completed |
 | 前置任务 | TASK-015、TASK-016 |
 | 后续任务 | TASK-018 及后续执行适配 |
-| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E-R4 已实现受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 已实现 selector evidence 提取与 PlanBuilder 传递；TASK-017E 已实现 Python 执行器与 Worker v2 主链，缓存生命周期修复与删除可观察性修复已完成；TASK-017F 已完成：Python/Go 全量离线回归与共享 URLMessage 契约测试通过 |
+| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E-R4 已实现受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 已实现 selector evidence 提取与 PlanBuilder 传递；TASK-017E 已实现 Python 执行器与 Worker v2 主链，缓存生命周期修复与删除可观察性修复已完成；TASK-017F 已完成：Python/Go 全量离线回归与 URLMessage 生产解码契约测试通过 |
 
 ### 17.2 正式目标
 
@@ -2102,17 +2102,18 @@ TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。�
 - 状态：已实现
 - 内容：plan_executor、search_orchestrator、SearchWorker v2 主链、正式 URLMessage 发布
 - 文件：crawler/search/plan_executor.py、crawler/search/search_orchestrator.py、workers/search_worker.py
-- Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段；TASK-017F 已完成共享 fixture 与生产解码路径契约验证
+- Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段；TASK-017F 已完成共享 fixture 与 `PopURL()` 生产解码契约验证
 - 缓存生命周期：新计划 success/no_results 后写缓存；缓存命中失败删除缓存；publish_failure 不删除合法计划。
 - 删除失败会记录安全 warning，不替换原始 executor 失败。
 
 #### TASK-017F：跨语言完整回归与交付门禁
 
 - 状态：已完成
-- 内容：Python/Go 全量离线回归、共享 `url_message_contract.json` fixture、Python 正式 `URLMessage.to_dict()` 顶层结构与 Go 生产 `HTMLPayload`/`json.Unmarshal` 解码闭环
+- 内容：Python/Go 全量离线回归、共享 `url_message_contract.json` fixture、Python 正式 `URLMessage.to_dict()` 顶层结构，以及 Go go-redis hook 注入 BRPOP 后经 `RedisQueue.PopURL()`/`pop()` 生产 `json.Unmarshal` 的解码闭环
 - 验证：Python 499 collected / 492 passed / 7 skipped；Go module `crawler-platform` 全部 package 的 `go test` 与 `go vet` 通过
 - 确认：v2 主链只发布正式 `URLMessage`；`failed`/`no_results` 零发布；`publish_failure` 保留实际 `published_count`；BRPOP 仍为既有 at-most-once 语义
 - 未修改 Python/Go 产品代码、协议、Redis key/TTL/schema、错误码或 legacy pipeline
+- Go 契约测试：BRPOP 与 ProcessHook 各 1 次，DialHook 与 ProcessPipelineHook 各 0 次；非法 JSON 通过同一生产 `PopURL()` 路径返回错误
 
 
 ### 17.13 验收标准

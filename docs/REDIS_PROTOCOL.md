@@ -130,7 +130,7 @@ Python Search Worker 在完成所有 URLMessage 推送后，发送一次 SearchD
 | result | crawler:result | Python | Go | 当前已运行 |
 | error | crawler:error | Go/Python | Go | 当前已运行 |
 
-- TASK-017 v2 主链向 `crawler:url` 发布正式 `URLMessage`（无旧 `time`）；Go 通过 `HTMLPayload`/`json.Unmarshal` 宽松读取共同字段；v1 legacy 旧消息路径保留且未修改。
+- TASK-017 v2 主链向 `crawler:url` 发布正式 `URLMessage`（无旧 `time`）；Go 通过 `PopURL()`/`pop()` 中的生产 `json.Unmarshal` 读取共同字段，契约测试使用 go-redis hook 注入 BRPOP 结果；v1 legacy 旧消息路径保留且未修改。
 
 ## 10. 字段类型约束
 

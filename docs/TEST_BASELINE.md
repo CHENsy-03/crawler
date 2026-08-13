@@ -74,7 +74,7 @@ TASK-017E 缓存语义修复新增 `tests/test_plan_cache_delete.py`、`tests/te
 
 TASK-017E delete 可观察性修复新增 `tests/test_search_orchestrator_delete_observability.py`。
 
-TASK-017F 新增 `tests/test_url_message_contract.py`、`tests/fixtures/url_message_contract.json` 与 `go-spider/internal/queue/url_message_contract_test.go`，验证 Python 正式 `URLMessage.to_dict()` 顶层 JSON 被 Go 生产 `HTMLPayload`/`json.Unmarshal` 解码路径读取。
+TASK-017F 新增 `tests/test_url_message_contract.py`、`tests/fixtures/url_message_contract.json` 与 `go-spider/internal/queue/url_message_contract_test.go`。Go 契约测试通过 go-redis hook 拦截 BRPOP 并注入 fixture，实际调用 `RedisQueue.PopURL()`，经生产 `pop()` 中的 `json.Unmarshal` 解码为 `HTMLPayload`。
 
 跳过项为 `tests/integration/` 下的 E2E 测试，因未设置 `E2E_ENABLED=1` 自动跳过，不会访问 Redis、MySQL 或外部 HTTP 服务。
 
@@ -93,6 +93,15 @@ TASK-017F 定向测试结果：
 - `cache and delete`：9 passed
 - `cache and (selector_mismatch or plan_invalid or no_results)`：4 passed
 - `publish_failure or no_results`：5 passed
+
+Go 生产解码契约测试：
+
+- `TestPythonURLMessageContractDecodesThroughProductionPopURL`
+- `TestPythonURLMessageContractRejectsInvalidJSONThroughProductionPopURL`
+- `TestPythonURLMessageContractIsHTMLPayloadStructCompatible`
+- `TestPythonURLMessageContractHasNoNestedPayloadOrLegacyTime`
+结果：4 passed；BRPOP 与 ProcessHook 各 1 次，DialHook 与 ProcessPipelineHook 各 0 次；非法 JSON 通过生产 `PopURL()` 返回错误。
+
 
 
 ## Go 离线测试

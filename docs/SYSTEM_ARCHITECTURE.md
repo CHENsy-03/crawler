@@ -296,5 +296,5 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 状态：已实现
 - 内容：plan_executor、search_orchestrator、SearchWorker v2 主链、正式 URLMessage 发布
 - Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段。
-- 本轮未修改 Go 或协议；TASK-017F 已完成共享 fixture 与生产解码路径契约验证。
+- 本轮未修改 Go 或协议；TASK-017F 已完成共享 fixture 契约验证，Go 测试通过 go-redis hook 注入 BRPOP 并实际调用 `RedisQueue.PopURL()`/`pop()` 生产解码。
 - 缓存生命周期：新计划 success/no_results 后写缓存；缓存命中失败删除缓存；publish_failure 不删除合法计划。
