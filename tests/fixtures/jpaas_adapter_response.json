@@ -1,0 +1,15 @@
+{
+  "code": "200",
+  "data": {
+    "appSearchResultBeanList": [
+      {
+        "mapSearchResult": {
+          "items": [
+            {"data": {"title": "标题一", "url": "/a.html", "content": "正文一", "date": "2026-08-01"}}
+          ]
+        }
+      },
+      {"title": "标题二", "url": "https://example.gov.cn/b.html", "content_556463": "正文二", "date": "2026-08-02"}
+    ]
+  }
+}

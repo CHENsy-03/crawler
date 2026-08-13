@@ -1,6 +1,7 @@
 """Offline tests for SearchPlan cache lifecycle semantics."""
 
 import pytest
+from dataclasses import replace
 
 from protocol.messages import SearchRequestedMessage, URLMessage
 
@@ -17,6 +18,13 @@ from crawler.search.plan_executor import (
     SearchResultItem,
 )
 from crawler.search.search_plan import (
+    ADAPTER_HTML,
+    KEYWORD_LOCATION_QUERY,
+    REQUEST_FORMAT_NONE,
+    RESPONSE_FORMAT_HTML,
+    SearchPagination,
+    SearchRequestShape,
+
     PLAN_STATUS_READY,
     PROTOCOL_VERSION_V2,
     SEARCH_STRATEGY_HTML_FORM,
@@ -54,25 +62,18 @@ def _ready_plan():
         protocol_version=PROTOCOL_VERSION_V2,
         status=PLAN_STATUS_READY,
         strategy=SEARCH_STRATEGY_HTML_FORM,
+        adapter=ADAPTER_HTML,
         http_method="GET",
-        query_params={"q": "{keyword}"},
+        request_format=REQUEST_FORMAT_NONE,
+        response_format=RESPONSE_FORMAT_HTML,
+        request_shape=SearchRequestShape(
+            keyword_location=KEYWORD_LOCATION_QUERY,
+            keyword_path=("q",),
+        ),
+        pagination=SearchPagination(),
         scope=SearchScope(domain="example.gov.cn"),
     )
-    return SearchPlan(
-        plan_id=compute_plan_id(base),
-        endpoint=base.endpoint,
-        protocol_version=base.protocol_version,
-        status=base.status,
-        strategy=base.strategy,
-        http_method=base.http_method,
-        query_params=base.query_params,
-        request_body_template=base.request_body_template,
-        pagination=base.pagination,
-        selectors=base.selectors,
-        scope=base.scope,
-        discovery=base.discovery,
-        created_from=base.created_from,
-    )
+    return replace(base, plan_id=compute_plan_id(base))
 
 
 def _candidate():
@@ -316,3 +317,30 @@ def test_publish_failure_keeps_cache_hit_plan():
     assert result.error_code == "publish_failure"
     assert cache.delete_calls == []
     assert cache.write_calls == []
+
+
+def test_incompatible_cache_enters_rebuild_path(monkeypatch):
+    cache = FakeCache(orch.PlanCacheReadResult(None, "incompatible", None))
+    analyzer = FakeAnalyzer(candidates=(_candidate(),))
+    builder = FakeBuilder(_ready_plan())
+    probe_calls = []
+
+    def fake_probe(*args, **kwargs):
+        probe_calls.append(args)
+        return _success_probe(*args, **kwargs)
+
+    monkeypatch.setattr(orch, "probe_search_candidate", fake_probe)
+    result = orch.run_v2_search_pipeline(
+        _message(),
+        analyzer=analyzer,
+        plan_builder=builder,
+        plan_cache=cache,
+        probe_fetcher=None,
+        policy=POLICY,
+        executor=FakeExecutor(_execution_result(items=(SearchResultItem("A", "https://example.gov.cn/a.html"),))),
+        publisher=FakePublisher(),
+    )
+    assert result.status == "published"
+    assert analyzer.calls
+    assert builder.calls
+    assert probe_calls

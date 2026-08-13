@@ -2,7 +2,7 @@
 
 import json
 import re
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from unittest.mock import patch
 
 import pytest
@@ -22,6 +22,13 @@ from crawler.search.plan_cache import (
     compute_target_fingerprint,
 )
 from crawler.search.search_plan import (
+    ADAPTER_HTML,
+    KEYWORD_LOCATION_QUERY,
+    REQUEST_FORMAT_NONE,
+    RESPONSE_FORMAT_HTML,
+    SearchPagination,
+    SearchRequestShape,
+
     PLAN_STATUS_DRAFT,
     PROTOCOL_VERSION_V2,
     SEARCH_STRATEGY_HTML_FORM,
@@ -42,26 +49,19 @@ def _valid_plan(endpoint=ENDPOINT, plan_id=None):
         protocol_version=PROTOCOL_VERSION_V2,
         status=PLAN_STATUS_DRAFT,
         strategy=SEARCH_STRATEGY_HTML_FORM,
+        adapter=ADAPTER_HTML,
         http_method="GET",
-        query_params={"q": "{keyword}"},
+        request_format=REQUEST_FORMAT_NONE,
+        response_format=RESPONSE_FORMAT_HTML,
+        request_shape=SearchRequestShape(
+            keyword_location=KEYWORD_LOCATION_QUERY,
+            keyword_path=("q",),
+        ),
+        pagination=SearchPagination(),
         scope=SearchScope(domain="example.gov.cn"),
     )
     pid = plan_id if plan_id is not None else compute_plan_id(base)
-    return SearchPlan(
-        plan_id=pid,
-        endpoint=base.endpoint,
-        protocol_version=base.protocol_version,
-        status=base.status,
-        strategy=base.strategy,
-        http_method=base.http_method,
-        query_params=base.query_params,
-        request_body_template=base.request_body_template,
-        pagination=base.pagination,
-        selectors=base.selectors,
-        scope=base.scope,
-        discovery=base.discovery,
-        created_from=base.created_from,
-    )
+    return replace(base, plan_id=pid)
 
 
 def _envelope(plan, fingerprint):
@@ -219,30 +219,32 @@ def test_missing_envelope_field_is_corrupt():
     redis = FakeRedis()
     key = build_plan_cache_key(TARGET)
     redis.values[key] = json.dumps(
-        {"cache_schema_version": 1, "target_fingerprint": compute_target_fingerprint(TARGET)}
+        {"cache_schema_version": 2, "target_fingerprint": compute_target_fingerprint(TARGET)}
     )
     result = SearchPlanCache(redis).get(target_url=TARGET)
     assert result.status == "corrupt"
 
 
-def test_unknown_schema_version_is_corrupt():
+def test_unknown_plan_schema_version_is_incompatible():
     redis = FakeRedis()
     key = build_plan_cache_key(TARGET)
+    plan_data = _valid_plan().to_dict()
+    plan_data["plan_schema_version"] = 999
     payload = {
         "cache_schema_version": 2,
         "target_fingerprint": compute_target_fingerprint(TARGET),
-        "plan": _valid_plan().to_dict(),
+        "plan": plan_data,
     }
     redis.values[key] = json.dumps(payload)
     result = SearchPlanCache(redis).get(target_url=TARGET)
-    assert result.status == "corrupt"
+    assert result.status == "incompatible"
 
 
 def test_fingerprint_mismatch_is_corrupt():
     redis = FakeRedis()
     key = build_plan_cache_key(TARGET)
     payload = {
-        "cache_schema_version": 1,
+        "cache_schema_version": 2,
         "target_fingerprint": "0" * 64,
         "plan": _valid_plan().to_dict(),
     }
@@ -251,7 +253,7 @@ def test_fingerprint_mismatch_is_corrupt():
     assert result.status == "corrupt"
 
 
-def test_plan_deserialization_failure_is_corrupt():
+def test_old_envelope_schema_is_incompatible():
     redis = FakeRedis()
     key = build_plan_cache_key(TARGET)
     payload = {
@@ -261,21 +263,18 @@ def test_plan_deserialization_failure_is_corrupt():
     }
     redis.values[key] = json.dumps(payload)
     result = SearchPlanCache(redis).get(target_url=TARGET)
-    assert result.status == "corrupt"
+    assert result.status == "incompatible"
+    assert result.plan is None
+    assert not result.hit
 
 
 def test_plan_validation_failure_is_corrupt():
     redis = FakeRedis()
     plan = _valid_plan()
-    bad = SearchPlan(
+    bad = replace(
+        plan,
         plan_id=plan.plan_id,
-        endpoint=plan.endpoint,
-        protocol_version=plan.protocol_version,
-        status=plan.status,
-        strategy=plan.strategy,
         http_method="PATCH",
-        query_params=plan.query_params,
-        scope=plan.scope,
     )
     key = build_plan_cache_key(TARGET)
     redis.values[key] = _envelope(bad, compute_target_fingerprint(TARGET))
@@ -286,16 +285,7 @@ def test_plan_validation_failure_is_corrupt():
 def test_plan_id_tampering_is_corrupt():
     redis = FakeRedis()
     plan = _valid_plan()
-    tampered = SearchPlan(
-        plan_id="tampered",
-        endpoint=plan.endpoint,
-        protocol_version=plan.protocol_version,
-        status=plan.status,
-        strategy=plan.strategy,
-        http_method=plan.http_method,
-        query_params=plan.query_params,
-        scope=plan.scope,
-    )
+    tampered = replace(plan, plan_id="tampered")
     key = build_plan_cache_key(TARGET)
     redis.values[key] = _envelope(tampered, compute_target_fingerprint(TARGET))
     result = SearchPlanCache(redis).get(target_url=TARGET)
@@ -371,7 +361,7 @@ def test_write_envelope_schema_is_correct():
     plan = _valid_plan()
     SearchPlanCache(redis).put(target_url=TARGET, plan=plan)
     envelope = json.loads(redis.last_value.decode("utf-8"))
-    assert envelope["cache_schema_version"] == 1
+    assert envelope["cache_schema_version"] == 2
     assert envelope["target_fingerprint"] == compute_target_fingerprint(TARGET)
     assert envelope["plan"] == plan.to_dict()
 
@@ -545,3 +535,52 @@ def test_search_plan_roundtrip_preserves_fields():
     restored = SearchPlan.from_dict(plan.to_dict())
     assert restored == plan
     validate_search_plan(restored)
+
+
+def test_old_plan_fields_are_incompatible():
+    redis = FakeRedis()
+    key = build_plan_cache_key(TARGET)
+    plan_data = _valid_plan().to_dict()
+    plan_data["query_params"] = {"q": "old"}
+    payload = {
+        "cache_schema_version": 2,
+        "target_fingerprint": compute_target_fingerprint(TARGET),
+        "plan": plan_data,
+    }
+    redis.values[key] = json.dumps(payload)
+    result = SearchPlanCache(redis).get(target_url=TARGET)
+    assert result.status == "incompatible"
+    assert result.plan is None
+    assert not result.hit
+
+
+def test_missing_new_required_field_is_incompatible():
+    redis = FakeRedis()
+    key = build_plan_cache_key(TARGET)
+    plan_data = _valid_plan().to_dict()
+    plan_data.pop("adapter")
+    payload = {
+        "cache_schema_version": 2,
+        "target_fingerprint": compute_target_fingerprint(TARGET),
+        "plan": plan_data,
+    }
+    redis.values[key] = json.dumps(payload)
+    result = SearchPlanCache(redis).get(target_url=TARGET)
+    assert result.status == "incompatible"
+    assert not result.hit
+
+
+def test_incompatible_read_does_not_delete_or_write():
+    redis = FakeRedis()
+    key = build_plan_cache_key(TARGET)
+    plan_data = _valid_plan().to_dict()
+    plan_data["plan_schema_version"] = 1
+    redis.values[key] = json.dumps({
+        "cache_schema_version": 2,
+        "target_fingerprint": compute_target_fingerprint(TARGET),
+        "plan": plan_data,
+    })
+    before_calls = list(redis.calls)
+    result = SearchPlanCache(redis).get(target_url=TARGET)
+    assert result.status == "incompatible"
+    assert redis.calls == before_calls + [("get", key)]

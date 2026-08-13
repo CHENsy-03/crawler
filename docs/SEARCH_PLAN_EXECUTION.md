@@ -2,6 +2,8 @@
 
 状态：已冻结，作为 TASK-017E 功能实现的输入契约。
 
+TASK-018B 起，v2 实际执行以本文件 §15 及后续实施说明为准；§3–8 保留为旧过渡契约的历史记录。
+
 本文件描述 SearchPlan 在 Python Search Worker 内部执行、解析结果并按既有 `crawler:url` 协议输出的规则。
 
 ## 1. 架构职责
@@ -40,13 +42,14 @@ execute_search_plan(
     plan: SearchPlan,
     keywords: tuple[str, ...],
     *,
-    fetcher: SearchPlanFetcher,
-) -> SearchExecutionResult
+    fetcher: SearchProbeFetcher,
+    policy: SearchProbePolicy,
+) -> SearchPlanExecutionResult
 ```
 
-- `SearchPlanFetcher` 是可注入的 Python HTTP 抽象。
+- `SearchProbeFetcher` 与 `SearchProbePolicy` 由调用方注入；测试使用 fake，不访问真实网络。
 - 测试使用 fake，不访问真实网络。
-- `SearchExecutionResult` 是 Python 内部值对象。
+- `SearchPlanExecutionResult` 是统一执行结果值对象。
 - 结果候选至少包含 `url`、`title`、`keyword`。
 - 不为这些内部类型增加 JSON 序列化。
 - 不创建对应 Go 类型。
@@ -443,3 +446,49 @@ SearchSelectors("", "", "", "", "")
 - 本轮未修改 Go 或消息协议；TASK-017F 已完成 Python/Go 全量离线回归与生产解码契约验证。
 - 共享 fixture：`tests/fixtures/url_message_contract.json` 由 Python 正式 `URLMessage.to_dict()` 约束；Go 契约测试通过 go-redis hook 拦截 BRPOP 并注入 fixture，实际调用 `RedisQueue.PopURL()`，经 `pop()` 中的生产 `json.Unmarshal` 解码为生产 `HTMLPayload`。
 - `failed`/`no_results` 零发布；`publish_failure` 保留实际 `published_count`；SearchPlan 不进入 `crawler:url`。
+
+
+## 15. TASK-018B 内部 schema 实施说明
+
+TASK-018B 已将 SearchPlan 内部 schema 提升到 `plan_schema_version=2`，并引入结构化 `request_shape`、新 `pagination`、`adapter/request_format/response_format`。旧 `query_params/request_body_template` 不再属于新 schema。
+
+当前 executor 仅提供单页过渡执行；`max_pages>1` 返回 `plan_not_executable`。多页、TRS、JPAAS 和 Generic JSON 的正式执行由 TASK-018C–G 完成，不在本轮交付。
+
+
+## 16. TASK-018C HTML Adapter 说明
+
+HTML 计划由 `HTMLSearchAdapter` 执行，覆盖 GET query 与 POST form-urlencoded。HTML 响应解析只使用唯一 `html_response_parser.py`。第一页零结果返回 `no_results`，后续页零结果或零新增 URL 停止；后续页失败时整次执行返回失败且不发布部分结果。结果 URL 必须通过 http/https、userinfo、domain 和 path scope 校验。
+
+Registry 尚未接入 orchestrator；其他 Adapter 未实现。
+
+
+## 17. TASK-018D TRS Adapter 说明
+
+TRS 计划由 `TRSSearchAdapter` 执行，使用 POST + form-urlencoded 请求并通过严格 JSON 解码解析 `resultDocs`。字段映射复用 `parser/api_parser.parse_trs_doc()`。第一页空数组返回 `no_results`；后续空/短页/重复页停止；后续页失败不返回部分结果。
+
+当前真实 Analyzer 的 `trs_signature` Candidate 缺少结构化 request_shape，因此自动发现生产者尚未闭合；TRS 执行器本身已完成。
+
+
+## 18. TASK-018E JPAAS Adapter 说明
+
+JPAAS 计划由 `JPAASSearchAdapter` 执行，使用 GET + JSON 响应，解析 `data.appSearchResultBeanList`，并展开 `mapSearchResult.items[*].data`。字段映射和嵌套展开复用 `crawler/search/jpaas_parser.py`；legacy `plugins/jpaas.py` 也复用同一核心，行为保持不变。
+
+当前真实 Analyzer `jpaas_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；JPAAS 执行器本身已完成。
+
+
+## 19. TASK-018F Generic JSON Adapter 说明
+
+Generic JSON 计划由 `GenericJSONSearchAdapter` 执行，支持 GET query 与 POST JSON body。响应解析严格按 SearchPlan JSON Pointer selectors 进行，不进行字段名 fallback、JSONP 剥离或 HTML 提取。PlanExecutor 已改为纯 Adapter 分派，不再保留内联 JSON 执行逻辑。
+
+当前 Candidate 生产路径尚不能自动生成 Generic JSON ready plan；GET/POST 均需显式正式 SearchPlan。
+
+## 20. TASK-018G 生产 Registry 集成说明
+
+- `plan_executor.py` 新增 `RegistryPlanExecutor` 与 `execute_plan_with_registry()`；执行器只通过注入的 AdapterRegistry 按 `plan.adapter` 精确分派，不再直接实例化具体 Adapter。
+- 生产默认 `execute_search_plan(plan, keywords, *, fetcher, policy)` 使用 `build_default_adapter_registry()`，构造零网络、无全局可变 Registry。
+- `search_orchestrator.py` 与 `workers/search_worker.py` 的 v2 生产路径已使用 `RegistryPlanExecutor(build_default_adapter_registry())`；显式 executor 注入仍保留。
+- HTML/TRS/JPAAS/Generic JSON 四类执行统一返回 `SearchPlanExecutionResult`，executor 不改写 Adapter 返回的 status/items/failure_code。
+- 未知或未注册 adapter 返回现有 `plan_invalid`，无 fallback、无 strategy/source/endpoint 猜测。
+- TASK-017 缓存与发布语义保持：success/no_results 后写缓存，failed 不写缓存且零发布，缓存命中失败 delete 一次，publish_failure 保留 published_count。
+- 六类 producer 状态：HTML GET/POST 为 auto_ready；TRS、JPAAS、Generic JSON GET/POST 真实 Analyzer 证据链下为 not_ready，需显式正式 Candidate/SearchPlan 或后续生产者补齐。
+- TASK-018H 最终交付门禁已通过；TASK-018 正式关闭等待人工 pre-push 审查；TASK-022 残余安全风险仍存在。

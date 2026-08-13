@@ -264,7 +264,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - Python 负责执行；Go 不解析、不执行、不消费 SearchPlan。
 - 不新增 SearchPlan Redis 结果消息、计划队列、执行队列或 ACK 队列。
 - SearchPlanCache 仅为生成阶段的内部优化缓存，不是结果交付通道。
-- 执行器冻结路径：`crawler/search/plan_executor.py`；入口：`execute_search_plan(plan, keywords, *, fetcher)`。
+- 执行器冻结路径：`crawler/search/plan_executor.py`；入口：`execute_search_plan(plan, keywords, *, fetcher, policy)`；TASK-018G 起生产默认经 AdapterRegistry 分派。
 - 只执行 `ready/active` 且 `strategy` 为 `html_form/json_api` 的计划。
 - 成功候选映射为既有 `URLMessage` 并发布到 `crawler:url`；执行错误复用 `SEARCH_FAILED`。
 - 当前 PlanBuilder 已通过 R5 selector evidence 生成可执行 `SearchSelectors`，TASK-017E 执行器与 Worker v2 主链已实现。
@@ -298,3 +298,12 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段。
 - 本轮未修改 Go 或协议；TASK-017F 已完成共享 fixture 契约验证，Go 测试通过 go-redis hook 注入 BRPOP 并实际调用 `RedisQueue.PopURL()`/`pop()` 生产解码。
 - 缓存生命周期：新计划 success/no_results 后写缓存；缓存命中失败删除缓存；publish_failure 不删除合法计划。
+
+## 20. TASK-018G 生产 Registry 与统一 Adapter 集成
+
+- `crawler/search/adapter_composition.py` 提供 `build_default_adapter_registry()`，每次返回新 Registry，注册 HTML、TRS、JPAAS、Generic JSON 四类正式 Adapter。
+- `plan_executor.py` 的 `RegistryPlanExecutor` 与 `execute_plan_with_registry()` 只通过注入 Registry 分派；生产默认 executor 使用默认 Registry，无 fallback、无 source/endpoint/strategy 猜测。
+- `search_orchestrator.py` 与 `workers/search_worker.py` 的 v2 生产路径已接入默认 Registry，不建立全局可变 singleton，也不在 orchestrator 内直接调用具体 Adapter。
+- 正式调用链为：Analyzer/Candidate evidence → PlanBuilder → SearchPlan v2 → cache/orchestrator → PlanExecutor → AdapterRegistry → Adapter → URLMessage publication。
+- 真实 Analyzer 只有 HTML GET/POST 可自动生成 ready plan；TRS、JPAAS、Generic JSON GET/POST 仍需显式正式 Candidate/SearchPlan 或后续生产者补齐。
+- TASK-018H 最终交付门禁已通过；TASK-022 连接级安全仍不在本轮范围。

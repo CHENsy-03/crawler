@@ -34,7 +34,8 @@ from crawler.search.plan_cache import (
     SearchPlanCache,
     build_plan_cache_key,
 )
-from crawler.search.plan_executor import execute_search_plan
+from crawler.search.adapter_composition import build_default_adapter_registry
+from crawler.search.plan_executor import RegistryPlanExecutor
 from crawler.search.search_orchestrator import RedisURLMessagePublisher, run_v2_search_pipeline
 from crawler.search.search_plan import SearchPlan
 from crawler.site.analyzer import SiteAnalyzer
@@ -274,7 +275,7 @@ def run_worker(redis_addr: str = "localhost:6379"):
                     plan_cache=plan_cache,
                     probe_fetcher=probe_fetcher,
                     policy=probe_policy,
-                    executor=execute_search_plan,
+                    executor=RegistryPlanExecutor(build_default_adapter_registry()),
                     publisher=publisher,
                 )
                 if pipeline_result.status == "published":

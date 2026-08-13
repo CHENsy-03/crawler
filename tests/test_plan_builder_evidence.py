@@ -3,7 +3,7 @@
 import pytest
 
 from crawler.search.plan_builder import PlanBuilder
-from crawler.site.models import SearchCandidate
+from crawler.site.models import CandidateRequestShape, SearchCandidate
 from crawler.site.selector_evidence import SelectorEvidence
 
 TARGET = "https://example.gov.cn/"
@@ -26,7 +26,7 @@ def _html_evidence():
 
 def _json_evidence():
     return SelectorEvidence(
-        candidate_key=("GET", "https://example.gov.cn/so/ss/query/s", "q", ()),
+        candidate_key=("POST", "https://example.gov.cn/so/ss/query/s", "q", ()),
         candidate_kind="json_api",
         response_kind="json",
         result_item="/data/items",
@@ -39,13 +39,14 @@ def _json_evidence():
     )
 
 
-def _candidate(source="form", endpoint="https://example.gov.cn/search"):
+def _candidate(source="form", endpoint="https://example.gov.cn/search", method="GET", request_shape=None):
     return SearchCandidate(
-        method="GET",
+        method=method,
         endpoint=endpoint,
         keyword_param="q",
         source=source,
         status="unverified",
+        request_shape=request_shape,
     )
 
 
@@ -64,9 +65,23 @@ def test_html_evidence_builds_ready_plan_with_selectors():
 
 
 def test_json_evidence_builds_ready_plan_with_pointers():
+    shape = CandidateRequestShape(
+        method="POST",
+        endpoint="https://example.gov.cn/so/ss/query/s",
+        keyword_location="form",
+        keyword_param="q",
+        form_fields=(("pageSize", "20"),),
+        content_type="application/x-www-form-urlencoded",
+        approved_origins=(TARGET, "https://example.gov.cn"),
+    )
     result = PlanBuilder().build(
         target_url=TARGET,
-        candidates=(_candidate(source="trs_signature", endpoint="https://example.gov.cn/so/ss/query/s"),),
+        candidates=(_candidate(
+            source="trs_signature",
+            endpoint="https://example.gov.cn/so/ss/query/s",
+            method="POST",
+            request_shape=shape,
+        ),),
         selector_evidence=_json_evidence(),
     )
     assert result.success

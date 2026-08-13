@@ -1,8 +1,9 @@
-"""Deterministic, network-free conversion of SearchCandidate to SearchPlan."""
+"""Deterministic, network-free conversion of SearchCandidate to SearchPlan v2."""
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
 from crawler.site.models import SearchCandidate
 from crawler.site.normalizer import (
@@ -14,22 +15,33 @@ from crawler.site.normalizer import (
 from crawler.site.selector_evidence import SelectorEvidence
 from crawler.site.security import classify_ip, is_ip_literal
 from crawler.search.search_plan import (
+    ADAPTER_GENERIC_JSON,
+    ADAPTER_HTML,
+    ADAPTER_JPAAS,
+    ADAPTER_TRS,
+    KEYWORD_LOCATION_FORM,
+    KEYWORD_LOCATION_JSON,
+    KEYWORD_LOCATION_QUERY,
     PLAN_STATUS_DRAFT,
     PLAN_STATUS_READY,
     PROTOCOL_VERSION_V2,
+    REQUEST_FORMAT_FORM_URLENCODED,
+    REQUEST_FORMAT_JSON,
+    REQUEST_FORMAT_NONE,
+    RESPONSE_FORMAT_HTML,
+    RESPONSE_FORMAT_JSON,
     SEARCH_STRATEGY_HTML_FORM,
     SEARCH_STRATEGY_JSON_API,
-    SEARCH_STRATEGY_UNKNOWN,
     ProtocolError,
     SearchDiscovery,
+    SearchPagination,
     SearchPlan,
+    SearchRequestShape,
     SearchScope,
     SearchSelectors,
     compute_plan_id,
     validate_search_plan,
 )
-
-KEYWORD_PLACEHOLDER = "{keyword}"
 
 ERROR_NO_CANDIDATES = "no_candidates"
 ERROR_NO_EXECUTABLE_PLAN = "no_executable_plan"
@@ -44,11 +56,56 @@ REJECTION_UNSAFE_URL = "unsafe_url"
 REJECTION_PLAN_VALIDATION_FAILED = "plan_validation_failed"
 
 _ALLOWED_METHODS = {"GET", "POST"}
+_SOURCE_ADAPTER = {
+    "form": ADAPTER_HTML,
+    "trs_signature": ADAPTER_TRS,
+    "jpaas_signature": ADAPTER_JPAAS,
+    "generic_json": ADAPTER_GENERIC_JSON,
+}
 _SOURCE_STRATEGY = {
     "form": SEARCH_STRATEGY_HTML_FORM,
     "trs_signature": SEARCH_STRATEGY_JSON_API,
     "jpaas_signature": SEARCH_STRATEGY_JSON_API,
+    "generic_json": SEARCH_STRATEGY_JSON_API,
 }
+_PERCENT_RE = re.compile(r"[0-9A-Fa-f]{2}")
+
+
+def _valid_percent_encoding(value: str) -> bool:
+    rest = value
+    while "%" in rest:
+        index = rest.index("%")
+        if index + 2 >= len(rest) or not _PERCENT_RE.fullmatch(rest[index + 1 : index + 3]):
+            return False
+        rest = rest[index + 3 :]
+    return True
+
+
+def _split_endpoint_query(raw: str) -> tuple[str, tuple[tuple[str, str], ...]]:
+    parts = urlsplit(raw)
+    if parts.fragment:
+        raise ProtocolError("INVALID_PLAN_ENDPOINT", "endpoint must not contain a fragment")
+    query = parse_qsl(parts.query, keep_blank_values=True)
+    names = [name for name, _ in query]
+    if len(names) != len(set(names)):
+        raise ProtocolError("INVALID_PLAN_ENDPOINT", "endpoint query contains duplicate parameter names")
+    for name, value in query:
+        if not _valid_percent_encoding(name) or not _valid_percent_encoding(value):
+            raise ProtocolError("INVALID_PLAN_ENDPOINT", "endpoint query contains invalid percent encoding")
+    clean = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    return clean, tuple(query)
+
+
+def _merge_pairs(first: tuple[tuple[str, str], ...], second: tuple[tuple[str, str], ...]) -> tuple[tuple[str, str], ...]:
+    seen: set[str] = set()
+    out: list[tuple[str, str]] = []
+    for pair in (*first, *second):
+        name, value = pair
+        if name in seen:
+            raise ProtocolError("INVALID_REQUEST_SHAPE", "fixed query parameter name is duplicated")
+        seen.add(name)
+        out.append((name, value))
+    return tuple(out)
 
 
 @dataclass(frozen=True)
@@ -105,32 +162,24 @@ def _target_error(raw: str) -> str | None:
     return None
 
 
-def _form_body_template(
-    fields: tuple[tuple[str, str], ...],
-    keyword_param: str,
-) -> str:
-    pairs = [(name, quote(value, safe="")) for name, value in fields]
-    pairs.append((keyword_param, "{keyword}"))
-    return "&".join(f"{name}={value}" for name, value in pairs)
-
-
-def _json_body_template(shape: CandidateRequestShape) -> str:
-    body: dict[str, object] = {}
-    for path, value in shape.json_object_template:
-        node = body
-        for part in path[:-1]:
-            node = node.setdefault(part, {})
-        node[path[-1]] = value
-    if shape.keyword_path:
-        node = body
-        for part in shape.keyword_path[:-1]:
-            node = node.setdefault(part, {})
-        node[shape.keyword_path[-1]] = "{keyword}"
-    return json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+def _derive_html_shape(candidate: SearchCandidate) -> SearchRequestShape:
+    method = candidate.method.strip().upper()
+    keyword_path = (candidate.keyword_param.strip(),)
+    if method == "POST":
+        return SearchRequestShape(
+            keyword_location=KEYWORD_LOCATION_FORM,
+            keyword_path=keyword_path,
+            form_fields=tuple(candidate.fixed_params),
+        )
+    return SearchRequestShape(
+        keyword_location=KEYWORD_LOCATION_QUERY,
+        keyword_path=keyword_path,
+        fixed_query_params=tuple(candidate.fixed_params),
+    )
 
 
 class PlanBuilder:
-    """Convert Analyzer candidates into the first valid SearchPlan."""
+    """Convert Analyzer candidates into the first valid SearchPlan v2."""
 
     def build(
         self,
@@ -309,6 +358,20 @@ class PlanBuilder:
                 code=REJECTION_UNSUPPORTED_CANDIDATE,
                 message="candidate evidence must be a sequence",
             )
+
+        source = candidate.source if isinstance(candidate.source, str) else ""
+        if source not in _SOURCE_ADAPTER:
+            return CandidateRejection(
+                candidate_index=index,
+                code=REJECTION_UNSUPPORTED_CANDIDATE,
+                message="candidate source has no formal adapter",
+            )
+        if source in ("trs_signature", "jpaas_signature", "generic_json") and candidate.request_shape is None:
+            return CandidateRejection(
+                candidate_index=index,
+                code=REJECTION_UNSUPPORTED_CANDIDATE,
+                message="TRS/JPAAS candidate requires a request shape",
+            )
         return None
 
     @staticmethod
@@ -333,7 +396,7 @@ class PlanBuilder:
             return "selector evidence is not validated"
         expected_kind = _SOURCE_STRATEGY.get(
             candidate.source if isinstance(candidate.source, str) else "",
-            SEARCH_STRATEGY_UNKNOWN,
+            SEARCH_STRATEGY_JSON_API,
         )
         if evidence.candidate_kind != expected_kind:
             return "selector evidence kind does not match candidate strategy"
@@ -350,25 +413,67 @@ class PlanBuilder:
         selector_evidence: SelectorEvidence | None = None,
     ) -> SearchPlan:
         method = candidate.method.strip().upper()
-        keyword_param = candidate.keyword_param.strip()
-        request_shape = candidate.request_shape
-        if request_shape is not None and request_shape.keyword_location in ("form", "json"):
-            query_params = dict(request_shape.fixed_query_params)
-        else:
-            query_params = {
-                name: value
-                for name, value in candidate.fixed_params
-            }
-            query_params[keyword_param] = KEYWORD_PLACEHOLDER
-        request_body_template = ""
-        if request_shape is not None and request_shape.keyword_location == "form":
-            request_body_template = _form_body_template(request_shape.form_fields, keyword_param)
-        elif request_shape is not None and request_shape.keyword_location == "json":
-            request_body_template = _json_body_template(request_shape)
         source = candidate.source if isinstance(candidate.source, str) else ""
-        strategy = _SOURCE_STRATEGY.get(source, SEARCH_STRATEGY_UNKNOWN)
-        evidence = [str(item) for item in candidate.evidence]
+        adapter = _SOURCE_ADAPTER[source]
+        strategy = _SOURCE_STRATEGY[source]
 
+        clean_endpoint, endpoint_query = _split_endpoint_query(candidate.endpoint)
+        clean_endpoint = normalize_target_url(clean_endpoint)
+
+        if candidate.request_shape is not None:
+            request_shape_data = candidate.request_shape
+            fixed_query = request_shape_data.fixed_query_params
+            form_fields = request_shape_data.form_fields
+            json_template = request_shape_data.json_object_template
+            keyword_location = request_shape_data.keyword_location
+            keyword_path = (
+                (candidate.keyword_param.strip(),)
+                if keyword_location in (KEYWORD_LOCATION_QUERY, KEYWORD_LOCATION_FORM)
+                else tuple(request_shape_data.keyword_path or ())
+            )
+        else:
+            derived = _derive_html_shape(candidate)
+            fixed_query = derived.fixed_query_params
+            form_fields = derived.form_fields
+            json_template = ()
+            keyword_location = derived.keyword_location
+            keyword_path = derived.keyword_path
+
+        merged_query = _merge_pairs(endpoint_query, fixed_query)
+        request_shape = SearchRequestShape(
+            keyword_location=keyword_location,
+            keyword_path=keyword_path,
+            fixed_query_params=merged_query,
+            form_fields=form_fields,
+            json_object_template=json_template,
+        )
+
+        if adapter == ADAPTER_HTML:
+            request_format = REQUEST_FORMAT_NONE if method == "GET" else REQUEST_FORMAT_FORM_URLENCODED
+            response_format = RESPONSE_FORMAT_HTML
+        elif adapter == ADAPTER_TRS:
+            if method != "POST":
+                raise ProtocolError("INVALID_PLAN", "TRS adapter requires POST")
+            request_format = REQUEST_FORMAT_FORM_URLENCODED
+            response_format = RESPONSE_FORMAT_JSON
+        elif adapter == ADAPTER_JPAAS:
+            if method != "GET":
+                raise ProtocolError("INVALID_PLAN", "JPAAS adapter requires GET")
+            request_format = REQUEST_FORMAT_NONE
+            response_format = RESPONSE_FORMAT_JSON
+        elif adapter == ADAPTER_GENERIC_JSON:
+            if method == "GET":
+                request_format = REQUEST_FORMAT_NONE
+                response_format = RESPONSE_FORMAT_JSON
+            elif method == "POST":
+                request_format = REQUEST_FORMAT_JSON
+                response_format = RESPONSE_FORMAT_JSON
+            else:
+                raise ProtocolError("INVALID_PLAN", "Generic JSON adapter requires GET or POST")
+        else:
+            raise ProtocolError("INVALID_PLAN", "adapter is not supported by PlanBuilder yet")
+
+        evidence = [str(item) for item in candidate.evidence]
         selectors = (
             SearchSelectors(
                 result_item=selector_evidence.result_item,
@@ -383,13 +488,16 @@ class PlanBuilder:
         status = PLAN_STATUS_READY if selector_evidence is not None else PLAN_STATUS_DRAFT
         base_plan = SearchPlan(
             plan_id="",
-            endpoint=normalize_target_url(candidate.endpoint),
+            endpoint=clean_endpoint,
             protocol_version=PROTOCOL_VERSION_V2,
             status=status,
             strategy=strategy,
+            adapter=adapter,
             http_method=method,
-            query_params=query_params,
-            request_body_template=request_body_template,
+            request_format=request_format,
+            response_format=response_format,
+            request_shape=request_shape,
+            pagination=SearchPagination(),
             selectors=selectors,
             scope=SearchScope(domain=target_domain),
             discovery=SearchDiscovery(
@@ -402,12 +510,15 @@ class PlanBuilder:
         return SearchPlan(
             plan_id=compute_plan_id(base_plan),
             endpoint=base_plan.endpoint,
+            plan_schema_version=base_plan.plan_schema_version,
             protocol_version=base_plan.protocol_version,
             status=base_plan.status,
             strategy=base_plan.strategy,
+            adapter=base_plan.adapter,
             http_method=base_plan.http_method,
-            query_params=base_plan.query_params,
-            request_body_template=base_plan.request_body_template,
+            request_format=base_plan.request_format,
+            response_format=base_plan.response_format,
+            request_shape=base_plan.request_shape,
             pagination=base_plan.pagination,
             selectors=base_plan.selectors,
             scope=base_plan.scope,

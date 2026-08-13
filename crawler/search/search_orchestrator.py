@@ -14,8 +14,10 @@ from crawler.search.plan_cache import (
     PlanCacheWriteResult,
     SearchPlanCache,
 )
+from crawler.search.adapter_composition import build_default_adapter_registry
 from crawler.search.plan_executor import (
     FAILURE_NO_RESULTS,
+    RegistryPlanExecutor,
     SearchPlanExecutionResult,
     execute_search_plan,
 )
@@ -249,6 +251,6 @@ def default_v2_components(redis_client, *, ttl_seconds: int = 86400):
         "plan_cache": SearchPlanCache(redis_client, ttl_seconds=ttl_seconds),
         "probe_fetcher": PinnedProbeFetcher(),
         "policy": SearchProbePolicy(),
-        "executor": execute_search_plan,
+        "executor": RegistryPlanExecutor(build_default_adapter_registry()),
         "publisher": RedisURLMessagePublisher(redis_client),
     }

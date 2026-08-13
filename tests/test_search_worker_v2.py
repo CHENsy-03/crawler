@@ -1,11 +1,12 @@
 """Offline tests for v2 SearchPlan generation in the search worker."""
 
 import json
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from unittest.mock import patch
 
 import pytest
 
+from crawler.search.plan_executor import RegistryPlanExecutor
 from crawler.search.plan_builder import (
     ERROR_NO_CANDIDATES,
     ERROR_NO_EXECUTABLE_PLAN,
@@ -16,6 +17,16 @@ from crawler.search.plan_cache import (
     PlanCacheWriteResult,
 )
 from crawler.search.search_plan import (
+    ADAPTER_HTML,
+    ADAPTER_GENERIC_JSON,
+    ADAPTER_JPAAS,
+    ADAPTER_TRS,
+    KEYWORD_LOCATION_QUERY,
+    REQUEST_FORMAT_NONE,
+    RESPONSE_FORMAT_HTML,
+    SearchPagination,
+    SearchRequestShape,
+
     PLAN_STATUS_DRAFT,
     PROTOCOL_VERSION_V2,
     SEARCH_STRATEGY_HTML_FORM,
@@ -23,11 +34,13 @@ from crawler.search.search_plan import (
     SearchScope,
     compute_plan_id,
 )
+from crawler.search.search_orchestrator import V2PipelineResult
 from crawler.site.models import SearchCandidate, SiteAnalysisResult
 from workers.search_worker import (
     V2PlanGenerationResult,
     handle_search_message,
     handle_v2_search_message,
+    run_worker,
 )
 
 TARGET = "https://example.gov.cn/"
@@ -41,25 +54,18 @@ def _valid_plan():
         protocol_version=PROTOCOL_VERSION_V2,
         status=PLAN_STATUS_DRAFT,
         strategy=SEARCH_STRATEGY_HTML_FORM,
+        adapter=ADAPTER_HTML,
         http_method="GET",
-        query_params={"q": "{keyword}"},
+        request_format=REQUEST_FORMAT_NONE,
+        response_format=RESPONSE_FORMAT_HTML,
+        request_shape=SearchRequestShape(
+            keyword_location=KEYWORD_LOCATION_QUERY,
+            keyword_path=("q",),
+        ),
+        pagination=SearchPagination(),
         scope=SearchScope(domain="example.gov.cn"),
     )
-    return SearchPlan(
-        plan_id=compute_plan_id(base),
-        endpoint=base.endpoint,
-        protocol_version=base.protocol_version,
-        status=base.status,
-        strategy=base.strategy,
-        http_method=base.http_method,
-        query_params=base.query_params,
-        request_body_template=base.request_body_template,
-        pagination=base.pagination,
-        selectors=base.selectors,
-        scope=base.scope,
-        discovery=base.discovery,
-        created_from=base.created_from,
-    )
+    return replace(base, plan_id=compute_plan_id(base))
 
 
 def _candidate(index=0):
@@ -798,3 +804,32 @@ def test_plan_fields_are_not_rewritten():
     )
     assert result.plan == plan
     assert result.plan.to_dict() == plan.to_dict()
+
+
+def test_worker_v2_default_executor_uses_production_registry():
+    import workers.search_worker as sw
+
+    captured = {}
+
+    class FakeRedis:
+        def __init__(self):
+            self.sent = False
+
+        def brpop(self, name, timeout=0):
+            if self.sent:
+                raise KeyboardInterrupt
+            self.sent = True
+            return (name, _v2_raw())
+
+    def fake_pipeline(message, **kwargs):
+        captured["executor"] = kwargs["executor"]
+        return V2PipelineResult("published", "plan-1", 1)
+
+    with patch.object(sw._redis, "Redis", return_value=FakeRedis()), patch.object(sw, "run_v2_search_pipeline", side_effect=fake_pipeline), patch.object(sw, "_load_plan_cache_ttl", return_value=86400), patch("signal.signal"):
+        try:
+            run_worker("localhost:6379")
+        except KeyboardInterrupt:
+            pass
+    assert isinstance(captured["executor"], RegistryPlanExecutor)
+    registry = captured["executor"]._registry
+    assert set(registry._adapters) == {ADAPTER_HTML, ADAPTER_TRS, ADAPTER_JPAAS, ADAPTER_GENERIC_JSON}

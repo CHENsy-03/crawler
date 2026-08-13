@@ -2169,3 +2169,188 @@ TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。�
 - 无真实网络、Redis、MySQL 访问。
 
 测试应使用 fake、mock、monkeypatch 和临时对象，不依赖外部服务。
+
+
+## TASK-018：统一 Search Adapter
+
+状态：accepted，契约已冻结。
+
+### 任务名称
+
+统一 Search Adapter，覆盖 HTML GET、HTML POST form、TRS、JPAAS、通用 JSON GET/POST。
+
+### 目标
+
+- 建立正式 AdapterRegistry 与统一 SearchPlanExecutionResult 边界。
+- 将六类搜索形态统一接入 v2 orchestrator。
+- 保持 legacy v1 不变。
+- 不扩大 Go 消费者协议，Go 仍只读取正式 URLMessage 公共字段。
+
+### 优先级
+
+P0（TASK-017 后执行）。
+
+### 依赖
+
+- TASK-015：v2 协议与 SearchPlan 模型。
+- TASK-016：安全分析与候选发现。
+- TASK-017：SearchPlan 执行、缓存、Worker v2 和 URLMessage 发布。
+- 已确认决策：新增正式 `adapter` 字段及 `request_format/response_format/request_shape`。
+
+### 已冻结判别决策
+
+- `adapter` 枚举：`html`、`trs`、`jpaas`、`generic_json`。
+- `request_format` 枚举：`none`、`form_urlencoded`、`json`。
+- `response_format` 枚举：`html`、`json`。
+- `request_shape` 使用结构化语义，禁止自由字符串作为唯一 body 契约。
+- `keyword_path` 是所有 `keyword_location` 的关键词插入位置：query/form 必须恰好一个非空片段，json 必须一个或多个非空片段。
+- `keyword_path` 的全部片段进入 canonical `plan_id`；关键词字段不得与对应固定字段集合冲突。
+- 禁止继续依靠 `query_params`/`request_body_template` 中的 `{keyword}` 占位符、运行时扫描 placeholder 或 Adapter 猜测字段名。
+- `discovery.source` 仅用于来源追踪、证据审计、日志诊断和测试说明，不用于正式分派。
+- 禁止根据 endpoint、hostname、selector 或运行时响应猜测 Adapter。
+
+### 请求单一真相与分页决策
+
+- 新 schema 不再接受、序列化或读取顶层 `query_params` 与 `request_body_template`；二者不进入 canonical `plan_id`。
+- `request_shape` 是所有固定请求参数和关键词位置的唯一正式来源。
+- `pagination` 是所有动态分页参数的唯一正式来源。
+- endpoint 必须是 `scheme + authority + path`；Candidate endpoint 的 query 必须确定性合并到 `request_shape.fixed_query_params`，fragment 拒绝。
+- `adapter` 是 AdapterRegistry 唯一分派字段；`strategy` 仅作为兼容性分类字段，不参与分派，不决定请求编码或响应解析器。
+- 新 `SearchPagination` 字段：`enabled/location/value_path/start/step/page_size_path/page_size/max_pages`。
+- 分页值公式：`pagination_value = start + i * step`；支持页码、页索引和 offset 计数。
+- query/form 路径恰好一个非空片段；json 路径一个或多个非空片段；禁止空片段、点号拆分、隐式数组索引。
+- `keyword_path`、`pagination.value_path`、`pagination.page_size_path` 与固定字段路径必须互不冲突；冲突返回 `plan_invalid`。
+- 旧 schema 缓存整体失效并按 cache miss 安全重建；保持 `CACHE_KEY_PREFIX`、fingerprint 和 TTL 不变。
+### 允许修改范围
+
+实现阶段允许修改：
+
+- crawler/search/adapter/ 或等价新模块；
+- crawler/search/plan_executor.py、search_orchestrator.py、plan_builder.py、plan_cache.py；
+- SearchPlan 内部 schema、canonical plan_id、cache schema 版本；
+- 现有 TRS/JPAAS 解析函数的无状态提取；
+- 对应测试和文档。
+
+禁止修改：
+
+- Go 产品代码；
+- URLMessage schema；
+- SearchRequestedMessage protocol_version；
+- Redis key/TTL/schema；
+- 错误码集合；
+- BRPOP/ACK/NACK/requeue 语义；
+- legacy v1；
+- TASK-022 安全边界。
+
+### 验收条件
+
+完整验收条件见 `docs/UNIFIED_SEARCH_ADAPTER.md` 第 18 节。
+
+### 任务拆分
+
+- TASK-018A：本轮文档与协议决策冻结。
+- TASK-018B：SearchPlan 内部 schema 演进，adapter/request_format/response_format/request_shape，新 SearchPagination，canonical plan_id，cache schema 与 incompatible 处理，Adapter 接口/Registry/统一结果模型，纯函数式无网络 RequestBuilder 基础能力，现有 executor 从自由 placeholder 机械迁移到结构化 RequestBuilder。
+- TASK-018C：HTML GET/POST，RequestBuilder + HTML parser。
+- TASK-018D：TRS Adapter，复用现有 TRS 无状态逻辑。
+- TASK-018E：JPAAS Adapter，复用现有嵌套展开逻辑。
+- TASK-018F：Generic JSON GET/POST，JSON Pointer 与结构化 JSON body。
+- TASK-018G：PlanExecutor/orchestrator 集成，缓存与发布边界不回归。
+- TASK-018H：完整 Python/Go/跨语言门禁。
+
+TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
+
+### TASK-018B 实施记录
+
+- 状态：基础层已实现；TASK-018C–G 尚未完成。
+- `plan_schema_version=2`，cache envelope schema version 提升为 2。
+- 新 SearchPlan 不再包含 `query_params` 或 `request_body_template`。
+- 新增结构化 `request_shape`、新 `pagination`、`adapter/request_format/response_format`。
+- 新增模块：`crawler/search/execution_models.py`、`adapter.py`、`adapter_registry.py`、`request_builder.py`。
+- AdapterRegistry 未注册任何真实 Adapter；具体 Adapter 由 TASK-018C–F 实现。
+- RequestBuilder 完全无网络，只根据结构化字段构造请求。
+- executor 保持单页过渡路径；`max_pages>1` 返回 `plan_not_executable`。
+- 旧 schema 缓存读取返回 `incompatible`，按 cache miss 安全重建。
+- TASK-018 整体未完成；不得声称 TRS/JPAAS/Generic JSON 已正式接入。
+
+### TASK-018C 实施记录
+
+- 状态：HTML Adapter 已实现；TASK-018D–G 尚未完成。
+- `crawler/search/html_adapter.py` 提供正式 `HTMLSearchAdapter`，`adapter_name=html`。
+- 支持 HTML GET + query 和 HTML POST + form-urlencoded。
+- `crawler/search/html_response_parser.py` 是唯一 HTML 响应解析实现；`plan_executor.py` 通过 HTML Adapter 复用。
+- 第一页合法零结果返回 `no_results`；后续页零结果或零新增 URL 正常停止。
+- 后续页失败采用 fail-closed，最终 `items=()`。
+- 结果 URL 做相对解析、http/https、userinfo、domain 和 path scope 校验。
+- Registry 仍未接入 orchestrator，未注册其他 Adapter。
+- TASK-018 整体未完成；不得宣称 TRS/JPAAS/Generic JSON 已实现。
+
+### TASK-018D 实施记录
+
+- 状态：TRS Adapter 已实现；TASK-018E–G 尚未完成。
+- `crawler/search/trs_adapter.py` 提供正式 `TRSSearchAdapter`，`adapter_name=trs`。
+- 支持 POST + form-urlencoded + JSON 响应，解析 `resultDocs`。
+- `crawler/search/trs_response_parser.py` 复用 `parser/api_parser.parse_trs_doc()` 字段映射。
+- `crawler/search/json_utils.py` 是唯一严格 JSON 解码实现，`plan_executor.py` 已复用。
+- 第一页空 `resultDocs` 返回 `no_results`；后续空/短页/重复页停止。
+- 后续页失败 fail-closed，`items=()`。
+- 当前真实 Analyzer `trs_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；正式执行器已具备，后续需补齐生产者证据。
+- TASK-018 整体未完成；不得宣称 JPAAS/Generic JSON 已实现。
+
+### TASK-018E 实施记录
+
+- 状态：JPAAS Adapter 已实现；TASK-018F–G 尚未完成。
+- `crawler/search/jpaas_adapter.py` 提供正式 `JPAASSearchAdapter`，`adapter_name=jpaas`。
+- 支持 GET + `request_format=none` + JSON 响应。
+- `crawler/search/jpaas_parser.py` 提供唯一嵌套展开与字段映射，`plugins/jpaas.py` 已改为复用同一核心。
+- 应用成功码严格为 `code=200`；`appSearchResultBeanList` 缺失/类型错误返回 `selector_mismatch`。
+- 第一页空结果返回 `no_results`；后续空/重复页停止；后续失败 fail-closed。
+- 当前真实 Analyzer `jpaas_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；正式执行器已具备。
+- TASK-018 整体未完成；不得宣称 Generic JSON 已实现。
+
+### TASK-018F 实施记录
+
+- 状态：Generic JSON Adapter 已实现；TASK-018G 尚未完成。
+- `crawler/search/generic_json_adapter.py` 提供正式 `GenericJSONSearchAdapter`。
+- 支持 GET + query 与 POST + JSON body。
+- `crawler/search/json_pointer.py` 是唯一严格 JSON Pointer helper；`generic_json_response_parser.py` 使用它按 SearchPlan selectors 解析。
+- `plan_executor.py` 已改为纯 Adapter 分派，不再保留内联 JSON 解析。
+- 第一页空结果返回 `no_results`；后续空/重复页停止；后续失败 fail-closed。
+- 当前真实 Candidate 生产路径尚不能自动生成 Generic JSON ready plan；GET 与 POST 均需显式正式 SearchPlan。
+- TASK-018 整体未完成；orchestrator 尚未接入 Registry。
+
+### TASK-018G 实施记录
+
+- 状态：生产集成已实现；TASK-018H 最终交付门禁已完成。
+- 新增 `crawler/search/adapter_composition.py`，`build_default_adapter_registry()` 每次构建全新 Registry，只注册 HTML、TRS、JPAAS、Generic JSON 四个正式 Adapter，不建立模块级可变 singleton。
+- `plan_executor.py` 新增 `RegistryPlanExecutor` 与 `execute_plan_with_registry()`；生产默认 `execute_search_plan()` 通过默认 Registry 精确按 `plan.adapter` 分派。
+- `plan_executor.py` 不再直接实例化具体 Adapter，不再解析 HTML/JSON、构造请求或根据 strategy/source/endpoint 猜测类型。
+- `search_orchestrator.py` 与 `workers/search_worker.py` 的 v2 生产路径使用 `RegistryPlanExecutor(build_default_adapter_registry())`；测试和调用方仍可显式注入 executor。
+- `plan_builder.py` 支持显式 `generic_json` Candidate 转换：GET 映射 `request_format=none`，POST 映射 `request_format=json`；缺少结构化 request_shape 时保持拒绝，不伪造默认字段。
+- 六类请求组合的离线生产链测试已建立：HTML GET、HTML POST form、TRS POST form、JPAAS GET、Generic JSON GET、Generic JSON POST。
+- Producer 状态：HTML GET/POST 为 auto_ready；TRS、JPAAS、Generic JSON GET/POST 在真实 Analyzer 证据链下仍为 not_ready，只能由显式正式 Candidate/SearchPlan 或后续生产者补齐后自动生成 ready plan。
+- TASK-017 缓存与发布语义未改变：success/no_results 写缓存；failed 不写缓存且零发布；缓存命中失败 delete 一次；publish_failure 保留实际 published_count；URLMessage 契约与 Go PopURL 解码不回归。
+- TASK-018H 最终交付门禁已通过；TASK-018 正式关闭等待人工 pre-push 审查。
+
+
+### TASK-018H 实施记录
+
+- 状态：最终交付门禁已通过；TASK-018 正式关闭等待人工 pre-push 审查。
+- 完成 TASK-018 全量差异审查、冻结协议一致性审查和生产 Registry/orchestrator/worker 调用链审查。
+- 修复最终门禁发现的冻结范围内缺陷：allowed path prefix 按路径边界比较；JSON 分页路径与固定模板、页码与页大小路径冲突拒绝；Generic JSON 禁用分页可单页执行；JPAAS `mapSearchResult` 错误嵌套类型映射 `selector_mismatch`。
+- 新增回归测试：四类 Adapter path boundary、Generic JSON disabled pagination、JSON pagination conflict、JPAAS malformed nested、`default_v2_components` 与 worker v2 production Registry。
+- 最终 Python 基线：647 collected / 640 passed / 7 skipped / 0 failed。
+- Go 全量 test/vet、compileall、pip check、git diff --check 通过。
+- 未修改 SearchPlan/cache schema、Redis key/TTL/fingerprint、外部消息协议、错误码、Go 或 legacy 行为。
+- TASK-022 残余安全风险仍存在；TASK-018 不得声称未知站点可自动发现并执行。
+
+### 后续顺序
+
+正式冻结：
+
+```text
+TASK-018：统一正式执行 Adapter
+→ TASK-022：生产级 SSRF 与连接级安全
+→ TASK-020：未知站点 MVP 验收
+```
+
+版本、tag、release 策略推迟到 TASK-020 MVP 验收通过后定义。
