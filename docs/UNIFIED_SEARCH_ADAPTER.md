@@ -129,23 +129,53 @@ json_object_template
 约束：
 
 - `keyword_location`：`query`、`form`、`json`；
-- `keyword_path`：仅 JSON body 使用，使用结构化路径片段，不使用点号拼接模糊字符串；
+- `keyword_path`：统一定义关键词插入位置，使用结构化路径片段，不使用点号拼接模糊字符串；
 - `fixed_query_params`：不可变、有序或 canonical 排序的 name/value 集合；
 - `form_fields`：不可变 name/value 集合，keyword 字段与固定字段不得重名；
 - `json_object_template`：使用结构化 path/value 表达，禁止以自由 JSON 字符串作为正式源。
+
+`keyword_path` 按 `keyword_location` 定义：
+
+| keyword_location | keyword_path 规则 | 示例 |
+|---|---|---|
+| query | 必须恰好一个非空片段 | `("q",)` |
+| form | 必须恰好一个非空片段 | `("searchWord",)` |
+| json | 必须包含一个或多个非空片段 | `("request", "keyword")` |
+
+- query：`keyword_path` 是 query 参数名；关键词经标准 URL 编码后写入 query；不得同时出现在 `fixed_query_params`。
+- form：`keyword_path` 是 form 字段名；关键词写入 `application/x-www-form-urlencoded` body；不得同时出现在 `form_fields`。
+- json：`keyword_path` 逐层定位 JSON object 中的关键词字段；不得与 `json_object_template` 固定 path 重复；不得穿越非 object 节点。
+- 路径片段必须是非空字符串，不得包含空片段，不得依赖点号字符串拆分，不得允许隐式数组索引，大小写原样保留。
+
+固定字段边界：
+
+- `fixed_query_params` 只存固定 query 参数；
+- `form_fields` 只存固定 form 字段；
+- `json_object_template` 只存固定 JSON path/value；
+- `keyword_path` 只描述关键词插入位置。
+
+关键词字段不得同时出现在对应固定字段集合中。发现冲突时返回 `plan_invalid`，不得由关键词值覆盖固定值，也不得静默忽略固定值。
+
+TASK-018B 转换规则：
+
+- Candidate keyword 在 query：`candidate.keyword_param` → `request_shape.keyword_path=(keyword_param,)`；
+- Candidate keyword 在 form：`candidate.keyword_param` → `request_shape.keyword_path=(keyword_param,)`；
+- Candidate keyword 在 JSON：`candidate.request_shape.keyword_path` → SearchPlan `request_shape.keyword_path`。
+
+禁止继续依靠 `query_params` 中的 `{keyword}`、`request_body_template` 中的 `{keyword}`、运行时扫描 placeholder、Adapter 猜测常见字段名或 `discovery.source`。
 
 请求构造器由结构化数据生成 query string、form-urlencoded body 或 JSON body；不得反向解析自由字符串恢复结构。
 
 ## 7. 合法字段组合
 
-| adapter | method | request_format | response_format |
-|---|---|---|---|
-| html | GET | none | html |
-| html | POST | form_urlencoded | html |
-| trs | POST | form_urlencoded | json |
-| jpaas | GET | none | json |
-| generic_json | GET | none | json |
-| generic_json | POST | json | json |
+| adapter | method | request_format | response_format | keyword_location | keyword_path 长度 |
+|---|---|---|---|---|---|
+| html | GET | none | html | query | 1 |
+| html | POST | form_urlencoded | html | form | 1 |
+| trs | POST | form_urlencoded | json | form | 1 |
+| jpaas | GET | none | json | query | 1 |
+| generic_json | GET | none | json | query | 1 |
+| generic_json | POST | json | json | json | >=1 |
 
 JPAAS 当前已验证组合以现有正式 plugin 和 fixture 为准：GET、无 body、JSON 响应。如后续发现其他正式请求变体，必须列出受支持组合并要求注册表或 Adapter 严格验证。
 
@@ -185,6 +215,13 @@ selectors
 scope
 其他现有执行字段
 ```
+
+`keyword_path` 的全部片段都进入 canonical `plan_id`。以下变化必须改变 `plan_id`：
+
+- query 参数名变化；
+- form 字段名变化；
+- JSON 嵌套路径变化；
+- `keyword_location` 变化。
 
 任何执行语义变化必须生成不同 `plan_id`。
 

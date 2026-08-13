@@ -2203,6 +2203,9 @@ P0（TASK-017 后执行）。
 - `request_format` 枚举：`none`、`form_urlencoded`、`json`。
 - `response_format` 枚举：`html`、`json`。
 - `request_shape` 使用结构化语义，禁止自由字符串作为唯一 body 契约。
+- `keyword_path` 是所有 `keyword_location` 的关键词插入位置：query/form 必须恰好一个非空片段，json 必须一个或多个非空片段。
+- `keyword_path` 的全部片段进入 canonical `plan_id`；关键词字段不得与对应固定字段集合冲突。
+- 禁止继续依靠 `query_params`/`request_body_template` 中的 `{keyword}` 占位符、运行时扫描 placeholder 或 Adapter 猜测字段名。
 - `discovery.source` 仅用于来源追踪、证据审计、日志诊断和测试说明，不用于正式分派。
 - 禁止根据 endpoint、hostname、selector 或运行时响应猜测 Adapter。
 

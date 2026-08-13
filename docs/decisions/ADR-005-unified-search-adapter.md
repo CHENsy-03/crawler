@@ -23,6 +23,17 @@ TASK-017 已实现 SearchPlan v2 分析、探测、构建、执行、缓存和 W
 
 `AdapterRegistry` 只根据已验证的正式 `adapter` 字段选择 Adapter。
 
+## 契约澄清
+
+原文早期草稿把 `keyword_path` 限定为仅 JSON body 使用，无法表达 query/form 的关键词参数名。现澄清为：
+
+- `keyword_path` 是所有 `keyword_location` 的结构化关键词插入位置；
+- query/form 使用恰好一个非空片段表示参数名；
+- json 使用一个或多个非空片段表示嵌套路径；
+- 路径片段不得为空、不得依赖点号拆分、不得隐式数组索引、大小写原样保留；
+- 关键词字段不得与对应固定字段集合冲突。
+
+这是补齐表达能力，不改变 Adapter 架构、正式 `adapter` 枚举或 method/format 组合决策。
 ## 拒绝方案
 
 - 拒绝方案 A：让 `discovery.source` 同时承担来源证据与执行分派。`discovery.source` 保留为来源追踪、证据审计、日志诊断和测试说明，不进入执行协议。
