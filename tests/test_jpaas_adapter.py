@@ -247,3 +247,26 @@ def test_no_network_dns_or_redis_access():
         result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 1
+
+
+def test_path_prefix_boundary_is_enforced():
+    plan = replace(_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
+    plan = replace(plan, plan_id=compute_plan_id(plan))
+    body = "{\"code\":\"200\",\"data\":{\"appSearchResultBeanList\":[{\"title\":\"Bad\",\"url\":\"/news-old/a\"}]}}"
+    result = JPAASSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    assert result.failure_code == "response_rejected"
+    assert result.items == ()
+
+
+def test_malformed_map_search_result_container_is_selector_mismatch():
+    body = "{\"code\":\"200\",\"data\":{\"appSearchResultBeanList\":[{\"mapSearchResult\":\"bad\"}]}}"
+    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    assert result.failure_code == "selector_mismatch"
+    assert result.items == ()
+
+
+def test_malformed_map_search_result_items_is_selector_mismatch():
+    body = "{\"code\":\"200\",\"data\":{\"appSearchResultBeanList\":[{\"mapSearchResult\":{\"items\":5}}]}}"
+    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    assert result.failure_code == "selector_mismatch"
+    assert result.items == ()

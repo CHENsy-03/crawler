@@ -2320,7 +2320,7 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 
 ### TASK-018G 实施记录
 
-- 状态：生产集成已实现；TASK-018H 尚未完成。
+- 状态：生产集成已实现；TASK-018H 最终交付门禁已完成。
 - 新增 `crawler/search/adapter_composition.py`，`build_default_adapter_registry()` 每次构建全新 Registry，只注册 HTML、TRS、JPAAS、Generic JSON 四个正式 Adapter，不建立模块级可变 singleton。
 - `plan_executor.py` 新增 `RegistryPlanExecutor` 与 `execute_plan_with_registry()`；生产默认 `execute_search_plan()` 通过默认 Registry 精确按 `plan.adapter` 分派。
 - `plan_executor.py` 不再直接实例化具体 Adapter，不再解析 HTML/JSON、构造请求或根据 strategy/source/endpoint 猜测类型。
@@ -2329,7 +2329,19 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 - 六类请求组合的离线生产链测试已建立：HTML GET、HTML POST form、TRS POST form、JPAAS GET、Generic JSON GET、Generic JSON POST。
 - Producer 状态：HTML GET/POST 为 auto_ready；TRS、JPAAS、Generic JSON GET/POST 在真实 Analyzer 证据链下仍为 not_ready，只能由显式正式 Candidate/SearchPlan 或后续生产者补齐后自动生成 ready plan。
 - TASK-017 缓存与发布语义未改变：success/no_results 写缓存；failed 不写缓存且零发布；缓存命中失败 delete 一次；publish_failure 保留实际 published_count；URLMessage 契约与 Go PopURL 解码不回归。
-- TASK-018H 的完整 Python/Go/跨语言门禁尚未完成；不得宣称 TASK-018 已完成。
+- TASK-018H 最终交付门禁已通过；TASK-018 正式关闭等待人工 pre-push 审查。
+
+
+### TASK-018H 实施记录
+
+- 状态：最终交付门禁已通过；TASK-018 正式关闭等待人工 pre-push 审查。
+- 完成 TASK-018 全量差异审查、冻结协议一致性审查和生产 Registry/orchestrator/worker 调用链审查。
+- 修复最终门禁发现的冻结范围内缺陷：allowed path prefix 按路径边界比较；JSON 分页路径与固定模板、页码与页大小路径冲突拒绝；Generic JSON 禁用分页可单页执行；JPAAS `mapSearchResult` 错误嵌套类型映射 `selector_mismatch`。
+- 新增回归测试：四类 Adapter path boundary、Generic JSON disabled pagination、JSON pagination conflict、JPAAS malformed nested、`default_v2_components` 与 worker v2 production Registry。
+- 最终 Python 基线：643 collected / 636 passed / 7 skipped / 0 failed。
+- Go 全量 test/vet、compileall、pip check、git diff --check 通过。
+- 未修改 SearchPlan/cache schema、Redis key/TTL/fingerprint、外部消息协议、错误码、Go 或 legacy 行为。
+- TASK-022 残余安全风险仍存在；TASK-018 不得声称未知站点可自动发现并执行。
 
 ### 后续顺序
 

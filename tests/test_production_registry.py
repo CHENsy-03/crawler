@@ -104,3 +104,14 @@ def test_strategy_and_source_do_not_affect_dispatch():
     result = execute_plan_with_registry(plan, ("k",), registry=registry, fetcher=None, policy=POLICY)
     assert result.success
     assert adapter.calls
+
+
+def test_default_v2_components_uses_registry_executor():
+    from crawler.search.plan_executor import RegistryPlanExecutor
+    from crawler.search.search_orchestrator import default_v2_components
+
+    components = default_v2_components(object())
+    executor = components["executor"]
+    assert isinstance(executor, RegistryPlanExecutor)
+    registry = executor._registry
+    assert set(registry._adapters) == {ADAPTER_HTML, ADAPTER_TRS, ADAPTER_JPAAS, ADAPTER_GENERIC_JSON}

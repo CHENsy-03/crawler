@@ -280,3 +280,12 @@ def test_trs_resultDocs_titleO_publishTime_mapping():
     assert result.success
     assert result.items[0].title == "标题"
     assert result.items[1].title == "第二"
+
+
+def test_path_prefix_boundary_is_enforced():
+    plan = replace(_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
+    plan = replace(plan, plan_id=compute_plan_id(plan))
+    body = "{\"resultDocs\":[{\"title\":\"Bad\",\"url\":\"/news-old/a\",\"summary\":\"s\"}]}"
+    result = TRSSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    assert result.failure_code == "response_rejected"
+    assert result.items == ()

@@ -58,11 +58,11 @@ py -m pytest -q
 
 结果：
 
-- 收集：632 tests
-- 通过：625
+- 收集：643 tests
+- 通过：636
 - 跳过：7
 - 失败：0
-- 最终实际耗时：3.23s（该次运行的观察值，不作为稳定性能门槛）
+- 最终实际耗时：3.82s（该次运行的观察值，不作为稳定性能门槛）
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
@@ -225,7 +225,7 @@ TASK-018F 已完成；TASK-018G 已实现。
 
 TASK-018F 新增 `tests/test_generic_json_adapter.py`、`tests/test_json_pointer.py`、`crawler/search/json_pointer.py`、`generic_json_response_parser.py` 和 `generic_json_adapter.py`。`plan_executor.py` 已移除内联 JSON 解析并改为四类 Adapter 分派。
 
-TASK-018G 已实现；TASK-018H 尚未完成。
+TASK-018G 已实现；TASK-018H 最终交付门禁已完成。
 
 
 TASK-018G 新增 `tests/test_production_registry.py` 与 `tests/test_production_adapter_pipeline.py`，并扩展 `tests/test_plan_builder.py`；覆盖默认 Registry 组合、Registry 精确分派、executor 注入、六类离线生产链、缓存/发布语义和零网络约束。
@@ -238,4 +238,17 @@ TASK-018G 产品范围：
 - `plan_builder.py` 支持显式 generic_json Candidate；
 - SearchPlan/cache/plan_id/Redis key/TTL/fingerprint、外部消息协议、错误码、Go 和 legacy 均未修改。
 
-TASK-018H 尚未完成。
+TASK-018H 最终交付门禁已完成；等待人工 pre-push 审查。
+
+
+TASK-018H 最终交付门禁新增/更新测试：
+
+- 四类 Adapter 的 allowed path prefix 路径边界测试；
+- Generic JSON 禁用分页单页执行测试；
+- JSON 分页与固定模板、页码与页大小冲突测试；
+- JPAAS malformed nested 类型测试；
+- `default_v2_components` 与 worker v2 production Registry 测试。
+
+TASK-018H 最终基线：643 collected / 636 passed / 7 skipped / 0 failed。
+Go 全量 test/vet、compileall、pip check、git diff --check 均通过。
+TASK-018 正式关闭等待人工 pre-push 审查；TASK-022 残余风险仍存在。

@@ -2,6 +2,7 @@
 
 from urllib.parse import urlsplit
 
+from crawler.search.adapter import path_allowed
 from crawler.search.execution_models import (
     FAILURE_NO_RESULTS,
     FAILURE_PLAN_INVALID,
@@ -49,9 +50,8 @@ def _validate_result_url(url: str, plan: SearchPlan) -> None:
             raise HTMLResultURLError("result URL is outside the plan domain")
     except SiteNormalizationError as exc:
         raise HTMLResultURLError("result URL could not be normalized") from exc
-    if plan.scope.allowed_path_prefixes:
-        if not any(parts.path.startswith(prefix) for prefix in plan.scope.allowed_path_prefixes):
-            raise HTMLResultURLError("result URL is outside allowed path prefixes")
+    if not path_allowed(parts.path, plan.scope.allowed_path_prefixes):
+        raise HTMLResultURLError("result URL is outside allowed path prefixes")
 
 
 def _dedupe(items: list[SearchResultItem]) -> list[SearchResultItem]:

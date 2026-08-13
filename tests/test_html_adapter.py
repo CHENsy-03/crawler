@@ -263,3 +263,12 @@ def test_no_network_dns_or_redis_access():
         result = HTMLSearchAdapter().execute(_plan(), ("k",), fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 1
+
+
+def test_path_prefix_boundary_is_enforced():
+    plan = replace(_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
+    plan = replace(plan, plan_id=compute_plan_id(plan))
+    body = "<div class=\"result-item\"><h3><a href=\"/news-old/a.html\">A</a></h3></div>"
+    result = HTMLSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_html_response(body)]), policy=POLICY)
+    assert result.failure_code == "response_rejected"
+    assert result.items == ()

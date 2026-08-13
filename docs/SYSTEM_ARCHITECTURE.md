@@ -306,4 +306,4 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - `search_orchestrator.py` 与 `workers/search_worker.py` 的 v2 生产路径已接入默认 Registry，不建立全局可变 singleton，也不在 orchestrator 内直接调用具体 Adapter。
 - 正式调用链为：Analyzer/Candidate evidence → PlanBuilder → SearchPlan v2 → cache/orchestrator → PlanExecutor → AdapterRegistry → Adapter → URLMessage publication。
 - 真实 Analyzer 只有 HTML GET/POST 可自动生成 ready plan；TRS、JPAAS、Generic JSON GET/POST 仍需显式正式 Candidate/SearchPlan 或后续生产者补齐。
-- TASK-018H 尚未完成；TASK-022 连接级安全仍不在本轮范围。
+- TASK-018H 最终交付门禁已通过；TASK-022 连接级安全仍不在本轮范围。

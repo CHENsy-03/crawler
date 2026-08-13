@@ -491,4 +491,4 @@ Generic JSON 计划由 `GenericJSONSearchAdapter` 执行，支持 GET query 与 
 - 未知或未注册 adapter 返回现有 `plan_invalid`，无 fallback、无 strategy/source/endpoint 猜测。
 - TASK-017 缓存与发布语义保持：success/no_results 后写缓存，failed 不写缓存且零发布，缓存命中失败 delete 一次，publish_failure 保留 published_count。
 - 六类 producer 状态：HTML GET/POST 为 auto_ready；TRS、JPAAS、Generic JSON GET/POST 真实 Analyzer 证据链下为 not_ready，需显式正式 Candidate/SearchPlan 或后续生产者补齐。
-- TASK-018H 尚未完成。
+- TASK-018H 最终交付门禁已通过；TASK-018 正式关闭等待人工 pre-push 审查；TASK-022 残余安全风险仍存在。

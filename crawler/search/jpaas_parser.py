@@ -95,6 +95,17 @@ def parse_jpaas_response(response: SearchProbeResponse, keyword: str) -> JPAASPa
     if not docs:
         return JPAASPageParseOutcome((), 0)
 
+    for doc in docs:
+        if not isinstance(doc, dict):
+            raise JPAASParseError("JPAAS document must be an object")
+        if "mapSearchResult" in doc:
+            container = doc["mapSearchResult"]
+            if not isinstance(container, dict):
+                raise JPAASParseError("JPAAS mapSearchResult must be an object")
+            items = container.get("items")
+            if not isinstance(items, list):
+                raise JPAASParseError("JPAAS mapSearchResult.items must be a list")
+
     items = []
     for doc in expand_jpaas_documents(docs):
         fields = raw_jpaas_fields(doc)

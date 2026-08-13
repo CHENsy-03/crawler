@@ -132,3 +132,52 @@ def test_infinity_rejected():
             ("query", "kw"),
             json_object_template=((("query", "v"), float("inf")),),
         )
+
+
+def test_json_pagination_conflicts_with_fixed_template_rejected():
+    shape = SearchRequestShape(
+        KEYWORD_LOCATION_JSON,
+        ("query", "kw"),
+        json_object_template=((("page",), {"size": 1}),),
+    )
+    plan = _base_plan(
+        ADAPTER_GENERIC_JSON,
+        "POST",
+        REQUEST_FORMAT_JSON,
+        RESPONSE_FORMAT_JSON,
+        shape,
+    )
+    pagination = SearchPagination(
+        enabled=True,
+        location=KEYWORD_LOCATION_JSON,
+        value_path=("page",),
+        start=1,
+        step=1,
+        max_pages=1,
+    )
+    bad = replace(plan, pagination=pagination, plan_id="")
+    with pytest.raises(ProtocolError):
+        validate_search_plan(replace(bad, plan_id=compute_plan_id(bad)))
+
+
+def test_pagination_value_and_page_size_conflict_rejected():
+    plan = _base_plan(
+        ADAPTER_GENERIC_JSON,
+        "GET",
+        REQUEST_FORMAT_NONE,
+        RESPONSE_FORMAT_JSON,
+        SearchRequestShape(KEYWORD_LOCATION_QUERY, ("q",)),
+    )
+    pagination = SearchPagination(
+        enabled=True,
+        location=KEYWORD_LOCATION_QUERY,
+        value_path=("page",),
+        start=1,
+        step=1,
+        page_size_path=("page",),
+        page_size=10,
+        max_pages=1,
+    )
+    bad = replace(plan, pagination=pagination, plan_id="")
+    with pytest.raises(ProtocolError):
+        validate_search_plan(replace(bad, plan_id=compute_plan_id(bad)))

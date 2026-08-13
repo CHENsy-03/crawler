@@ -775,4 +775,14 @@ TASK-018B 应：
 - `plan_builder.py` 支持显式 `generic_json` Candidate：GET 映射 `request_format=none`，POST 映射 `request_format=json`；request_shape 缺失时拒绝生成 ready plan。
 - 六类组合均可通过显式正式 SearchPlan/Candidate 完成离线生产链；真实 Analyzer 仅 HTML GET/POST 为 auto_ready，TRS/JPAAS/Generic JSON GET/POST 仍为 not_ready。
 - SearchPlan schema、plan_id canonical、cache schema、Redis key/fingerprint/TTL、外部消息协议和错误码均未变化。
-- TASK-018H 尚未完成；不得宣称 TASK-018 已完成或未知站点可自动发现并执行。
+- TASK-018H 最终交付门禁已通过；TASK-018 正式关闭等待人工 pre-push 审查；不得宣称未知站点可自动发现并执行。
+
+
+## 27. TASK-018H 实施记录
+
+- 最终交付门禁已完成，TASK-018 正式关闭等待人工 pre-push 审查。
+- 修复最终审查发现的冻结范围内缺陷：allowed path prefix 按路径边界比较；JSON 分页路径与固定模板、页码与页大小路径冲突拒绝；Generic JSON 禁用分页可单页执行；JPAAS `mapSearchResult` 错误嵌套类型映射 `selector_mismatch`。
+- 新增对应回归测试，并补充 `default_v2_components` 与 worker v2 production Registry 测试。
+- Producer 状态不变：HTML GET/POST auto_ready，TRS/JPAAS/Generic JSON GET/POST not_ready。
+- SearchPlan/cache schema、Redis key/TTL/fingerprint、外部消息协议、错误码、Go 与 legacy v1 均未修改。
+- TASK-022 残余安全风险仍存在；版本/tag/release 策略仍推迟到 TASK-020 验收后。

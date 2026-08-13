@@ -307,3 +307,23 @@ def test_no_network_dns_or_redis_access():
         result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 1
+
+
+def test_path_prefix_boundary_is_enforced():
+    plan = replace(_get_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
+    plan = replace(plan, plan_id=compute_plan_id(plan))
+    body = "{\"data\":{\"items\":[{\"title\":\"A\",\"url\":\"/news-old/a\"}]}}"
+    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    assert result.failure_code == "response_rejected"
+    assert result.items == ()
+
+
+def test_disabled_pagination_executes_single_page():
+    plan = replace(_get_plan(), pagination=SearchPagination(), plan_id="")
+    plan = replace(plan, plan_id=compute_plan_id(plan))
+    fetcher = FakeFetcher([_response(_ok_body())])
+    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    assert result.success
+    assert len(fetcher.calls) == 1
+    assert "page=" not in fetcher.calls[0].url
+    assert "size=" not in fetcher.calls[0].url

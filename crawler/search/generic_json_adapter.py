@@ -2,6 +2,7 @@
 
 from urllib.parse import urlsplit
 
+from crawler.search.adapter import path_allowed
 from crawler.search.execution_models import (
     FAILURE_NO_RESULTS,
     FAILURE_PLAN_INVALID,
@@ -53,9 +54,8 @@ def _validate_result_url(url: str, plan: SearchPlan) -> None:
             raise ValueError("result URL is outside the plan domain")
     except SiteNormalizationError as exc:
         raise ValueError("result URL could not be normalized") from exc
-    if plan.scope.allowed_path_prefixes:
-        if not any(parts.path.startswith(prefix) for prefix in plan.scope.allowed_path_prefixes):
-            raise ValueError("result URL is outside allowed path prefixes")
+    if not path_allowed(parts.path, plan.scope.allowed_path_prefixes):
+        raise ValueError("result URL is outside allowed path prefixes")
 
 
 def _dedupe(items: list[SearchResultItem]) -> list[SearchResultItem]:
@@ -92,14 +92,13 @@ class GenericJSONSearchAdapter:
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
 
         pagination = plan.pagination
-        if not pagination.enabled:
-            return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
-        if pagination.location not in (KEYWORD_LOCATION_QUERY, KEYWORD_LOCATION_JSON):
-            return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
-        if plan.http_method == "GET" and pagination.location != KEYWORD_LOCATION_QUERY:
-            return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
-        if pagination.page_size_path and not pagination.page_size:
-            return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
+        if pagination.enabled:
+            if pagination.location not in (KEYWORD_LOCATION_QUERY, KEYWORD_LOCATION_JSON):
+                return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
+            if plan.http_method == "GET" and pagination.location != KEYWORD_LOCATION_QUERY:
+                return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
+            if pagination.page_size_path and not pagination.page_size:
+                return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
         if not (plan.selectors.title and plan.selectors.url):
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "generic_json_adapter")
         if not keywords:

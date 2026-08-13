@@ -556,17 +556,27 @@ def _validate_pagination_location(plan: SearchPlan) -> None:
 def _validate_pagination_conflicts(plan: SearchPlan) -> None:
     keyword_path = plan.request_shape.keyword_path
     if plan.pagination.enabled:
-        if _path_conflict(keyword_path, plan.pagination.value_path):
+        value_path = plan.pagination.value_path
+        page_size_path = plan.pagination.page_size_path
+        if page_size_path and _path_conflict(value_path, page_size_path):
+            raise ProtocolError("INVALID_PAGINATION", "pagination.value_path conflicts with page_size_path")
+        if _path_conflict(keyword_path, value_path):
             raise ProtocolError("INVALID_PAGINATION", "pagination.value_path conflicts with keyword_path")
-        if plan.pagination.page_size_path and _path_conflict(keyword_path, plan.pagination.page_size_path):
+        if page_size_path and _path_conflict(keyword_path, page_size_path):
             raise ProtocolError("INVALID_PAGINATION", "pagination.page_size_path conflicts with keyword_path")
-    fixed_paths = [pair[0] for pair in plan.request_shape.fixed_query_params]
-    fixed_paths += [pair[0] for pair in plan.request_shape.form_fields]
-    if plan.pagination.enabled and plan.pagination.location in (KEYWORD_LOCATION_QUERY, KEYWORD_LOCATION_FORM):
-        if plan.pagination.value_path[0] in fixed_paths:
-            raise ProtocolError("INVALID_PAGINATION", "pagination.value_path conflicts with a fixed field")
-        if plan.pagination.page_size_path and plan.pagination.page_size_path[0] in fixed_paths:
-            raise ProtocolError("INVALID_PAGINATION", "pagination.page_size_path conflicts with a fixed field")
+        fixed_paths = [pair[0] for pair in plan.request_shape.fixed_query_params]
+        fixed_paths += [pair[0] for pair in plan.request_shape.form_fields]
+        if plan.pagination.location in (KEYWORD_LOCATION_QUERY, KEYWORD_LOCATION_FORM):
+            if value_path[0] in fixed_paths:
+                raise ProtocolError("INVALID_PAGINATION", "pagination.value_path conflicts with a fixed field")
+            if page_size_path and page_size_path[0] in fixed_paths:
+                raise ProtocolError("INVALID_PAGINATION", "pagination.page_size_path conflicts with a fixed field")
+        elif plan.pagination.location == KEYWORD_LOCATION_JSON:
+            for path, _ in plan.request_shape.json_object_template:
+                if _path_conflict(value_path, path):
+                    raise ProtocolError("INVALID_PAGINATION", "pagination.value_path conflicts with json_object_template")
+                if page_size_path and _path_conflict(page_size_path, path):
+                    raise ProtocolError("INVALID_PAGINATION", "pagination.page_size_path conflicts with json_object_template")
 
 
 def validate_search_plan(plan: SearchPlan) -> None:
