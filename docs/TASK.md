@@ -2169,3 +2169,89 @@ TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。�
 - 无真实网络、Redis、MySQL 访问。
 
 测试应使用 fake、mock、monkeypatch 和临时对象，不依赖外部服务。
+
+
+## TASK-018：统一 Search Adapter
+
+状态：accepted，契约已冻结。
+
+### 任务名称
+
+统一 Search Adapter，覆盖 HTML GET、HTML POST form、TRS、JPAAS、通用 JSON GET/POST。
+
+### 目标
+
+- 建立正式 AdapterRegistry 与统一 SearchPlanExecutionResult 边界。
+- 将六类搜索形态统一接入 v2 orchestrator。
+- 保持 legacy v1 不变。
+- 不扩大 Go 消费者协议，Go 仍只读取正式 URLMessage 公共字段。
+
+### 优先级
+
+P0（TASK-017 后执行）。
+
+### 依赖
+
+- TASK-015：v2 协议与 SearchPlan 模型。
+- TASK-016：安全分析与候选发现。
+- TASK-017：SearchPlan 执行、缓存、Worker v2 和 URLMessage 发布。
+- 已确认决策：新增正式 `adapter` 字段及 `request_format/response_format/request_shape`。
+
+### 已冻结判别决策
+
+- `adapter` 枚举：`html`、`trs`、`jpaas`、`generic_json`。
+- `request_format` 枚举：`none`、`form_urlencoded`、`json`。
+- `response_format` 枚举：`html`、`json`。
+- `request_shape` 使用结构化语义，禁止自由字符串作为唯一 body 契约。
+- `discovery.source` 仅用于来源追踪、证据审计、日志诊断和测试说明，不用于正式分派。
+- 禁止根据 endpoint、hostname、selector 或运行时响应猜测 Adapter。
+
+### 允许修改范围
+
+实现阶段允许修改：
+
+- crawler/search/adapter/ 或等价新模块；
+- crawler/search/plan_executor.py、search_orchestrator.py、plan_builder.py、plan_cache.py；
+- SearchPlan 内部 schema、canonical plan_id、cache schema 版本；
+- 现有 TRS/JPAAS 解析函数的无状态提取；
+- 对应测试和文档。
+
+禁止修改：
+
+- Go 产品代码；
+- URLMessage schema；
+- SearchRequestedMessage protocol_version；
+- Redis key/TTL/schema；
+- 错误码集合；
+- BRPOP/ACK/NACK/requeue 语义；
+- legacy v1；
+- TASK-022 安全边界。
+
+### 验收条件
+
+完整验收条件见 `docs/UNIFIED_SEARCH_ADAPTER.md` 第 18 节。
+
+### 任务拆分
+
+- TASK-018A：本轮文档与协议决策冻结。
+- TASK-018B：SearchPlan 内部 schema 演进，adapter/request_format/response_format/request_shape，canonical plan_id，cache schema 不兼容处理，Adapter 接口/Registry/统一结果模型。
+- TASK-018C：HTML GET/POST，RequestBuilder + HTML parser。
+- TASK-018D：TRS Adapter，复用现有 TRS 无状态逻辑。
+- TASK-018E：JPAAS Adapter，复用现有嵌套展开逻辑。
+- TASK-018F：Generic JSON GET/POST，JSON Pointer 与结构化 JSON body。
+- TASK-018G：PlanExecutor/orchestrator 集成，缓存与发布边界不回归。
+- TASK-018H：完整 Python/Go/跨语言门禁。
+
+TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
+
+### 后续顺序
+
+正式冻结：
+
+```text
+TASK-018：统一正式执行 Adapter
+→ TASK-022：生产级 SSRF 与连接级安全
+→ TASK-020：未知站点 MVP 验收
+```
+
+版本、tag、release 策略推迟到 TASK-020 MVP 验收通过后定义。
