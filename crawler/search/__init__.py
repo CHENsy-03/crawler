@@ -15,6 +15,19 @@ from crawler.search.search_plan import (
     validate_search_hit,
     validate_search_plan,
 )
+from crawler.search.plan_builder import (
+    CandidateRejection,
+    PlanBuildResult,
+    PlanBuilder,
+)
+from crawler.search.plan_cache import (
+    DEFAULT_PLAN_CACHE_TTL_SECONDS,
+    PlanCacheReadResult,
+    PlanCacheWriteResult,
+    SearchPlanCache,
+    build_plan_cache_key,
+    compute_target_fingerprint,
+)
 from plugins import search as search_with_plugin, register as register_plugin
 from core.query_expander import QueryExpander
 from search.keyword_expand import expand_keywords

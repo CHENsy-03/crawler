@@ -40,6 +40,25 @@ class DiscoveryLimits:
     max_evidence_chars: int = 500
 
 
+
+
+@dataclass(frozen=True)
+class CandidateRequestShape:
+    """Deterministic internal request shape for a probe candidate."""
+
+    method: str
+    endpoint: str
+    keyword_location: str
+    keyword_param: str | None = None
+    keyword_path: tuple[str, ...] | None = None
+    fixed_query_params: tuple[tuple[str, str], ...] = ()
+    form_fields: tuple[tuple[str, str], ...] = ()
+    json_object_template: tuple[tuple[tuple[str, ...], Any], ...] = ()
+    content_type: str = ""
+    evidence_source: str = ""
+    approved_origins: tuple[str, ...] = ()
+
+
 @dataclass(frozen=True)
 class SearchCandidate:
     method: str
@@ -52,6 +71,7 @@ class SearchCandidate:
     scope: str = "same_origin"
     evidence: Tuple[str, ...] = ()
     status: str = "unverified"
+    request_shape: CandidateRequestShape | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {

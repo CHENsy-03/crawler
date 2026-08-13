@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local environments and secrets
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Logs and generated binaries
+*.log
+*.exe
+/bin/
+/build/
+/dist/
+
+# Runtime crawler output
+/output/
+
+# Local code exports
+/全部代码.txt
+/全部代码_旧版备份.txt
+
+# Local product document
+/通用型爬虫_Python-Go_产品与技术实施方案_V1.2_产品化优化版.docx

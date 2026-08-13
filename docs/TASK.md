@@ -1785,3 +1785,387 @@ TASK-016 完成不代表“输入任意网站即可自动采集”已经完成�
   - `test_zero_max_evidence_chars_produces_no_evidence`：修复前失败，实际为 `evidence == ("",)`；修复后通过，结果为 `evidence == ()`。
   - `test_zero_max_evidence_items_produces_no_evidence`：修复前已经通过；修复后仍然通过。
 - TASK-016 只生成未经验证 SearchCandidate；未实施 TASK-017、未修改 Go/Worker/协议/插件/site.json，未访问真实外网。
+
+
+---
+
+## TASK-017：搜索计划流水线
+
+### 17.1 基本信息
+
+| 项目 | 内容 |
+|---|---|
+| 任务编号 | TASK-017 |
+| 任务名称 | 搜索计划流水线 |
+| 当前状态 | completed |
+| 前置任务 | TASK-015、TASK-016 |
+| 后续任务 | TASK-018 及后续执行适配 |
+| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E-R4 已实现受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 已实现 selector evidence 提取与 PlanBuilder 传递；TASK-017E 已实现 Python 执行器与 Worker v2 主链，缓存生命周期修复与删除可观察性修复已完成；TASK-017F 已完成：Python/Go 全量离线回归与 URLMessage 生产解码契约测试通过 |
+
+### 17.2 正式目标
+
+针对 protocol v2 的 `SearchRequestedMessage`，由 Python Search Worker 根据 `target_url` 调用既有 `SiteAnalyzer`，将 `SearchCandidate` 确定性转换为既有 `SearchPlan`，完成计划验证、缓存和执行接入，同时保持 v1 `SearchMessage` 及现有预配置站点搜索行为兼容。
+
+正式流水线边界：
+
+```text
+SearchRequestedMessage v2
+→ 消息校验与安全门禁
+→ SearchPlan 缓存查询
+→ SiteAnalyzer（缓存未命中时）
+→ PlanBuilder
+→ SearchPlan 严格验证
+→ 正式执行并确认结果可复用
+→ success/no_results 后缓存已验证计划
+→ 通过现有 Python 搜索能力执行
+→ 按现有队列协议发布 URL 或错误结果
+```
+
+上述顺序是正式目标，应拆分为 TASK-017A 至 TASK-017F 原子子任务实现。
+
+### 17.3 Python 与 Go 责任边界
+
+Python 负责：
+
+- `target_url` 安全校验；
+- SiteAnalyzer 调用；
+- Candidate 选择；
+- PlanBuilder；
+- SearchPlan 验证；
+- SearchPlan 缓存；
+- SearchPlan 执行适配；
+- v2 Search Worker 行为；
+- 错误分类；
+- 离线单元测试。
+
+Go 继续负责：
+
+- 创建和发布既有 v2 `SearchRequestedMessage`；
+- 现有 API、CLI、Redis 队列、Worker Manager 和结果存储职责；
+- 不新增 Go 消费逻辑；
+- 不解析或执行 SearchPlan。
+
+TASK-017 不修改任何 Go 文件。若未来确需 Go 执行计划，必须另立任务并版本化协议。
+
+### 17.4 协议与队列边界
+
+- v2 输入继续使用既有 `SearchRequestedMessage`。
+- v1 和 v2 继续共用现有 `crawler:search` 入口。
+- 不新增 `SearchPlanDraftMessage`。
+- 不新增计划草案队列、计划执行队列或 ACK 队列。
+- 不修改现有 Redis 消息版本。
+- 不改变 Go 当前发布的 v2 消息结构。
+- 成功结果和失败信息继续走既有 URL、event 和 error 路径。
+- 不重新设计 Redis 可靠队列、ACK、重试或死信机制。
+
+### 17.5 模型决策
+
+- 沿用现有 `crawler/search/search_plan.py` 中的 `SearchPlan`。
+- 不新增 `SearchPlanDraft`。
+- `SearchCandidate` 是分析阶段输出，不是可直接执行的计划。
+- 只有通过现有 `SearchPlan` 严格校验的对象才可执行或写入缓存。
+- 不得放宽现有 `SearchPlan` 校验规则来容纳无效 Candidate。
+- 不得在协议消息中直接传递未经验证的 Candidate。
+
+`SearchCandidate` 实际字段：
+
+- `method`
+- `endpoint`
+- `keyword_param`
+- `fixed_params`
+- `request_encoding`
+- `source`
+- `priority`
+- `scope`
+- `evidence`
+- `status`
+
+`SearchPlan` 实际字段：
+
+- `plan_id`
+- `endpoint`
+- `protocol_version`
+- `status`
+- `strategy`
+- `http_method`
+- `query_params`
+- `request_body_template`
+- `pagination`
+- `selectors`
+- `scope`
+- `discovery`
+- `created_from`
+- `created_at`
+- `expires_at`
+- `invalid_reason`
+
+### 17.6 PlanBuilder 规则
+
+- `PlanBuilder` 是 Python 纯逻辑组件。
+- 不访问网络、Redis、MySQL、文件系统或系统时间。
+- 输入为 Analyzer 返回的 Candidate 序列及构建计划所必需的明确上下文。
+- 输出为一个通过严格验证的既有 `SearchPlan`，或结构化失败结果。
+- Candidate 按 Analyzer 返回顺序处理。
+- 首个能够完整、合法映射的 Candidate 胜出。
+- 单个 Candidate 不可映射时，记录明确拒绝原因并继续检查下一个。
+- 全部 Candidate 不可映射时返回 `no_executable_plan`。
+- 相同输入必须生成语义一致、`plan_id` 一致的结果。
+- 只能映射 Candidate 中已经存在且有证据支持的值。
+- 不得凭空生成 CSS 选择器、分页参数、HTTP 方法、请求参数或站点标识。
+- 不得通过网络请求补充 Candidate。
+- 必须继续执行既有 URL 规范化、同源限制和 SSRF 安全门禁。
+- 不支持的方法、字段、选择器或分页模式必须拒绝，不得静默降级。
+- 构建失败不能产生半有效 SearchPlan。
+
+### 17.7 搜索计划缓存
+
+- 只缓存已经通过严格验证的 `SearchPlan`。
+- 不缓存原始 HTML、Analyzer 异常或无效 Candidate。
+- 缓存属于 Python Worker 内部能力。
+- 使用 Redis 普通键值，不新增队列。
+- 缓存键使用独立命名空间，不得与现有队列键冲突。
+- 正式键格式：`crawler:search_plan:v1:<target_fingerprint>`。
+- `target_fingerprint` 由规范化后的目标 URL 的确定性 SHA-256 十六进制表示计算，禁止使用 Python 进程随机化的 `hash()`。
+- 缓存值使用现有 SearchPlan 的 JSON 序列化结果。
+- 默认 TTL 为 86400 秒，必须通过现有 Python 配置体系配置。
+- 缓存命中后仍须反序列化并重新执行 SearchPlan 模型校验。
+- 缓存值损坏、字段不合法或目标不匹配时按缓存未命中处理，并记录受控错误。
+- 缓存读取或写入失败不得绕过安全检查。
+- 缓存写入失败不应使已经成功生成的合法计划失效，但必须记录可观察告警。
+- 本任务不要求 Go 读取该缓存。
+
+### 17.8 Worker v1/v2 兼容规则
+
+- 现有 v1 `SearchMessage(site, keyword)` 行为必须保持。
+- v1 继续使用现有站点配置和插件链路。
+- v2 通过已有协议版本或消息结构进行严格识别。
+- 未知协议版本不得回退为 v1 处理。
+- 非法 v2 消息不得进入 Analyzer。
+- v2 的 `target_url` 必须先经过既有安全门禁。
+- v2 缓存未命中时才调用 Analyzer。
+- Analyzer 返回空 Candidate 时输出明确失败。
+- Analyzer 异常、PlanBuilder 失败、计划验证失败、执行失败必须分类。
+- 单条 v2 失败不得导致 Worker 进程崩溃。
+- 不得改变既有消息队列名称。
+- 不得在 TASK-017 中新增无限重试。
+- 当前 Redis 消费模型没有独立 ACK 时，文档不得虚构 ACK 语义。
+
+### 17.9 执行边界
+
+- TASK-017 最终必须让合法 v2 消息能够进入实际搜索执行链路，不能只生成计划后停止。
+- 优先复用现有插件、标准化、去重和 URL 发布能力。
+- 允许新增薄的 SearchPlan 执行适配层。
+- 不得整体重写 TRS、JPAAS 或 HTML 插件。
+- 不得改变现有评分、详情抓取、存储或 Go Worker 职责。
+- 无法由现有插件安全执行的计划必须明确失败，不能假成功。
+- TASK-017 只处理搜索计划阶段，不扩展为任意 JavaScript 浏览器自动化。
+- 正式执行契约见 `docs/SEARCH_PLAN_EXECUTION.md` 和 `docs/decisions/ADR-003-search-plan-execution.md`；当前 PlanBuilder 的 selectors 为空，TASK-017E 功能实现被上游阻断。
+
+### 17.10 错误语义
+
+稳定错误类别：
+
+```text
+invalid_message
+unsupported_protocol
+unsafe_target
+analysis_failed
+no_candidates
+candidate_rejected
+no_executable_plan
+plan_validation_failed
+plan_cache_read_failed
+plan_cache_write_failed
+plan_execution_failed
+publish_failed
+```
+
+要求：
+
+- 对外错误不得包含 Cookie、token、完整响应正文或敏感表单值。
+- 候选拒绝原因应可测试、可记录。
+- 缓存告警和任务失败必须区分。
+- `plan_cache_write_failed` 默认属于非致命告警。
+- 其他错误是否进入现有 error/event 路径，沿用当前 Worker 既有模式。
+- TASK-017 不新增另一套日志或指标框架。
+
+### 17.11 正式非目标
+
+TASK-017 不包含：
+
+- 修改 Go 代码；
+- 创建新的 Redis 队列或消息版本；
+- 重新设计 ACK、重试、死信队列；
+- 修改现有 v1 协议；
+- 重写 TRS、JPAAS、HTML 插件；
+- 修改评分算法；
+- 修改详情页解析；
+- 修改 DuckDB/MySQL 存储结构；
+- 浏览器或 JavaScript 渲染；
+- 验证码处理；
+- 登录态采集；
+- 绕过 SSRF 或同源安全限制；
+- 自动执行任意表单；
+- 修复某个特定政府网站；
+- 访问真实网站进行验收；
+- 创建 GitHub Actions；
+- 删除原仓库或本地备份。
+
+### 17.12 实施拆分
+
+#### TASK-017A：正式定义冻结
+
+- 仅修改 `docs/TASK.md`。
+- 不写功能代码。
+- 当前指令完成该子任务。
+
+#### TASK-017B：PlanBuilder 纯逻辑
+
+建议范围：
+
+```text
+crawler/search/plan_builder.py
+crawler/search/__init__.py（仅在确有导出需要时）
+tests/test_plan_builder.py
+```
+
+目标：
+
+- Candidate 到现有 SearchPlan 的确定性映射；
+- 候选拒绝原因；
+- 首个有效候选选择；
+- 全部候选失败；
+- 不访问网络或外部服务。
+
+#### TASK-017C：SearchPlan 缓存
+
+目标：
+
+- Redis 计划缓存适配；
+- 确定性缓存键；
+- TTL 配置；
+- 缓存反序列化和重新校验；
+- 缓存异常降级；
+- 纯离线 fake Redis 测试。
+
+实际文件应在该步骤开始前只读确认，不在 TASK-017A 创建。
+
+#### TASK-017D：v2 Worker 生成计划
+
+目标：
+
+- 严格解码 v1/v2；
+- 保持 v1 行为；
+- v2 安全门禁；
+- 缓存查询；
+- Analyzer；
+- PlanBuilder；
+- 错误分类；
+- 不接触真实 Redis 和网络的 Worker 单元测试。
+
+#### TASK-017E：SearchPlan 执行接入
+
+目标：
+
+- 将合法计划接入现有搜索插件和 URL 发布链；
+- 复用标准化及现有输出协议；
+- 验证执行失败和发布失败；
+- 不重写插件。
+
+TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。功能实现已由 R5 selector 证据提取与 TASK-017E 主链实施完成。
+
+### 17.15 TASK-017E-R1 契约冻结
+
+- 正式执行契约：`docs/SEARCH_PLAN_EXECUTION.md`
+- ADR：`docs/decisions/ADR-003-search-plan-execution.md`
+- 当前状态：已实现
+- 阻断：已由 TASK-017E-R5 selector 证据提取解除
+- 后续要求：已由 TASK-017E/TASK-017F 完成
+
+### 17.16 TASK-017E-R3 受控搜索探测契约
+
+- 正式契约：`docs/SEARCH_ANALYSIS_PROBE.md`
+- ADR：`docs/decisions/ADR-004-search-analysis-probe.md`
+- 当前状态：已实现
+- 后续拆分：TASK-017E-R4 受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 HTML/JSON selector 证据提取与 PlanBuilder 传递
+- 后续拆分已由 R4/R5 完成，TASK-017E 主链已实现
+
+### 17.17 TASK-017E-R4 受控探测基础
+
+- 状态：已实现
+- 内容：候选请求形状建模、探测资格判定、SearchProbePolicy、安全请求构造、固定 IP 连接的受控 HTTP 获取、响应门禁
+- 文件：crawler/site/models.py、crawler/site/forms.py、crawler/site/search_probe.py、tests/test_search_probe.py
+- 后续：TASK-017E-R5 HTML/JSON selector 证据提取与 PlanBuilder 传递
+
+### 17.18 TASK-017E SearchPlan 执行器与 Worker v2 主链
+
+- 状态：已实现
+- 内容：plan_executor、search_orchestrator、SearchWorker v2 主链、正式 URLMessage 发布
+- 文件：crawler/search/plan_executor.py、crawler/search/search_orchestrator.py、workers/search_worker.py
+- Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段；TASK-017F 已完成共享 fixture 与 `PopURL()` 生产解码契约验证
+- 缓存生命周期：新计划 success/no_results 后写缓存；缓存命中失败删除缓存；publish_failure 不删除合法计划。
+- 删除失败会记录安全 warning，不替换原始 executor 失败。
+
+#### TASK-017F：跨语言完整回归与交付门禁
+
+- 状态：已完成
+- 内容：Python/Go 全量离线回归、共享 `url_message_contract.json` fixture、Python 正式 `URLMessage.to_dict()` 顶层结构，以及 Go go-redis hook 注入 BRPOP 后经 `RedisQueue.PopURL()`/`pop()` 生产 `json.Unmarshal` 的解码闭环
+- 验证：Python 499 collected / 492 passed / 7 skipped；Go module `crawler-platform` 全部 package 的 `go test` 与 `go vet` 通过
+- 确认：v2 主链只发布正式 `URLMessage`；`failed`/`no_results` 零发布；`publish_failure` 保留实际 `published_count`；BRPOP 仍为既有 at-most-once 语义
+- 未修改 Python/Go 产品代码、协议、Redis key/TTL/schema、错误码或 legacy pipeline
+- Go 契约测试：BRPOP 与 ProcessHook 各 1 次，DialHook 与 ProcessPipelineHook 各 0 次；非法 JSON 通过同一生产 `PopURL()` 路径返回错误
+
+
+### 17.13 验收标准
+
+- AC-017-01：相同 Candidate 输入生成相同 SearchPlan 和 plan_id。
+- AC-017-02：首个 Candidate 无效时可选择后续首个有效 Candidate。
+- AC-017-03：全部 Candidate 无效时返回 `no_executable_plan`。
+- AC-017-04：PlanBuilder 不访问网络、Redis、MySQL 或文件系统。
+- AC-017-05：无效计划不会执行或进入缓存。
+- AC-017-06：合法缓存命中时不调用 Analyzer。
+- AC-017-07：损坏缓存按未命中处理并重新生成计划。
+- AC-017-08：缓存写入失败不否定已生成的合法计划。
+- AC-017-09：合法 v2 消息可完成计划生成并进入实际搜索执行链。
+- AC-017-10：非法 v2 消息不会进入 Analyzer。
+- AC-017-11：Analyzer 空结果和异常均产生明确错误。
+- AC-017-12：v1 消息的既有行为和测试保持不变。
+- AC-017-13：未知协议版本不会被当作 v1 处理。
+- AC-017-14：不新增 Redis 队列或协议消息类型。
+- AC-017-15：不修改任何 Go 功能代码。
+- AC-017-16：所有新增自动化测试默认离线运行。
+- AC-017-17：默认测试不访问真实网站、Redis 或 MySQL。
+- AC-017-18：现有 Python 和 Go 离线回归全部通过。
+- AC-017-19：共享 `url_message_contract.json` 由 Python `URLMessage.to_dict()` 约束，Go 通过生产 `HTMLPayload`/`json.Unmarshal` 解码共同字段成功。
+- AC-017-20：TASK-017F 的 Python 完整回归、compileall、pip check、Go 全量 `go test`/`go vet` 均通过。
+
+### 17.14 测试矩阵
+
+后续至少覆盖：
+- 共享 URLMessage 契约 fixture 的 Python 正式序列化与 Go 生产解码；
+
+- 合法单 Candidate；
+- 多 Candidate 首个有效；
+- 首个无效、后续有效；
+- 全部无效；
+- 空 Candidate；
+- 不支持的 HTTP 方法；
+- 缺少必填映射字段；
+- 非法或跨源 URL；
+- 确定性 `plan_id`；
+- 缓存命中；
+- 缓存未命中；
+- 缓存损坏；
+- 缓存读取失败；
+- 缓存写入失败；
+- 合法 v1；
+- 合法 v2；
+- 非法 v2；
+- 未知协议版本；
+- Analyzer 异常；
+- 计划执行失败；
+- URL 发布失败；
+- 敏感信息不进入错误输出；
+- 无真实网络、Redis、MySQL 访问。
+
+测试应使用 fake、mock、monkeypatch 和临时对象，不依赖外部服务。
