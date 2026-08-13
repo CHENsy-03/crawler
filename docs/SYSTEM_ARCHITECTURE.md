@@ -27,7 +27,7 @@
   -> Go 更新任务状态
 ```
 
-以上为目标运行流程。当前版本尚未实现 `crawler:search`，且 `crawler:url` 仍由 Go 生产并在 Go 内部消费，后续任务将按版本化协议逐步迁移。
+以上为目标运行流程。TASK-017 已实现 v2 `crawler:search` → Python Search Worker → 正式 `URLMessage` → `crawler:url` → Go Worker Pool 主链；v1 legacy 消息路径仍保留且未修改。
 
 Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标正式入口。
 
@@ -72,7 +72,7 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 
 | 队列 | 生产者 | 消费者 | JSON 字段 |
 |------|--------|--------|---------|
-| crawler:url | Go PushURLTask | Go (内部) | url, site, keyword, level |
+| crawler:url | Python v2 URLMessage / Go legacy PushURLTask | Go Worker Pool | v2: task_id,url,site,keyword,level,title |
 | crawler:html | Go PushHTML | Python BRPop | url, title, html, time |
 | crawler:error | Go PushError | - | url, error, time |
 | crawler:result | Python LPush | Go PopResult | url, title, score, content |
@@ -239,7 +239,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - v1/v2 使用显式协议版本分派，未知字段和跨版本字段返回明确错误。
 - 无版本请求只有合法旧 v1 `site` + 字符串 `keywords` 才固定映射 v1；带 `target_url` 或数组 `keywords` 必须显式声明 v2。
 - `plan_id` 使用 SHA-256 canonical JSON；U+2028/U+2029 转义为 `\u2028`/`\u2029`，`<>&` 不转义。
-- TASK-016 已实施；TASK-017A 至 TASK-017D 已实施；TASK-017E-R1/R3 契约已冻结；TASK-017E 功能实现未开始，正式 Worker v2 执行尚未实现。
+- TASK-016 已实施；TASK-017A 至 TASK-017E 已实施；TASK-017F 已完成 Python/Go 全量离线回归与共享 URLMessage 契约验证。
 
 ### 13.5 CLI 与 API 输入保护
 
@@ -267,7 +267,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 执行器冻结路径：`crawler/search/plan_executor.py`；入口：`execute_search_plan(plan, keywords, *, fetcher)`。
 - 只执行 `ready/active` 且 `strategy` 为 `html_form/json_api` 的计划。
 - 成功候选映射为既有 `URLMessage` 并发布到 `crawler:url`；执行错误复用 `SEARCH_FAILED`。
-- 当前 PlanBuilder 的 `SearchSelectors` 为空，TASK-017E 功能实现被上游阻断。
+- 当前 PlanBuilder 已通过 R5 selector evidence 生成可执行 `SearchSelectors`，TASK-017E 执行器与 Worker v2 主链已实现。
 - 完整契约：`docs/SEARCH_PLAN_EXECUTION.md`；ADR：`docs/decisions/ADR-003-search-plan-execution.md`。
 
 ## 16. TASK-017E-R3 受控搜索探测契约
@@ -278,23 +278,23 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 探测只用于观察响应结构并形成 selector 证据；响应体只在 Python 进程内短暂存在。
 - 请求预算、SSRF/DNS/redirect、Content-Type、selector 门禁和 R4/R5 拆分见 `docs/SEARCH_ANALYSIS_PROBE.md`。
 - ADR：`docs/decisions/ADR-004-search-analysis-probe.md`。
-- TASK-017E 仍被上游 selector 来源阻断。
+- R4/R5 已实现，TASK-017E 已实现。
 ## 17. TASK-017E-R4 受控探测基础
 
 - 状态：已实现
 - 内容：SearchCandidate 请求形状、forms 请求形状映射、SearchProbePolicy、安全请求构造、固定 IP 连接探测、响应门禁
 - 文件：crawler/site/models.py、crawler/site/forms.py、crawler/site/search_probe.py、tests/test_search_probe.py
-- TASK-017E 仍被 R5 selector 证据提取阻断。
+- R5 已实现，TASK-017E 主链已实现。
 ## 18. TASK-017E-R5 Selector Evidence 提取
 
 - 状态：已实现
 - 内容：HTML CSS selector 与 JSON RFC 6901 Pointer 证据提取、同响应重新验证、正式 `probe_search_candidate()`、PlanBuilder 传递
 - 文件：crawler/site/selector_evidence.py、crawler/site/search_probe.py、crawler/search/plan_builder.py
-- TASK-017E 主执行适配器尚未实现。
+- TASK-017E 主执行适配器已实现。
 ## 19. TASK-017E SearchPlan 执行器与 Worker v2 主链
 
 - 状态：已实现
 - 内容：plan_executor、search_orchestrator、SearchWorker v2 主链、正式 URLMessage 发布
 - Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段。
-- 本轮未修改 Go 或协议；跨语言全量契约回归留待 TASK-017F。
+- 本轮未修改 Go 或协议；TASK-017F 已完成共享 fixture 与生产解码路径契约验证。
 - 缓存生命周期：新计划 success/no_results 后写缓存；缓存命中失败删除缓存；publish_failure 不删除合法计划。

@@ -1,0 +1,12 @@
+{
+  "protocol_version": "2.0",
+  "task_id": "task-compat-001",
+  "message_id": "msg-compat-001",
+  "timestamp": "2026-08-12T00:00:00Z",
+  "type": "url",
+  "url": "https://example.gov.cn/a.html",
+  "site": "example.gov.cn",
+  "keyword": "低空经济",
+  "level": 1,
+  "title": "示例标题"
+}

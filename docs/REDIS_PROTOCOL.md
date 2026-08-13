@@ -125,10 +125,12 @@ Python Search Worker 在完成所有 URLMessage 推送后，发送一次 SearchD
 | type | 队列 | 生产者 | 消费者 | 状态 |
 |------|------|--------|--------|------|
 | search | crawler:search | Go | Python | 已实施 |
-| url | crawler:url | Python | Go | 目标未切换 |
+| url | crawler:url | Python | Go | v2 已切换；v1 legacy 保留 |
 | html | crawler:html | Go | Python | 当前已运行 |
 | result | crawler:result | Python | Go | 当前已运行 |
 | error | crawler:error | Go/Python | Go | 当前已运行 |
+
+- TASK-017 v2 主链向 `crawler:url` 发布正式 `URLMessage`（无旧 `time`）；Go 通过 `HTMLPayload`/`json.Unmarshal` 宽松读取共同字段；v1 legacy 旧消息路径保留且未修改。
 
 ## 10. 字段类型约束
 

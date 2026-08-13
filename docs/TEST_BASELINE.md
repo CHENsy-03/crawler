@@ -2,7 +2,7 @@
 
 ## 基线日期
 
-2026-08-12
+2026-08-13
 
 ## 环境
 
@@ -58,11 +58,11 @@ py -m pytest -q
 
 结果：
 
-- 收集：496 tests
-- 通过：489
+- 收集：499 tests
+- 通过：492
 - 跳过：7
 - 失败：0
-- 耗时：3.05s
+- 耗时：3.04s
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
@@ -74,7 +74,26 @@ TASK-017E 缓存语义修复新增 `tests/test_plan_cache_delete.py`、`tests/te
 
 TASK-017E delete 可观察性修复新增 `tests/test_search_orchestrator_delete_observability.py`。
 
+TASK-017F 新增 `tests/test_url_message_contract.py`、`tests/fixtures/url_message_contract.json` 与 `go-spider/internal/queue/url_message_contract_test.go`，验证 Python 正式 `URLMessage.to_dict()` 顶层 JSON 被 Go 生产 `HTMLPayload`/`json.Unmarshal` 解码路径读取。
+
 跳过项为 `tests/integration/` 下的 E2E 测试，因未设置 `E2E_ENABLED=1` 自动跳过，不会访问 Redis、MySQL 或外部 HTTP 服务。
+
+具体跳过项：
+
+- `tests/integration/test_all_failed.py:10`、`test_all_failed.py:30`
+- `tests/integration/test_empty_search.py:9`、`test_empty_search.py:25`、`test_empty_search.py:44`
+- `tests/integration/test_partial_failure.py:10`
+- `tests/integration/test_success_pipeline.py:10`
+
+
+TASK-017F 定向测试结果：
+
+- `tests/test_url_message_contract.py`、`test_plan_cache.py`、`test_plan_cache_delete.py`、`test_plan_executor.py`、`test_search_orchestrator.py`、`test_search_orchestrator_cache.py`、`test_search_orchestrator_delete_observability.py`：87 passed
+- `URLMessage or url_message or protocol`：52 passed
+- `cache and delete`：9 passed
+- `cache and (selector_mismatch or plan_invalid or no_results)`：4 passed
+- `publish_failure or no_results`：5 passed
+
 
 ## Go 离线测试
 
@@ -91,6 +110,7 @@ $env:GOPROXY = "off"
 $env:GOSUMDB = "off"
 $env:GOWORK = "off"
 go test -mod=readonly -count=1 ./...
+go vet -mod=readonly ./...
 ```
 
 结果：
@@ -102,6 +122,7 @@ go test -mod=readonly -count=1 ./...
 - internal/store：ok
 - internal/worker：ok
 - 无 test files 的包：client、config、httpx
+- `go vet -mod=readonly ./...`：通过
 - 退出码：0
 
 说明：
@@ -148,6 +169,7 @@ $env:GOPROXY = "off"
 $env:GOSUMDB = "off"
 $env:GOWORK = "off"
 go test -mod=readonly -count=1 ./...
+go vet -mod=readonly ./...
 ```
 
 ## 已知限制

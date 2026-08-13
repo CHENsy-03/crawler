@@ -1797,10 +1797,10 @@ TASK-016 完成不代表“输入任意网站即可自动采集”已经完成�
 |---|---|
 | 任务编号 | TASK-017 |
 | 任务名称 | 搜索计划流水线 |
-| 当前状态 | contract-frozen |
+| 当前状态 | completed |
 | 前置任务 | TASK-015、TASK-016 |
 | 后续任务 | TASK-018 及后续执行适配 |
-| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E-R4 已实现受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 已实现 selector evidence 提取与 PlanBuilder 传递；TASK-017E 已实现 Python 执行器与 Worker v2 主链，缓存生命周期修复已完成；TASK-017F 未实施 |
+| 定义冻结 | TASK-017A 至 TASK-017D 已完成；TASK-017E-R1 契约已冻结；TASK-017E-R2 已确认 selector 来源缺口；TASK-017E-R3 已冻结受控探测契约；TASK-017E-R4 已实现受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 已实现 selector evidence 提取与 PlanBuilder 传递；TASK-017E 已实现 Python 执行器与 Worker v2 主链，缓存生命周期修复与删除可观察性修复已完成；TASK-017F 已完成：Python/Go 全量离线回归与共享 URLMessage 契约测试通过 |
 
 ### 17.2 正式目标
 
@@ -1815,7 +1815,8 @@ SearchRequestedMessage v2
 → SiteAnalyzer（缓存未命中时）
 → PlanBuilder
 → SearchPlan 严格验证
-→ 缓存已验证计划
+→ 正式执行并确认结果可复用
+→ success/no_results 后缓存已验证计划
 → 通过现有 Python 搜索能力执行
 → 按现有队列协议发布 URL 或错误结果
 ```
@@ -2071,23 +2072,23 @@ tests/test_plan_builder.py
 - 验证执行失败和发布失败；
 - 不重写插件。
 
-TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。功能实现尚未开始，且被当前空 selectors 上游缺口阻断。
+TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。功能实现已由 R5 selector 证据提取与 TASK-017E 主链实施完成。
 
 ### 17.15 TASK-017E-R1 契约冻结
 
 - 正式执行契约：`docs/SEARCH_PLAN_EXECUTION.md`
 - ADR：`docs/decisions/ADR-003-search-plan-execution.md`
-- 当前状态：契约已冻结，功能未实现
-- 阻断：Analyzer/PlanBuilder 当前无法生成 `result_item/title/url` selectors
-- 后续要求：先由独立任务修复上游 selector 生成，再实现 TASK-017E
+- 当前状态：已实现
+- 阻断：已由 TASK-017E-R5 selector 证据提取解除
+- 后续要求：已由 TASK-017E/TASK-017F 完成
 
 ### 17.16 TASK-017E-R3 受控搜索探测契约
 
 - 正式契约：`docs/SEARCH_ANALYSIS_PROBE.md`
 - ADR：`docs/decisions/ADR-004-search-analysis-probe.md`
-- 当前状态：契约已冻结，功能未实现
+- 当前状态：已实现
 - 后续拆分：TASK-017E-R4 受控探测 HTTP 安全基础与候选请求形状；TASK-017E-R5 HTML/JSON selector 证据提取与 PlanBuilder 传递
-- TASK-017E 仍被上游 selector 来源阻断
+- 后续拆分已由 R4/R5 完成，TASK-017E 主链已实现
 
 ### 17.17 TASK-017E-R4 受控探测基础
 
@@ -2101,20 +2102,18 @@ TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。�
 - 状态：已实现
 - 内容：plan_executor、search_orchestrator、SearchWorker v2 主链、正式 URLMessage 发布
 - 文件：crawler/search/plan_executor.py、crawler/search/search_orchestrator.py、workers/search_worker.py
-- Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段；跨语言全量契约回归留待 TASK-017F
+- Python 发布正式 `URLMessage`；Go 当前通过宽松 JSON 解码兼容读取共同字段；TASK-017F 已完成共享 fixture 与生产解码路径契约验证
 - 缓存生命周期：新计划 success/no_results 后写缓存；缓存命中失败删除缓存；publish_failure 不删除合法计划。
 - 删除失败会记录安全 warning，不替换原始 executor 失败。
 
-#### TASK-017F：协议文档与完整离线回归
+#### TASK-017F：跨语言完整回归与交付门禁
 
-目标：
+- 状态：已完成
+- 内容：Python/Go 全量离线回归、共享 `url_message_contract.json` fixture、Python 正式 `URLMessage.to_dict()` 顶层结构与 Go 生产 `HTMLPayload`/`json.Unmarshal` 解码闭环
+- 验证：Python 499 collected / 492 passed / 7 skipped；Go module `crawler-platform` 全部 package 的 `go test` 与 `go vet` 通过
+- 确认：v2 主链只发布正式 `URLMessage`；`failed`/`no_results` 零发布；`publish_failure` 保留实际 `published_count`；BRPOP 仍为既有 at-most-once 语义
+- 未修改 Python/Go 产品代码、协议、Redis key/TTL/schema、错误码或 legacy pipeline
 
-- 根据已经落地的缓存键和 v2 Worker 行为更新 `docs/REDIS_PROTOCOL.md`；
-- 补齐兼容性说明和测试矩阵；
-- 运行 Python 离线测试；
-- Go 代码虽不修改，但运行 Go 离线回归确认兼容。
-
-每个子任务独立审计、实现、测试和提交。不得在一个提交中完成全部 TASK-017。
 
 ### 17.13 验收标准
 
@@ -2136,10 +2135,13 @@ TASK-017E-R1 已冻结执行契约，详见 `docs/SEARCH_PLAN_EXECUTION.md`。�
 - AC-017-16：所有新增自动化测试默认离线运行。
 - AC-017-17：默认测试不访问真实网站、Redis 或 MySQL。
 - AC-017-18：现有 Python 和 Go 离线回归全部通过。
+- AC-017-19：共享 `url_message_contract.json` 由 Python `URLMessage.to_dict()` 约束，Go 通过生产 `HTMLPayload`/`json.Unmarshal` 解码共同字段成功。
+- AC-017-20：TASK-017F 的 Python 完整回归、compileall、pip check、Go 全量 `go test`/`go vet` 均通过。
 
 ### 17.14 测试矩阵
 
 后续至少覆盖：
+- 共享 URLMessage 契约 fixture 的 Python 正式序列化与 Go 生产解码；
 
 - 合法单 Candidate；
 - 多 Candidate 首个有效；
