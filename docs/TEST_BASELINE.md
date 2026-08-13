@@ -58,11 +58,11 @@ py -m pytest -q
 
 结果：
 
-- 收集：588 tests
-- 通过：581
+- 收集：615 tests
+- 通过：608
 - 跳过：7
 - 失败：0
-- 最终实际耗时：3.28s（该次运行的观察值，不作为稳定性能门槛）
+- 最终实际耗时：3.68s（该次运行的观察值，不作为稳定性能门槛）
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
@@ -221,3 +221,8 @@ TASK-018E–G 尚未完成。
 TASK-018E 新增 `tests/test_jpaas_adapter.py`、`tests/test_legacy_jpaas_plugin.py`、`tests/fixtures/jpaas_adapter_response.json`、`crawler/search/jpaas_parser.py` 和 `jpaas_adapter.py`。`plugins/jpaas.py` 已机械提取共享解析核心并保持 legacy 输出不变。
 
 TASK-018F–G 尚未完成。
+
+
+TASK-018F 新增 `tests/test_generic_json_adapter.py`、`tests/test_json_pointer.py`、`crawler/search/json_pointer.py`、`generic_json_response_parser.py` 和 `generic_json_adapter.py`。`plan_executor.py` 已移除内联 JSON 解析并改为四类 Adapter 分派。
+
+TASK-018G 尚未完成。

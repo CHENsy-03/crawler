@@ -755,3 +755,13 @@ TASK-018B 应：
 - `appSearchResultBeanList` 缺失或类型错误返回 `selector_mismatch`。
 - 第一页空结果返回 `no_results`；后续空/重复页停止；后续失败 fail-closed。
 - 当前真实 Analyzer `jpaas_signature` Candidate 缺少结构化 request_shape，自动发现生产者待后续补齐。
+
+
+## 25. TASK-018F 实施记录
+
+- `GenericJSONSearchAdapter` 已实现并位于 `crawler/search/generic_json_adapter.py`。
+- 支持 GET + `request_format=none` + query keyword，以及 POST + `request_format=json` + JSON keyword path。
+- JSON Pointer 解析统一位于 `json_pointer.py`，响应解析位于 `generic_json_response_parser.py`。
+- `plan_executor.py` 不再包含内联 JSON 解析，四类 adapter 均通过正式 Adapter 执行。
+- 第一页空结果返回 `no_results`；后续空/重复页停止；后续失败 fail-closed。
+- 当前 Candidate 生产路径无法自动生成 Generic JSON ready plan；GET/POST 均需显式正式 SearchPlan。

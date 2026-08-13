@@ -471,3 +471,10 @@ TRS 计划由 `TRSSearchAdapter` 执行，使用 POST + form-urlencoded 请求�
 JPAAS 计划由 `JPAASSearchAdapter` 执行，使用 GET + JSON 响应，解析 `data.appSearchResultBeanList`，并展开 `mapSearchResult.items[*].data`。字段映射和嵌套展开复用 `crawler/search/jpaas_parser.py`；legacy `plugins/jpaas.py` 也复用同一核心，行为保持不变。
 
 当前真实 Analyzer `jpaas_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；JPAAS 执行器本身已完成。
+
+
+## 19. TASK-018F Generic JSON Adapter 说明
+
+Generic JSON 计划由 `GenericJSONSearchAdapter` 执行，支持 GET query 与 POST JSON body。响应解析严格按 SearchPlan JSON Pointer selectors 进行，不进行字段名 fallback、JSONP 剥离或 HTML 提取。PlanExecutor 已改为纯 Adapter 分派，不再保留内联 JSON 执行逻辑。
+
+当前 Candidate 生产路径尚不能自动生成 Generic JSON ready plan；GET/POST 均需显式正式 SearchPlan。

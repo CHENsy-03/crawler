@@ -24,9 +24,11 @@ from crawler.search.adapter_registry import AdapterRegistry
 from crawler.search.html_adapter import HTMLSearchAdapter
 from crawler.search.trs_adapter import TRSSearchAdapter
 from crawler.search.jpaas_adapter import JPAASSearchAdapter
+from crawler.search.generic_json_adapter import GenericJSONSearchAdapter
 from crawler.search.html_response_parser import parse_html_response
 from crawler.search.trs_response_parser import parse_trs_response
 from crawler.search.jpaas_parser import parse_jpaas_response
+from crawler.search.generic_json_response_parser import parse_generic_json_response
 from crawler.search.request_builder import build_search_request
 from crawler.search.plan_builder import (
     CandidateRejection,

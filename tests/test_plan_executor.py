@@ -75,7 +75,16 @@ def _json_plan(method="POST"):
             keyword_location=KEYWORD_LOCATION_JSON,
             keyword_path=("query", "kw"),
         ),
-        pagination=SearchPagination(),
+        pagination=SearchPagination(
+            enabled=True,
+            location="query",
+            value_path=("page",),
+            start=1,
+            step=1,
+            page_size_path=("size",),
+            page_size=10,
+            max_pages=1,
+        ),
         selectors=SearchSelectors("/data/items", "/title", "/url", "", ""),
         scope=SearchScope(domain="api.example.gov.cn"),
         created_from="test",
@@ -218,7 +227,7 @@ def test_json_duplicate_keys_rejected():
     body = b'{"data":{"items":[{"title":"A","title":"B","url":"https://api.example.gov.cn/a"},{"title":"C","url":"https://api.example.gov.cn/b"}]}}'
     fetcher = FakeFetcher(ProbeOutcome(SearchProbeResponse(200, "application/json", body, "https://api.example.gov.cn/search", 0), None))
     result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
-    assert result.failure_code == "selector_mismatch"
+    assert result.failure_code == "response_rejected"
 
 
 def test_transport_failure_no_retry():

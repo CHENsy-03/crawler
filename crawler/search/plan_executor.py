@@ -1,9 +1,7 @@
-"""Execute a validated SearchPlan v2 through the safe probe HTTP foundation."""
-
-from typing import Any
-from urllib.parse import urljoin
+"""Execute a validated SearchPlan v2 through the unified SearchAdapter layer."""
 
 from crawler.search.execution_models import (
+    EXECUTION_OK,
     FAILURE_INVALID_RESULT_URL,
     FAILURE_NO_RESULTS,
     FAILURE_PLAN_INVALID,
@@ -14,121 +12,25 @@ from crawler.search.execution_models import (
     SearchPlanExecutionResult,
     SearchResultItem,
 )
+from crawler.search.generic_json_adapter import GenericJSONSearchAdapter
 from crawler.search.html_adapter import HTMLSearchAdapter
-from crawler.search.json_utils import load_strict_json
-from crawler.search.trs_adapter import TRSSearchAdapter
 from crawler.search.jpaas_adapter import JPAASSearchAdapter
-from crawler.search.request_builder import build_search_request
+from crawler.search.trs_adapter import TRSSearchAdapter
 from crawler.search.search_plan import (
+    ADAPTER_GENERIC_JSON,
     ADAPTER_HTML,
     ADAPTER_JPAAS,
     ADAPTER_TRS,
     PLAN_STATUS_ACTIVE,
     PLAN_STATUS_READY,
-    RESPONSE_FORMAT_HTML,
-    RESPONSE_FORMAT_JSON,
     ProtocolError,
     SearchPlan,
     compute_plan_id,
     validate_search_plan,
 )
-from crawler.site.normalizer import (
-    SiteNormalizationError,
-    normalize_target_url,
-)
-from crawler.site.search_probe import (
-    ProbeOutcome,
-    SearchProbeFetcher,
-    SearchProbePolicy,
-    SearchProbeResponse,
-)
+from crawler.site.search_probe import SearchProbeFetcher, SearchProbePolicy
 
-EXECUTION_OK = "ok"
-FAILURE_PLAN_INVALID = FAILURE_PLAN_INVALID
-FAILURE_PLAN_NOT_EXECUTABLE = FAILURE_PLAN_NOT_EXECUTABLE
-FAILURE_TRANSPORT = FAILURE_TRANSPORT
-FAILURE_RESPONSE_REJECTED = FAILURE_RESPONSE_REJECTED
-FAILURE_SELECTOR_MISMATCH = FAILURE_SELECTOR_MISMATCH
-FAILURE_INVALID_RESULT_URL = FAILURE_INVALID_RESULT_URL
-FAILURE_NO_RESULTS = FAILURE_NO_RESULTS
-
-_ALLOWED_STATUSES = {PLAN_STATUS_READY, PLAN_STATUS_ACTIVE}
-
-
-def _resolve_pointer(data: Any, pointer: str) -> Any:
-    if not pointer:
-        return data
-    if not pointer.startswith("/"):
-        raise ValueError("invalid pointer")
-    node = data
-    for raw in pointer[1:].split("/"):
-        part = raw.replace("~1", "/").replace("~0", "~")
-        if isinstance(node, dict):
-            node = node[part]
-        elif isinstance(node, list):
-            node = node[int(part)]
-        else:
-            raise ValueError("invalid pointer traversal")
-    return node
-
-
-def _extract_json_items(response: SearchProbeResponse, plan: SearchPlan) -> list[SearchResultItem]:
-    try:
-        data = load_strict_json(response.body)
-        container = _resolve_pointer(data, plan.selectors.result_item)
-    except Exception as exc:
-        raise SelectorApplicationError("JSON selector application failed") from exc
-    if not isinstance(container, list):
-        raise SelectorApplicationError("result_item pointer did not resolve to an array")
-    if not container:
-        raise SelectorApplicationError("result_item array is empty")
-
-    items: list[SearchResultItem] = []
-    for element in container:
-        try:
-            title = _resolve_pointer(element, plan.selectors.title)
-            url = _resolve_pointer(element, plan.selectors.url)
-        except Exception as exc:
-            raise SelectorApplicationError("result element structure changed") from exc
-        if not isinstance(title, str) or not title:
-            raise SelectorApplicationError("result title is missing or not a string")
-        if not isinstance(url, str) or not url:
-            raise SelectorApplicationError("result url is missing or not a string")
-        try:
-            normalized = normalize_target_url(urljoin(response.final_url, url))
-        except SiteNormalizationError as exc:
-            raise SelectorApplicationError("result URL is invalid") from exc
-        snippet = ""
-        body = ""
-        if plan.selectors.snippet:
-            try:
-                value = _resolve_pointer(element, plan.selectors.snippet)
-                snippet = value if isinstance(value, str) else ""
-            except Exception:
-                snippet = ""
-        if plan.selectors.body:
-            try:
-                value = _resolve_pointer(element, plan.selectors.body)
-                body = value if isinstance(value, str) else ""
-            except Exception:
-                body = ""
-        items.append(SearchResultItem(title=title, url=normalized, snippet=snippet, body=body))
-    return items
-
-
-class SelectorApplicationError(ValueError):
-    pass
-
-
-def _dedupe(items: list[SearchResultItem]) -> tuple[SearchResultItem, ...]:
-    seen: set[str] = set()
-    ordered: list[SearchResultItem] = []
-    for item in items:
-        if item.url in seen:
-            continue
-        seen.add(item.url)
-        ordered.append(item)
-    return tuple(ordered)
+ALLOWED_STATUSES = {PLAN_STATUS_READY, PLAN_STATUS_ACTIVE}
 
 
 def execute_search_plan(
@@ -138,17 +40,9 @@ def execute_search_plan(
     fetcher: SearchProbeFetcher,
     policy: SearchProbePolicy,
 ) -> SearchPlanExecutionResult:
-    """Execute one SearchPlan against the first keyword using safe transport."""
-    if plan.status not in _ALLOWED_STATUSES:
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "failed",
-            (),
-            "",
-            FAILURE_PLAN_NOT_EXECUTABLE,
-            False,
-            "plan_status",
-        )
+    """Dispatch a validated plan to the formal adapter selected by plan.adapter."""
+    if plan.status not in ALLOWED_STATUSES:
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_status")
     try:
         validate_search_plan(plan)
     except ProtocolError:
@@ -157,121 +51,13 @@ def execute_search_plan(
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
     if not keywords:
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
+
     if plan.adapter == ADAPTER_HTML:
         return HTMLSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
     if plan.adapter == ADAPTER_TRS:
         return TRSSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
     if plan.adapter == ADAPTER_JPAAS:
         return JPAASSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
-    if not (plan.selectors.result_item and plan.selectors.title and plan.selectors.url):
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "failed",
-            (),
-            "",
-            FAILURE_PLAN_NOT_EXECUTABLE,
-            False,
-            "plan_validation",
-        )
-    if plan.pagination.max_pages > 1:
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "failed",
-            (),
-            "",
-            FAILURE_PLAN_NOT_EXECUTABLE,
-            False,
-            "pagination",
-        )
-
-    try:
-        request = build_search_request(plan, keywords[0], page_index=0)
-    except ProtocolError:
-        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "request")
-
-    try:
-        outcome = fetcher.fetch(request, policy=policy)
-    except Exception:
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "failed",
-            (),
-            "",
-            FAILURE_TRANSPORT,
-            False,
-            "transport",
-        )
-    if outcome.rejection is not None or outcome.response is None:
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "failed",
-            (),
-            "",
-            FAILURE_TRANSPORT,
-            False,
-            "transport",
-        )
-
-    response = outcome.response
-    if plan.response_format == RESPONSE_FORMAT_HTML and not (
-        response.content_type.startswith("text/html") or response.content_type == "application/xhtml+xml"
-    ):
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "failed",
-            (),
-            response.content_type,
-            FAILURE_RESPONSE_REJECTED,
-            False,
-            "response",
-        )
-    if plan.response_format == RESPONSE_FORMAT_JSON and not (
-        response.content_type == "application/json" or (
-            response.content_type.startswith("application/") and response.content_type.endswith("+json")
-        )
-    ):
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "failed",
-            (),
-            response.content_type,
-            FAILURE_RESPONSE_REJECTED,
-            False,
-            "response",
-        )
-    try:
-        if plan.response_format == RESPONSE_FORMAT_HTML:
-            items = _extract_html_items(response, plan)
-        else:
-            items = _extract_json_items(response, plan)
-    except SelectorApplicationError:
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "failed",
-            (),
-            response.content_type,
-            FAILURE_SELECTOR_MISMATCH,
-            False,
-            "parse",
-        )
-
-    normalized_items = _dedupe(items)
-    if not normalized_items:
-        return SearchPlanExecutionResult(
-            plan.plan_id,
-            "ok",
-            (),
-            response.content_type,
-            FAILURE_NO_RESULTS,
-            False,
-            "parse",
-        )
-    return SearchPlanExecutionResult(
-        plan.plan_id,
-        "ok",
-        normalized_items,
-        response.content_type,
-        None,
-        False,
-        "parse",
-    )
+    if plan.adapter == ADAPTER_GENERIC_JSON:
+        return GenericJSONSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
+    return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")

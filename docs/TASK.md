@@ -2307,6 +2307,17 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 - 当前真实 Analyzer `jpaas_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；正式执行器已具备。
 - TASK-018 整体未完成；不得宣称 Generic JSON 已实现。
 
+### TASK-018F 实施记录
+
+- 状态：Generic JSON Adapter 已实现；TASK-018G 尚未完成。
+- `crawler/search/generic_json_adapter.py` 提供正式 `GenericJSONSearchAdapter`。
+- 支持 GET + query 与 POST + JSON body。
+- `crawler/search/json_pointer.py` 是唯一严格 JSON Pointer helper；`generic_json_response_parser.py` 使用它按 SearchPlan selectors 解析。
+- `plan_executor.py` 已改为纯 Adapter 分派，不再保留内联 JSON 解析。
+- 第一页空结果返回 `no_results`；后续空/重复页停止；后续失败 fail-closed。
+- 当前真实 Candidate 生产路径尚不能自动生成 Generic JSON ready plan；GET 与 POST 均需显式正式 SearchPlan。
+- TASK-018 整体未完成；orchestrator 尚未接入 Registry。
+
 ### 后续顺序
 
 正式冻结：
