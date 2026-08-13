@@ -17,9 +17,11 @@ from crawler.search.execution_models import (
 from crawler.search.html_adapter import HTMLSearchAdapter
 from crawler.search.json_utils import load_strict_json
 from crawler.search.trs_adapter import TRSSearchAdapter
+from crawler.search.jpaas_adapter import JPAASSearchAdapter
 from crawler.search.request_builder import build_search_request
 from crawler.search.search_plan import (
     ADAPTER_HTML,
+    ADAPTER_JPAAS,
     ADAPTER_TRS,
     PLAN_STATUS_ACTIVE,
     PLAN_STATUS_READY,
@@ -151,6 +153,16 @@ def execute_search_plan(
         validate_search_plan(plan)
     except ProtocolError:
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
+    if plan.plan_id != compute_plan_id(plan):
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
+    if not keywords:
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
+    if plan.adapter == ADAPTER_HTML:
+        return HTMLSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
+    if plan.adapter == ADAPTER_TRS:
+        return TRSSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
+    if plan.adapter == ADAPTER_JPAAS:
+        return JPAASSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
     if not (plan.selectors.result_item and plan.selectors.title and plan.selectors.url):
         return SearchPlanExecutionResult(
             plan.plan_id,
@@ -161,14 +173,6 @@ def execute_search_plan(
             False,
             "plan_validation",
         )
-    if plan.plan_id != compute_plan_id(plan):
-        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
-    if not keywords:
-        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
-    if plan.adapter == ADAPTER_HTML:
-        return HTMLSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
-    if plan.adapter == ADAPTER_TRS:
-        return TRSSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
     if plan.pagination.max_pages > 1:
         return SearchPlanExecutionResult(
             plan.plan_id,

@@ -2296,6 +2296,17 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 - 当前真实 Analyzer `trs_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；正式执行器已具备，后续需补齐生产者证据。
 - TASK-018 整体未完成；不得宣称 JPAAS/Generic JSON 已实现。
 
+### TASK-018E 实施记录
+
+- 状态：JPAAS Adapter 已实现；TASK-018F–G 尚未完成。
+- `crawler/search/jpaas_adapter.py` 提供正式 `JPAASSearchAdapter`，`adapter_name=jpaas`。
+- 支持 GET + `request_format=none` + JSON 响应。
+- `crawler/search/jpaas_parser.py` 提供唯一嵌套展开与字段映射，`plugins/jpaas.py` 已改为复用同一核心。
+- 应用成功码严格为 `code=200`；`appSearchResultBeanList` 缺失/类型错误返回 `selector_mismatch`。
+- 第一页空结果返回 `no_results`；后续空/重复页停止；后续失败 fail-closed。
+- 当前真实 Analyzer `jpaas_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；正式执行器已具备。
+- TASK-018 整体未完成；不得宣称 Generic JSON 已实现。
+
 ### 后续顺序
 
 正式冻结：

@@ -147,7 +147,8 @@ def test_fingerprint_mismatch_rejected():
 
 def test_missing_selectors_rejected():
     plan = _plan()
-    missing = replace(plan, selectors=SearchSelectors("", "", "", "", ""))
+    missing = replace(plan, selectors=SearchSelectors("", "", "", "", ""), plan_id="")
+    missing = replace(missing, plan_id=compute_plan_id(missing))
     fetcher = FakeFetcher(_html_response())
     result = execute_search_plan(missing, ("k",), fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "plan_not_executable"

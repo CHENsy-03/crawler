@@ -58,11 +58,11 @@ py -m pytest -q
 
 结果：
 
-- 收集：568 tests
-- 通过：561
+- 收集：588 tests
+- 通过：581
 - 跳过：7
 - 失败：0
-- 最终实际耗时：3.32s（该次运行的观察值，不作为稳定性能门槛）
+- 最终实际耗时：3.28s（该次运行的观察值，不作为稳定性能门槛）
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
@@ -216,3 +216,8 @@ TASK-018D–G 尚未完成。
 TASK-018D 新增 `tests/test_trs_adapter.py`、`tests/fixtures/trs_adapter_response.json`、`crawler/search/json_utils.py`、`trs_response_parser.py` 和 `trs_adapter.py`。`plan_executor.py` 的 TRS 路径复用正式 Adapter，并统一使用唯一严格 JSON 解码 helper。
 
 TASK-018E–G 尚未完成。
+
+
+TASK-018E 新增 `tests/test_jpaas_adapter.py`、`tests/test_legacy_jpaas_plugin.py`、`tests/fixtures/jpaas_adapter_response.json`、`crawler/search/jpaas_parser.py` 和 `jpaas_adapter.py`。`plugins/jpaas.py` 已机械提取共享解析核心并保持 legacy 输出不变。
+
+TASK-018F–G 尚未完成。

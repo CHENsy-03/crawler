@@ -744,3 +744,14 @@ TASK-018B 应：
 - 严格 JSON 解码统一位于 `json_utils.py`。
 - 第一页空 `resultDocs` 返回 `no_results`；后续空/短页/重复页停止；后续失败 fail-closed。
 - 当前 Analyzer `trs_signature` Candidate 尚无完整 request_shape，自动发现生产者待后续补齐；TRS 正式执行器本身可运行。
+
+
+## 24. TASK-018E 实施记录
+
+- `JPAASSearchAdapter` 已实现并位于 `crawler/search/jpaas_adapter.py`。
+- 合法组合：`adapter=jpaas + strategy=json_api + GET + request_format=none + response_format=json + keyword_location=query`。
+- `jpaas_parser.py` 是唯一嵌套展开与字段映射实现；`plugins/jpaas.py` 复用 `expand_jpaas_documents()` 与 `map_jpaas_legacy_article()`。
+- 成功码校验：`str(code)=="200"`；非 200 返回 `response_rejected`。
+- `appSearchResultBeanList` 缺失或类型错误返回 `selector_mismatch`。
+- 第一页空结果返回 `no_results`；后续空/重复页停止；后续失败 fail-closed。
+- 当前真实 Analyzer `jpaas_signature` Candidate 缺少结构化 request_shape，自动发现生产者待后续补齐。

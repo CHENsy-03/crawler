@@ -464,3 +464,10 @@ Registry 尚未接入 orchestrator；其他 Adapter 未实现。
 TRS 计划由 `TRSSearchAdapter` 执行，使用 POST + form-urlencoded 请求并通过严格 JSON 解码解析 `resultDocs`。字段映射复用 `parser/api_parser.parse_trs_doc()`。第一页空数组返回 `no_results`；后续空/短页/重复页停止；后续页失败不返回部分结果。
 
 当前真实 Analyzer 的 `trs_signature` Candidate 缺少结构化 request_shape，因此自动发现生产者尚未闭合；TRS 执行器本身已完成。
+
+
+## 18. TASK-018E JPAAS Adapter 说明
+
+JPAAS 计划由 `JPAASSearchAdapter` 执行，使用 GET + JSON 响应，解析 `data.appSearchResultBeanList`，并展开 `mapSearchResult.items[*].data`。字段映射和嵌套展开复用 `crawler/search/jpaas_parser.py`；legacy `plugins/jpaas.py` 也复用同一核心，行为保持不变。
+
+当前真实 Analyzer `jpaas_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；JPAAS 执行器本身已完成。
