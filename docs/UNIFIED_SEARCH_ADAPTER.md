@@ -205,6 +205,7 @@ AdapterRegistry
 
 ```text
 adapter
+strategy
 http_method
 endpoint
 request_format
@@ -213,7 +214,7 @@ request_shape
 pagination
 selectors
 scope
-其他现有执行字段
+其他仍保留的执行语义
 ```
 
 `keyword_path` 的全部片段都进入 canonical `plan_id`。以下变化必须改变 `plan_id`：
@@ -230,6 +231,8 @@ scope
 - 新增执行字段但不进入 `plan_id`；
 - 只靠 `discovery.source` 影响执行却不进入 `plan_id`；
 - 对字典顺序或原始 JSON 文本敏感。
+- 新 schema 明确排除旧字段 `query_params` 和 `request_body_template`，它们不进入 canonical `plan_id`。
+- 新 `pagination` 的全部字段（`enabled/location/value_path/start/step/page_size_path/page_size/max_pages`）都进入 canonical `plan_id`。
 
 canonical 规则要求：
 
@@ -442,3 +445,264 @@ TASK-018：统一正式执行 Adapter
 ```
 
 版本、tag、release 策略推迟到 TASK-020 MVP 验收通过后定义。
+
+
+## 20. 请求单一真相与分页契约
+
+### 20.1 请求参数唯一真相
+
+新 SearchPlan schema 冻结为：
+
+- `request_shape` 是所有固定请求参数和关键词位置的唯一正式来源；
+- `pagination` 是所有动态分页参数的唯一正式来源。
+
+新 schema 不再使用顶层 `query_params`：
+
+- 不接受；
+- 不序列化；
+- 不进入 canonical `plan_id`；
+- 不供 Adapter 或 RequestBuilder 读取。
+
+新 schema 不再使用 `request_body_template`：
+
+- 不接受；
+- 不序列化；
+- 不进入 canonical `plan_id`；
+- 不供新执行路径读取；
+- form 和 JSON body 只能由结构化 `request_shape` 生成。
+
+禁止过渡性双重读取：
+
+- 优先 `request_shape`、缺少时读取 `query_params`；
+- 优先 `request_shape`、失败时解析 `request_body_template`；
+- 比较两个来源后任选其一；
+- 运行时扫描 `{keyword}`、`{page}`、`{page_size}`。
+
+旧 schema 缓存必须整体失效并重建。
+
+### 20.2 endpoint query
+
+新 ready plan 的正式 `endpoint` 必须是：
+
+```text
+scheme + authority + path
+```
+
+不得把固定 query 参数隐藏在 endpoint 中。
+
+Candidate endpoint 如果带 query：
+
+- PlanBuilder 必须确定性解析；
+- 合并到 `request_shape.fixed_query_params`；
+- 保存无 query、无 fragment 的 endpoint。
+
+规则：
+
+- 固定 query 参数名不得重复；
+- 不得与 `keyword_path` 冲突；
+- 不得与 `pagination` 路径冲突；
+- fragment 拒绝；
+- 非法 percent encoding 拒绝；
+- 冲突返回既有 `plan_invalid`/构建拒绝语义。
+
+不得让 RequestBuilder 同时从 endpoint query 和 `request_shape` 取固定参数。
+
+### 20.3 strategy 角色
+
+- `adapter` 是 AdapterRegistry 唯一分派字段；
+- `strategy` 是兼容性分类字段；
+- `strategy` 不参与 AdapterRegistry 分派；
+- `strategy` 不决定请求编码；
+- `strategy` 不决定响应解析器。
+
+新 ready/active plan 必须满足：
+
+| adapter | strategy |
+|---|---|
+| html | html_form |
+| trs | json_api |
+| jpaas | json_api |
+| generic_json | json_api |
+
+不一致返回 `plan_invalid`。
+
+`strategy` 暂时保留在 schema 与 canonical `plan_id` 中，直到独立任务证明所有生产引用均可移除。不得用 `strategy` 回退选择 Adapter。
+
+### 20.4 结构化分页
+
+新 schema 中的 `SearchPagination` 冻结为：
+
+```text
+enabled
+location
+value_path
+start
+step
+page_size_path
+page_size
+max_pages
+```
+
+字段语义：
+
+- `enabled`：是否启用分页参数注入；
+- `location`：`none`、`query`、`form`、`json`；
+- `value_path`：当前页码、页索引或 offset 的结构化路径；
+- `start`：第一次请求的分页值，整数且 `>= 0`；
+- `step`：后续每次请求的增量，整数且 `>= 1`；
+- `page_size_path`：可选的 page-size 结构化路径；
+- `page_size`：与 `page_size_path` 对应的正整数；无路径时必须为 `null`；
+- `max_pages`：最多请求页数，正整数，并受全局策略上限约束。
+
+第 `i` 次请求使用零基索引：
+
+```text
+pagination_value = start + i * step
+```
+
+可以表达：
+
+```text
+1, 2, 3...       → start=1, step=1
+0, 1, 2...       → start=0, step=1
+0, 10, 20...     → start=0, step=10
+```
+
+TASK-018 不支持 cursor token 分页；如以后需要，必须提升内部 schema 版本。
+
+### 20.5 禁用分页
+
+`enabled=false` 时：
+
+```text
+location=none
+value_path=()
+start=0
+step=0
+page_size_path=()
+page_size=null
+max_pages=1
+```
+
+不得发送任何分页参数。
+
+### 20.6 启用分页
+
+`enabled=true` 时：
+
+```text
+location 为 query/form/json 之一
+value_path 非空
+start >= 0
+step >= 1
+max_pages >= 1
+```
+
+即使 `max_pages=1`，也允许注入第一页参数，因为 TRS/JPAAS 可能要求显式发送第一页。
+
+### 20.7 分页路径规则
+
+- query/form：`value_path` 恰好一个非空片段；`page_size_path` 为空或恰好一个非空片段；
+- json：`value_path` 一个或多个非空片段；`page_size_path` 为空或一个或多个非空片段；
+- 所有路径不得包含空片段；
+- 不得隐式拆分点号字符串；
+- 不得包含数组索引；
+- 大小写原样保留。
+
+### 20.8 page size
+
+- `page_size_path` 为空 → `page_size` 必须为 `null` → 不注入 page-size 参数；
+- `page_size_path` 非空 → `page_size` 必须为正整数 → 每次请求注入相同 page-size。
+
+不得使用 `{page_size}` 占位符。
+
+### 20.9 分页位置合法矩阵
+
+| 请求组合 | pagination.location |
+|---|---|
+| GET + request_format=none | none 或 query |
+| POST + form_urlencoded | none、query 或 form |
+| POST + json | none、query 或 json |
+
+禁止：
+
+- GET 使用 form/json 分页；
+- form POST 使用 json 分页；
+- JSON POST 使用 form 分页。
+
+不合法组合返回 `plan_invalid`。
+
+已知 Adapter 推荐位置：
+
+- HTML GET → query；
+- HTML POST → query 或 form，以正式计划为准；
+- TRS POST → form；
+- JPAAS GET → query；
+- Generic GET → query；
+- Generic POST → query 或 json。
+
+不得由 Adapter 根据参数名称猜测位置。
+
+### 20.10 路径冲突
+
+以下路径必须互不冲突：
+
+```text
+request_shape.keyword_path
+pagination.value_path
+pagination.page_size_path
+固定字段路径
+```
+
+- query/form：同名字段出现于两个来源即冲突；
+- json：完全相同路径、祖先路径、后代路径、穿越已经固定为非 object 的节点均为冲突；
+- 任何冲突返回 `plan_invalid`；
+- 不得覆盖、合并或静默忽略。
+
+### 20.11 RequestBuilder 顺序
+
+```text
+1. 从无 query 的 endpoint 开始
+2. 复制 request_shape 中对应的固定字段
+3. 注入 keyword
+4. 注入 pagination value
+5. 注入可选 page_size
+6. 进行最终冲突验证
+7. 使用标准编码生成 query/form/JSON
+```
+
+不得依赖 dict 插入顺序、自由模板替换、字符串拼接 query 或运行时字段名猜测。
+
+编码要求：
+
+- query/form 使用标准百分号编码；
+- 空格语义由标准 `application/x-www-form-urlencoded` 规则确定；
+- JSON 使用确定性序列化；
+- JSON 禁止 NaN/Infinity；
+- 不得记录完整敏感请求 body。
+
+### 20.12 旧 schema 与缓存
+
+保持已接受决策：
+
+- 旧 SearchPlan schema 不迁移；
+- 旧 `query_params`/`request_body_template` 不转换；
+- 旧缓存不进入 executor；
+- 当前任务按 cache miss 路径安全重建。
+
+TASK-018B 应：
+
+- 新增/提升 `plan_schema_version`；
+- 提升 cache envelope schema version；
+- 保持 `CACHE_KEY_PREFIX` 和 target fingerprint 算法不变；
+- 保持 TTL 不变。
+
+缓存读取状态允许新增内部 `incompatible`，但：
+
+- 不得新增外部错误码；
+- 不得把 `incompatible` 报成任务失败；
+- 不得发布 URLMessage；
+- 不得进入 executor；
+- 应进入安全重建路径。
+
+生成新计划并成功执行后，原 key 可被新 schema 缓存覆盖。

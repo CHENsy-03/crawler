@@ -2209,6 +2209,18 @@ P0（TASK-017 后执行）。
 - `discovery.source` 仅用于来源追踪、证据审计、日志诊断和测试说明，不用于正式分派。
 - 禁止根据 endpoint、hostname、selector 或运行时响应猜测 Adapter。
 
+### 请求单一真相与分页决策
+
+- 新 schema 不再接受、序列化或读取顶层 `query_params` 与 `request_body_template`；二者不进入 canonical `plan_id`。
+- `request_shape` 是所有固定请求参数和关键词位置的唯一正式来源。
+- `pagination` 是所有动态分页参数的唯一正式来源。
+- endpoint 必须是 `scheme + authority + path`；Candidate endpoint 的 query 必须确定性合并到 `request_shape.fixed_query_params`，fragment 拒绝。
+- `adapter` 是 AdapterRegistry 唯一分派字段；`strategy` 仅作为兼容性分类字段，不参与分派，不决定请求编码或响应解析器。
+- 新 `SearchPagination` 字段：`enabled/location/value_path/start/step/page_size_path/page_size/max_pages`。
+- 分页值公式：`pagination_value = start + i * step`；支持页码、页索引和 offset 计数。
+- query/form 路径恰好一个非空片段；json 路径一个或多个非空片段；禁止空片段、点号拆分、隐式数组索引。
+- `keyword_path`、`pagination.value_path`、`pagination.page_size_path` 与固定字段路径必须互不冲突；冲突返回 `plan_invalid`。
+- 旧 schema 缓存整体失效并按 cache miss 安全重建；保持 `CACHE_KEY_PREFIX`、fingerprint 和 TTL 不变。
 ### 允许修改范围
 
 实现阶段允许修改：
@@ -2237,7 +2249,7 @@ P0（TASK-017 后执行）。
 ### 任务拆分
 
 - TASK-018A：本轮文档与协议决策冻结。
-- TASK-018B：SearchPlan 内部 schema 演进，adapter/request_format/response_format/request_shape，canonical plan_id，cache schema 不兼容处理，Adapter 接口/Registry/统一结果模型。
+- TASK-018B：SearchPlan 内部 schema 演进，adapter/request_format/response_format/request_shape，新 SearchPagination，canonical plan_id，cache schema 与 incompatible 处理，Adapter 接口/Registry/统一结果模型，纯函数式无网络 RequestBuilder 基础能力，现有 executor 从自由 placeholder 机械迁移到结构化 RequestBuilder。
 - TASK-018C：HTML GET/POST，RequestBuilder + HTML parser。
 - TASK-018D：TRS Adapter，复用现有 TRS 无状态逻辑。
 - TASK-018E：JPAAS Adapter，复用现有嵌套展开逻辑。

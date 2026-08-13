@@ -124,6 +124,38 @@ no_results
 
 TASK-018 保持 legacy v1 不变；迁移完成前双路径并存。
 
+## 请求单一真相与分页契约澄清
+
+新 schema 消除 `query_params` 与 `request_shape.fixed_query_params` 的双重来源：
+
+- 新 schema 不接受、不序列化、不读取顶层 `query_params` 与 `request_body_template`；
+- `request_shape` 是所有固定请求参数和关键词位置的唯一正式来源；
+- `pagination` 是所有动态分页参数的唯一正式来源；
+- endpoint 必须是无 query、无 fragment 的 `scheme + authority + path`；
+- Candidate endpoint query 必须确定性合并到 `request_shape.fixed_query_params`。
+
+`strategy` 仅作为兼容性分类字段，不参与 AdapterRegistry 分派，不决定请求编码或响应解析器。
+
+新 `SearchPagination` 使用结构化计数分页：
+
+```text
+enabled
+location
+value_path
+start
+step
+page_size_path
+page_size
+max_pages
+```
+
+分页值公式：
+
+```text
+pagination_value = start + i * step
+```
+
+这落实既有单一真相原则，不改变 Adapter 总体架构、正式 `adapter` 枚举或 method/format 组合。
 ## 后续关系
 
 正式冻结：
