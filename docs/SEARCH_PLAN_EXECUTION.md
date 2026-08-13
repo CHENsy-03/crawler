@@ -2,6 +2,8 @@
 
 状态：已冻结，作为 TASK-017E 功能实现的输入契约。
 
+TASK-018B 起，v2 实际执行以本文件 §15 及后续实施说明为准；§3–8 保留为旧过渡契约的历史记录。
+
 本文件描述 SearchPlan 在 Python Search Worker 内部执行、解析结果并按既有 `crawler:url` 协议输出的规则。
 
 ## 1. 架构职责
@@ -40,13 +42,14 @@ execute_search_plan(
     plan: SearchPlan,
     keywords: tuple[str, ...],
     *,
-    fetcher: SearchPlanFetcher,
-) -> SearchExecutionResult
+    fetcher: SearchProbeFetcher,
+    policy: SearchProbePolicy,
+) -> SearchPlanExecutionResult
 ```
 
-- `SearchPlanFetcher` 是可注入的 Python HTTP 抽象。
+- `SearchProbeFetcher` 与 `SearchProbePolicy` 由调用方注入；测试使用 fake，不访问真实网络。
 - 测试使用 fake，不访问真实网络。
-- `SearchExecutionResult` 是 Python 内部值对象。
+- `SearchPlanExecutionResult` 是统一执行结果值对象。
 - 结果候选至少包含 `url`、`title`、`keyword`。
 - 不为这些内部类型增加 JSON 序列化。
 - 不创建对应 Go 类型。
@@ -478,3 +481,14 @@ JPAAS 计划由 `JPAASSearchAdapter` 执行，使用 GET + JSON 响应，解析 
 Generic JSON 计划由 `GenericJSONSearchAdapter` 执行，支持 GET query 与 POST JSON body。响应解析严格按 SearchPlan JSON Pointer selectors 进行，不进行字段名 fallback、JSONP 剥离或 HTML 提取。PlanExecutor 已改为纯 Adapter 分派，不再保留内联 JSON 执行逻辑。
 
 当前 Candidate 生产路径尚不能自动生成 Generic JSON ready plan；GET/POST 均需显式正式 SearchPlan。
+
+## 20. TASK-018G 生产 Registry 集成说明
+
+- `plan_executor.py` 新增 `RegistryPlanExecutor` 与 `execute_plan_with_registry()`；执行器只通过注入的 AdapterRegistry 按 `plan.adapter` 精确分派，不再直接实例化具体 Adapter。
+- 生产默认 `execute_search_plan(plan, keywords, *, fetcher, policy)` 使用 `build_default_adapter_registry()`，构造零网络、无全局可变 Registry。
+- `search_orchestrator.py` 与 `workers/search_worker.py` 的 v2 生产路径已使用 `RegistryPlanExecutor(build_default_adapter_registry())`；显式 executor 注入仍保留。
+- HTML/TRS/JPAAS/Generic JSON 四类执行统一返回 `SearchPlanExecutionResult`，executor 不改写 Adapter 返回的 status/items/failure_code。
+- 未知或未注册 adapter 返回现有 `plan_invalid`，无 fallback、无 strategy/source/endpoint 猜测。
+- TASK-017 缓存与发布语义保持：success/no_results 后写缓存，failed 不写缓存且零发布，缓存命中失败 delete 一次，publish_failure 保留 published_count。
+- 六类 producer 状态：HTML GET/POST 为 auto_ready；TRS、JPAAS、Generic JSON GET/POST 真实 Analyzer 证据链下为 not_ready，需显式正式 Candidate/SearchPlan 或后续生产者补齐。
+- TASK-018H 尚未完成。

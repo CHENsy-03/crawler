@@ -21,6 +21,7 @@ from crawler.search.search_plan import (
 from crawler.search.execution_models import SearchPlanExecutionResult, SearchResultItem
 from crawler.search.adapter import SearchAdapter
 from crawler.search.adapter_registry import AdapterRegistry
+from crawler.search.adapter_composition import build_default_adapter_registry
 from crawler.search.html_adapter import HTMLSearchAdapter
 from crawler.search.trs_adapter import TRSSearchAdapter
 from crawler.search.jpaas_adapter import JPAASSearchAdapter
@@ -30,6 +31,7 @@ from crawler.search.trs_response_parser import parse_trs_response
 from crawler.search.jpaas_parser import parse_jpaas_response
 from crawler.search.generic_json_response_parser import parse_generic_json_response
 from crawler.search.request_builder import build_search_request
+from crawler.search.plan_executor import RegistryPlanExecutor, execute_plan_with_registry
 from crawler.search.plan_builder import (
     CandidateRejection,
     PlanBuildResult,

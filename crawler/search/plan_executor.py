@@ -1,5 +1,7 @@
-"""Execute a validated SearchPlan v2 through the unified SearchAdapter layer."""
+"""Execute a validated SearchPlan v2 through an injected AdapterRegistry."""
 
+from crawler.search.adapter_composition import build_default_adapter_registry
+from crawler.search.adapter_registry import AdapterRegistry
 from crawler.search.execution_models import (
     EXECUTION_OK,
     FAILURE_INVALID_RESULT_URL,
@@ -12,15 +14,7 @@ from crawler.search.execution_models import (
     SearchPlanExecutionResult,
     SearchResultItem,
 )
-from crawler.search.generic_json_adapter import GenericJSONSearchAdapter
-from crawler.search.html_adapter import HTMLSearchAdapter
-from crawler.search.jpaas_adapter import JPAASSearchAdapter
-from crawler.search.trs_adapter import TRSSearchAdapter
 from crawler.search.search_plan import (
-    ADAPTER_GENERIC_JSON,
-    ADAPTER_HTML,
-    ADAPTER_JPAAS,
-    ADAPTER_TRS,
     PLAN_STATUS_ACTIVE,
     PLAN_STATUS_READY,
     ProtocolError,
@@ -33,14 +27,37 @@ from crawler.site.search_probe import SearchProbeFetcher, SearchProbePolicy
 ALLOWED_STATUSES = {PLAN_STATUS_READY, PLAN_STATUS_ACTIVE}
 
 
-def execute_search_plan(
+class RegistryPlanExecutor:
+    """Callable executor that resolves only through an injected registry."""
+
+    def __init__(self, registry: AdapterRegistry) -> None:
+        self._registry = registry
+
+    def __call__(
+        self,
+        plan: SearchPlan,
+        keywords: tuple[str, ...],
+        *,
+        fetcher: SearchProbeFetcher,
+        policy: SearchProbePolicy,
+    ) -> SearchPlanExecutionResult:
+        return execute_plan_with_registry(
+            plan,
+            keywords,
+            registry=self._registry,
+            fetcher=fetcher,
+            policy=policy,
+        )
+
+
+def execute_plan_with_registry(
     plan: SearchPlan,
     keywords: tuple[str, ...],
     *,
+    registry: AdapterRegistry,
     fetcher: SearchProbeFetcher,
     policy: SearchProbePolicy,
 ) -> SearchPlanExecutionResult:
-    """Dispatch a validated plan to the formal adapter selected by plan.adapter."""
     if plan.status not in ALLOWED_STATUSES:
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_status")
     try:
@@ -52,12 +69,24 @@ def execute_search_plan(
     if not keywords:
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
 
-    if plan.adapter == ADAPTER_HTML:
-        return HTMLSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
-    if plan.adapter == ADAPTER_TRS:
-        return TRSSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
-    if plan.adapter == ADAPTER_JPAAS:
-        return JPAASSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
-    if plan.adapter == ADAPTER_GENERIC_JSON:
-        return GenericJSONSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
-    return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
+    resolution = registry.resolve_plan(plan)
+    if not resolution.found or resolution.adapter is None:
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "registry")
+    return resolution.adapter.execute(plan, keywords, fetcher=fetcher, policy=policy)
+
+
+def execute_search_plan(
+    plan: SearchPlan,
+    keywords: tuple[str, ...],
+    *,
+    fetcher: SearchProbeFetcher,
+    policy: SearchProbePolicy,
+) -> SearchPlanExecutionResult:
+    """Default production executor backed by a fresh default registry."""
+    return execute_plan_with_registry(
+        plan,
+        keywords,
+        registry=build_default_adapter_registry(),
+        fetcher=fetcher,
+        policy=policy,
+    )

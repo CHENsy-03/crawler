@@ -2318,6 +2318,19 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 - 当前真实 Candidate 生产路径尚不能自动生成 Generic JSON ready plan；GET 与 POST 均需显式正式 SearchPlan。
 - TASK-018 整体未完成；orchestrator 尚未接入 Registry。
 
+### TASK-018G 实施记录
+
+- 状态：生产集成已实现；TASK-018H 尚未完成。
+- 新增 `crawler/search/adapter_composition.py`，`build_default_adapter_registry()` 每次构建全新 Registry，只注册 HTML、TRS、JPAAS、Generic JSON 四个正式 Adapter，不建立模块级可变 singleton。
+- `plan_executor.py` 新增 `RegistryPlanExecutor` 与 `execute_plan_with_registry()`；生产默认 `execute_search_plan()` 通过默认 Registry 精确按 `plan.adapter` 分派。
+- `plan_executor.py` 不再直接实例化具体 Adapter，不再解析 HTML/JSON、构造请求或根据 strategy/source/endpoint 猜测类型。
+- `search_orchestrator.py` 与 `workers/search_worker.py` 的 v2 生产路径使用 `RegistryPlanExecutor(build_default_adapter_registry())`；测试和调用方仍可显式注入 executor。
+- `plan_builder.py` 支持显式 `generic_json` Candidate 转换：GET 映射 `request_format=none`，POST 映射 `request_format=json`；缺少结构化 request_shape 时保持拒绝，不伪造默认字段。
+- 六类请求组合的离线生产链测试已建立：HTML GET、HTML POST form、TRS POST form、JPAAS GET、Generic JSON GET、Generic JSON POST。
+- Producer 状态：HTML GET/POST 为 auto_ready；TRS、JPAAS、Generic JSON GET/POST 在真实 Analyzer 证据链下仍为 not_ready，只能由显式正式 Candidate/SearchPlan 或后续生产者补齐后自动生成 ready plan。
+- TASK-017 缓存与发布语义未改变：success/no_results 写缓存；failed 不写缓存且零发布；缓存命中失败 delete 一次；publish_failure 保留实际 published_count；URLMessage 契约与 Go PopURL 解码不回归。
+- TASK-018H 的完整 Python/Go/跨语言门禁尚未完成；不得宣称 TASK-018 已完成。
+
 ### 后续顺序
 
 正式冻结：

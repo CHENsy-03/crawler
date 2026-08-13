@@ -39,7 +39,8 @@ from crawler.search.search_plan import (
     compute_plan_id,
     validate_search_plan,
 )
-from crawler.site.models import SearchCandidate
+from crawler.site.models import CandidateRequestShape, SearchCandidate
+from crawler.site.selector_evidence import SelectorEvidence
 
 TARGET = "https://example.gov.cn/"
 
@@ -384,3 +385,70 @@ def test_endpoint_fragment_is_rejected():
     )
     assert result.plan is None
     assert result.rejections[0].code == REJECTION_PLAN_VALIDATION_FAILED
+
+
+def _json_evidence(candidate):
+    return SelectorEvidence(
+        candidate_key=(candidate.method, candidate.endpoint, candidate.keyword_param, tuple(sorted(candidate.fixed_params))),
+        candidate_kind="json_api",
+        response_kind="json",
+        result_item="/data/items",
+        title="/title",
+        url="/url",
+        final_origin=TARGET,
+        match_count=2,
+        validated=True,
+        evidence_source="probe",
+    )
+
+
+def test_jpaas_explicit_request_shape_builds_ready_plan():
+    from crawler.site.models import CandidateRequestShape
+
+    shape = CandidateRequestShape(
+        method="GET",
+        endpoint="https://example.gov.cn/search",
+        keyword_location="query",
+        keyword_param="q",
+        fixed_query_params=(("webId", "3217"),),
+        approved_origins=(TARGET, "https://example.gov.cn"),
+    )
+    candidate = _candidate(source="jpaas_signature", endpoint="https://example.gov.cn/search", method="GET", request_shape=shape)
+    result = PlanBuilder().build(target_url=TARGET, candidates=(candidate,), selector_evidence=_json_evidence(candidate))
+    assert result.success
+    assert result.plan is not None
+    assert result.plan.adapter == "jpaas"
+    assert result.plan.request_format == "none"
+
+
+def test_generic_json_explicit_request_shape_builds_ready_plan():
+    get_shape = CandidateRequestShape(
+        method="GET",
+        endpoint="https://example.gov.cn/search",
+        keyword_location="query",
+        keyword_param="q",
+        fixed_query_params=(("api", "1"),),
+        approved_origins=(TARGET, "https://example.gov.cn"),
+    )
+    candidate = _candidate(source="generic_json", endpoint="https://example.gov.cn/search", method="GET", request_shape=get_shape)
+    result = PlanBuilder().build(target_url=TARGET, candidates=(candidate,), selector_evidence=_json_evidence(candidate))
+    assert result.success
+    assert result.plan is not None
+    assert result.plan.adapter == "generic_json"
+    assert result.plan.request_format == "none"
+
+    post_shape = CandidateRequestShape(
+        method="POST",
+        endpoint="https://example.gov.cn/search",
+        keyword_location="json",
+        keyword_param="",
+        keyword_path=("query", "kw"),
+        content_type="application/json",
+        approved_origins=(TARGET, "https://example.gov.cn"),
+    )
+    candidate = _candidate(source="generic_json", endpoint="https://example.gov.cn/search", method="POST", request_shape=post_shape)
+    result = PlanBuilder().build(target_url=TARGET, candidates=(candidate,), selector_evidence=_json_evidence(candidate))
+    assert result.success
+    assert result.plan is not None
+    assert result.plan.adapter == "generic_json"
+    assert result.plan.request_format == "json"

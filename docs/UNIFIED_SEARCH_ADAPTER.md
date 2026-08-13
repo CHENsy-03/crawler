@@ -765,3 +765,14 @@ TASK-018B 应：
 - `plan_executor.py` 不再包含内联 JSON 解析，四类 adapter 均通过正式 Adapter 执行。
 - 第一页空结果返回 `no_results`；后续空/重复页停止；后续失败 fail-closed。
 - 当前 Candidate 生产路径无法自动生成 Generic JSON ready plan；GET/POST 均需显式正式 SearchPlan。
+
+## 26. TASK-018G 实施记录
+
+- 新增 `crawler/search/adapter_composition.py`；`build_default_adapter_registry()` 每次构造全新 AdapterRegistry，注册且仅注册 HTML、TRS、JPAAS、Generic JSON。
+- Registry 无模块级可变 singleton，构造不发起网络，不根据 strategy/source/endpoint/selectors/Content-Type fallback 或猜测。
+- `plan_executor.py` 的 `RegistryPlanExecutor` 与 `execute_plan_with_registry()` 只通过注入 Registry 按 `plan.adapter` 分派；生产默认 `execute_search_plan()` 使用默认 Registry。
+- `search_orchestrator.py` 与 `workers/search_worker.py` 的生产 v2 路径已接入默认 Registry；显式 executor 注入仍可用。
+- `plan_builder.py` 支持显式 `generic_json` Candidate：GET 映射 `request_format=none`，POST 映射 `request_format=json`；request_shape 缺失时拒绝生成 ready plan。
+- 六类组合均可通过显式正式 SearchPlan/Candidate 完成离线生产链；真实 Analyzer 仅 HTML GET/POST 为 auto_ready，TRS/JPAAS/Generic JSON GET/POST 仍为 not_ready。
+- SearchPlan schema、plan_id canonical、cache schema、Redis key/fingerprint/TTL、外部消息协议和错误码均未变化。
+- TASK-018H 尚未完成；不得宣称 TASK-018 已完成或未知站点可自动发现并执行。

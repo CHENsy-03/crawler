@@ -15,6 +15,7 @@ from crawler.site.normalizer import (
 from crawler.site.selector_evidence import SelectorEvidence
 from crawler.site.security import classify_ip, is_ip_literal
 from crawler.search.search_plan import (
+    ADAPTER_GENERIC_JSON,
     ADAPTER_HTML,
     ADAPTER_JPAAS,
     ADAPTER_TRS,
@@ -25,6 +26,7 @@ from crawler.search.search_plan import (
     PLAN_STATUS_READY,
     PROTOCOL_VERSION_V2,
     REQUEST_FORMAT_FORM_URLENCODED,
+    REQUEST_FORMAT_JSON,
     REQUEST_FORMAT_NONE,
     RESPONSE_FORMAT_HTML,
     RESPONSE_FORMAT_JSON,
@@ -58,11 +60,13 @@ _SOURCE_ADAPTER = {
     "form": ADAPTER_HTML,
     "trs_signature": ADAPTER_TRS,
     "jpaas_signature": ADAPTER_JPAAS,
+    "generic_json": ADAPTER_GENERIC_JSON,
 }
 _SOURCE_STRATEGY = {
     "form": SEARCH_STRATEGY_HTML_FORM,
     "trs_signature": SEARCH_STRATEGY_JSON_API,
     "jpaas_signature": SEARCH_STRATEGY_JSON_API,
+    "generic_json": SEARCH_STRATEGY_JSON_API,
 }
 _PERCENT_RE = re.compile(r"[0-9A-Fa-f]{2}")
 
@@ -362,7 +366,7 @@ class PlanBuilder:
                 code=REJECTION_UNSUPPORTED_CANDIDATE,
                 message="candidate source has no formal adapter",
             )
-        if source in ("trs_signature", "jpaas_signature") and candidate.request_shape is None:
+        if source in ("trs_signature", "jpaas_signature", "generic_json") and candidate.request_shape is None:
             return CandidateRejection(
                 candidate_index=index,
                 code=REJECTION_UNSUPPORTED_CANDIDATE,
@@ -457,6 +461,15 @@ class PlanBuilder:
                 raise ProtocolError("INVALID_PLAN", "JPAAS adapter requires GET")
             request_format = REQUEST_FORMAT_NONE
             response_format = RESPONSE_FORMAT_JSON
+        elif adapter == ADAPTER_GENERIC_JSON:
+            if method == "GET":
+                request_format = REQUEST_FORMAT_NONE
+                response_format = RESPONSE_FORMAT_JSON
+            elif method == "POST":
+                request_format = REQUEST_FORMAT_JSON
+                response_format = RESPONSE_FORMAT_JSON
+            else:
+                raise ProtocolError("INVALID_PLAN", "Generic JSON adapter requires GET or POST")
         else:
             raise ProtocolError("INVALID_PLAN", "adapter is not supported by PlanBuilder yet")
 
