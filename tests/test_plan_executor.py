@@ -235,12 +235,12 @@ def test_content_type_mismatch_rejected():
     assert result.failure_code == "response_rejected"
 
 
-def test_selector_mismatch_fails_closed():
+def test_empty_html_result_is_no_results():
     plan = _plan()
     body = b"<html><body>no results</body></html>"
     fetcher = FakeFetcher(_html_response(body=body))
     result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
-    assert result.failure_code == "selector_mismatch"
+    assert result.failure_code == "no_results"
     assert result.items == ()
 
 
@@ -252,7 +252,7 @@ def test_result_repr_does_not_leak_body_or_keyword():
     assert "html" not in repr(result).lower()
 
 
-def test_multipage_plan_returns_plan_not_executable():
+def test_multipage_html_plan_executes_through_adapter():
     pagination = SearchPagination(
         enabled=True,
         location="query",
@@ -265,5 +265,5 @@ def test_multipage_plan_returns_plan_not_executable():
     plan = replace(base, plan_id=compute_plan_id(base))
     fetcher = FakeFetcher(_html_response())
     result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
-    assert result.failure_code == "plan_not_executable"
-    assert fetcher.calls == []
+    assert result.success
+    assert len(fetcher.calls) == 2

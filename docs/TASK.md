@@ -2272,6 +2272,18 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 - 旧 schema 缓存读取返回 `incompatible`，按 cache miss 安全重建。
 - TASK-018 整体未完成；不得声称 TRS/JPAAS/Generic JSON 已正式接入。
 
+### TASK-018C 实施记录
+
+- 状态：HTML Adapter 已实现；TASK-018D–G 尚未完成。
+- `crawler/search/html_adapter.py` 提供正式 `HTMLSearchAdapter`，`adapter_name=html`。
+- 支持 HTML GET + query 和 HTML POST + form-urlencoded。
+- `crawler/search/html_response_parser.py` 是唯一 HTML 响应解析实现；`plan_executor.py` 通过 HTML Adapter 复用。
+- 第一页合法零结果返回 `no_results`；后续页零结果或零新增 URL 正常停止。
+- 后续页失败采用 fail-closed，最终 `items=()`。
+- 结果 URL 做相对解析、http/https、userinfo、domain 和 path scope 校验。
+- Registry 仍未接入 orchestrator，未注册其他 Adapter。
+- TASK-018 整体未完成；不得宣称 TRS/JPAAS/Generic JSON 已实现。
+
 ### 后续顺序
 
 正式冻结：

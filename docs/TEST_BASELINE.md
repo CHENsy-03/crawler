@@ -58,11 +58,11 @@ py -m pytest -q
 
 结果：
 
-- 收集：525 tests
-- 通过：518
+- 收集：545 tests
+- 通过：538
 - 跳过：7
 - 失败：0
-- 最终实际耗时：3.20s（该次运行的观察值，不作为稳定性能门槛）
+- 最终实际耗时：3.16s（该次运行的观察值，不作为稳定性能门槛）
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
@@ -206,3 +206,8 @@ TASK-018B 产品范围：
 - executor 仅单页过渡路径。
 
 TASK-018C–G 尚未完成。
+
+
+TASK-018C 新增 `tests/test_html_adapter.py` 与 `tests/fixtures/html_adapter_results.html`，覆盖 GET/POST、HTML 解析、零结果、多页、后续页失败和安全 URL 校验。`plan_executor.py` 的 HTML 路径复用正式 HTML Adapter，不再包含重复 HTML parser。
+
+TASK-018D–G 尚未完成。

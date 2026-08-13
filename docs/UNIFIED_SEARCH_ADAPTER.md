@@ -721,3 +721,14 @@ TASK-018B 应：
 - `request_builder.py` 是纯函数式无网络请求构造器。
 - executor 目前只执行 `max_pages=1` 的过渡路径；多页计划返回 `plan_not_executable`。
 - TASK-018C–G 尚未完成；不得声称多页执行或具体 Adapter 已交付。
+
+
+## 22. TASK-018C 实施记录
+
+- `HTMLSearchAdapter` 已实现并位于 `crawler/search/html_adapter.py`。
+- 支持 GET + `request_format=none` 与 POST + `request_format=form_urlencoded`。
+- 唯一 HTML parser 位于 `crawler/search/html_response_parser.py`，`plan_executor.py` 不再包含第二套 HTML 解析实现。
+- 多页执行按 `max_pages` 逐页调用 RequestBuilder；第一页零结果返回 `no_results`，后续页空/重复停止。
+- 后续页 transport/response/selector 失败返回 fail-closed，`items=()`。
+- 结果 URL 安全校验包括相对解析、http/https、userinfo、domain 与 allowed path prefix。
+- Registry 未接入 orchestrator，未注册 TRS/JPAAS/Generic JSON Adapter。

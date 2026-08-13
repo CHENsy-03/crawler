@@ -4,8 +4,6 @@ import json
 from typing import Any
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
-
 from crawler.search.execution_models import (
     FAILURE_INVALID_RESULT_URL,
     FAILURE_NO_RESULTS,
@@ -17,8 +15,10 @@ from crawler.search.execution_models import (
     SearchPlanExecutionResult,
     SearchResultItem,
 )
+from crawler.search.html_adapter import HTMLSearchAdapter
 from crawler.search.request_builder import build_search_request
 from crawler.search.search_plan import (
+    ADAPTER_HTML,
     PLAN_STATUS_ACTIVE,
     PLAN_STATUS_READY,
     RESPONSE_FORMAT_HTML,
@@ -78,41 +78,6 @@ def _resolve_pointer(data: Any, pointer: str) -> Any:
         else:
             raise ValueError("invalid pointer traversal")
     return node
-
-
-def _extract_html_items(response: SearchProbeResponse, plan: SearchPlan) -> list[SearchResultItem]:
-    soup = BeautifulSoup(response.body.decode("utf-8", errors="ignore"), "html.parser")
-    try:
-        containers = soup.select(plan.selectors.result_item)
-    except Exception as exc:
-        raise SelectorApplicationError(str(exc)) from exc
-    if not containers:
-        raise SelectorApplicationError("result_item selector matched nothing")
-
-    items: list[SearchResultItem] = []
-    for container in containers:
-        links = container.select(plan.selectors.url)
-        titles = container.select(plan.selectors.title)
-        if len(links) != 1 or len(titles) != 1:
-            raise SelectorApplicationError("result item selector structure changed")
-        href = links[0].get("href", "")
-        title = titles[0].get_text(" ", strip=True)
-        if not href or not title:
-            raise SelectorApplicationError("result item is missing title or url")
-        try:
-            normalized = normalize_target_url(urljoin(response.final_url, href))
-        except SiteNormalizationError as exc:
-            raise SelectorApplicationError("result URL is invalid") from exc
-        snippet = ""
-        body = ""
-        if plan.selectors.snippet:
-            node = container.select_one(plan.selectors.snippet)
-            snippet = node.get_text(" ", strip=True) if node else ""
-        if plan.selectors.body:
-            node = container.select_one(plan.selectors.body)
-            body = node.get_text(" ", strip=True) if node else ""
-        items.append(SearchResultItem(title=title, url=normalized, snippet=snippet, body=body))
-    return items
 
 
 def _extract_json_items(response: SearchProbeResponse, plan: SearchPlan) -> list[SearchResultItem]:
@@ -208,6 +173,10 @@ def execute_search_plan(
         )
     if plan.plan_id != compute_plan_id(plan):
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
+    if not keywords:
+        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
+    if plan.adapter == ADAPTER_HTML:
+        return HTMLSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
     if plan.pagination.max_pages > 1:
         return SearchPlanExecutionResult(
             plan.plan_id,
@@ -218,8 +187,6 @@ def execute_search_plan(
             False,
             "pagination",
         )
-    if not keywords:
-        return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
 
     try:
         request = build_search_request(plan, keywords[0], page_index=0)

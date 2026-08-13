@@ -450,3 +450,10 @@ SearchSelectors("", "", "", "", "")
 TASK-018B 已将 SearchPlan 内部 schema 提升到 `plan_schema_version=2`，并引入结构化 `request_shape`、新 `pagination`、`adapter/request_format/response_format`。旧 `query_params/request_body_template` 不再属于新 schema。
 
 当前 executor 仅提供单页过渡执行；`max_pages>1` 返回 `plan_not_executable`。多页、TRS、JPAAS 和 Generic JSON 的正式执行由 TASK-018C–G 完成，不在本轮交付。
+
+
+## 16. TASK-018C HTML Adapter 说明
+
+HTML 计划由 `HTMLSearchAdapter` 执行，覆盖 GET query 与 POST form-urlencoded。HTML 响应解析只使用唯一 `html_response_parser.py`。第一页零结果返回 `no_results`，后续页零结果或零新增 URL 停止；后续页失败时整次执行返回失败且不发布部分结果。结果 URL 必须通过 http/https、userinfo、domain 和 path scope 校验。
+
+Registry 尚未接入 orchestrator；其他 Adapter 未实现。
