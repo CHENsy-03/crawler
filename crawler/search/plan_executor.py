@@ -1,6 +1,5 @@
 """Execute a validated SearchPlan v2 through the safe probe HTTP foundation."""
 
-import json
 from typing import Any
 from urllib.parse import urljoin
 
@@ -16,9 +15,12 @@ from crawler.search.execution_models import (
     SearchResultItem,
 )
 from crawler.search.html_adapter import HTMLSearchAdapter
+from crawler.search.json_utils import load_strict_json
+from crawler.search.trs_adapter import TRSSearchAdapter
 from crawler.search.request_builder import build_search_request
 from crawler.search.search_plan import (
     ADAPTER_HTML,
+    ADAPTER_TRS,
     PLAN_STATUS_ACTIVE,
     PLAN_STATUS_READY,
     RESPONSE_FORMAT_HTML,
@@ -51,18 +53,6 @@ FAILURE_NO_RESULTS = FAILURE_NO_RESULTS
 _ALLOWED_STATUSES = {PLAN_STATUS_READY, PLAN_STATUS_ACTIVE}
 
 
-def _strict_json(body: bytes) -> Any:
-    def _pairs_hook(pairs):
-        result: dict[str, Any] = {}
-        for key, value in pairs:
-            if key in result:
-                raise ValueError("duplicate object key")
-            result[key] = value
-        return result
-
-    return json.loads(body.decode("utf-8"), object_pairs_hook=_pairs_hook)
-
-
 def _resolve_pointer(data: Any, pointer: str) -> Any:
     if not pointer:
         return data
@@ -82,7 +72,7 @@ def _resolve_pointer(data: Any, pointer: str) -> Any:
 
 def _extract_json_items(response: SearchProbeResponse, plan: SearchPlan) -> list[SearchResultItem]:
     try:
-        data = _strict_json(response.body)
+        data = load_strict_json(response.body)
         container = _resolve_pointer(data, plan.selectors.result_item)
     except Exception as exc:
         raise SelectorApplicationError("JSON selector application failed") from exc
@@ -177,6 +167,8 @@ def execute_search_plan(
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
     if plan.adapter == ADAPTER_HTML:
         return HTMLSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
+    if plan.adapter == ADAPTER_TRS:
+        return TRSSearchAdapter().execute(plan, keywords, fetcher=fetcher, policy=policy)
     if plan.pagination.max_pages > 1:
         return SearchPlanExecutionResult(
             plan.plan_id,

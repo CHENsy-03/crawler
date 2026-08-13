@@ -732,3 +732,15 @@ TASK-018B 应：
 - 后续页 transport/response/selector 失败返回 fail-closed，`items=()`。
 - 结果 URL 安全校验包括相对解析、http/https、userinfo、domain 与 allowed path prefix。
 - Registry 未接入 orchestrator，未注册 TRS/JPAAS/Generic JSON Adapter。
+
+
+## 23. TASK-018D 实施记录
+
+- `TRSSearchAdapter` 已实现并位于 `crawler/search/trs_adapter.py`。
+- 合法组合：`adapter=trs + strategy=json_api + POST + request_format=form_urlencoded + response_format=json + keyword_location=form`。
+- TRS 分页必须为 form，`value_path`/`page_size_path` 长度均为 1，`page_size` 为正整数。
+- `post_json()` legacy 真实语义是 form-urlencoded POST；TRS Adapter 使用 RequestBuilder 构造同样的 form body，不发送 JSON body。
+- `trs_response_parser.py` 复用 `parse_trs_doc()` 字段映射，处理扁平 document 与 `data` 嵌套 document。
+- 严格 JSON 解码统一位于 `json_utils.py`。
+- 第一页空 `resultDocs` 返回 `no_results`；后续空/短页/重复页停止；后续失败 fail-closed。
+- 当前 Analyzer `trs_signature` Candidate 尚无完整 request_shape，自动发现生产者待后续补齐；TRS 正式执行器本身可运行。

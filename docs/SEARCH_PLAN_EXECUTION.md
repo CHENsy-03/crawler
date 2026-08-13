@@ -457,3 +457,10 @@ TASK-018B 已将 SearchPlan 内部 schema 提升到 `plan_schema_version=2`，�
 HTML 计划由 `HTMLSearchAdapter` 执行，覆盖 GET query 与 POST form-urlencoded。HTML 响应解析只使用唯一 `html_response_parser.py`。第一页零结果返回 `no_results`，后续页零结果或零新增 URL 停止；后续页失败时整次执行返回失败且不发布部分结果。结果 URL 必须通过 http/https、userinfo、domain 和 path scope 校验。
 
 Registry 尚未接入 orchestrator；其他 Adapter 未实现。
+
+
+## 17. TASK-018D TRS Adapter 说明
+
+TRS 计划由 `TRSSearchAdapter` 执行，使用 POST + form-urlencoded 请求并通过严格 JSON 解码解析 `resultDocs`。字段映射复用 `parser/api_parser.parse_trs_doc()`。第一页空数组返回 `no_results`；后续空/短页/重复页停止；后续页失败不返回部分结果。
+
+当前真实 Analyzer 的 `trs_signature` Candidate 缺少结构化 request_shape，因此自动发现生产者尚未闭合；TRS 执行器本身已完成。

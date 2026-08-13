@@ -2284,6 +2284,18 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 - Registry 仍未接入 orchestrator，未注册其他 Adapter。
 - TASK-018 整体未完成；不得宣称 TRS/JPAAS/Generic JSON 已实现。
 
+### TASK-018D 实施记录
+
+- 状态：TRS Adapter 已实现；TASK-018E–G 尚未完成。
+- `crawler/search/trs_adapter.py` 提供正式 `TRSSearchAdapter`，`adapter_name=trs`。
+- 支持 POST + form-urlencoded + JSON 响应，解析 `resultDocs`。
+- `crawler/search/trs_response_parser.py` 复用 `parser/api_parser.parse_trs_doc()` 字段映射。
+- `crawler/search/json_utils.py` 是唯一严格 JSON 解码实现，`plan_executor.py` 已复用。
+- 第一页空 `resultDocs` 返回 `no_results`；后续空/短页/重复页停止。
+- 后续页失败 fail-closed，`items=()`。
+- 当前真实 Analyzer `trs_signature` Candidate 缺少结构化 request_shape，自动发现生产者尚未闭合；正式执行器已具备，后续需补齐生产者证据。
+- TASK-018 整体未完成；不得宣称 JPAAS/Generic JSON 已实现。
+
 ### 后续顺序
 
 正式冻结：

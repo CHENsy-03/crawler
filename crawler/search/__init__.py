@@ -22,7 +22,9 @@ from crawler.search.execution_models import SearchPlanExecutionResult, SearchRes
 from crawler.search.adapter import SearchAdapter
 from crawler.search.adapter_registry import AdapterRegistry
 from crawler.search.html_adapter import HTMLSearchAdapter
+from crawler.search.trs_adapter import TRSSearchAdapter
 from crawler.search.html_response_parser import parse_html_response
+from crawler.search.trs_response_parser import parse_trs_response
 from crawler.search.request_builder import build_search_request
 from crawler.search.plan_builder import (
     CandidateRejection,
