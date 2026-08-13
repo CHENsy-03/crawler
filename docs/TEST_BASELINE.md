@@ -62,7 +62,7 @@ py -m pytest -q
 - 通过：492
 - 跳过：7
 - 失败：0
-- 耗时：3.04s
+- 最终实际耗时：3.71s（该次运行的观察值，不作为稳定性能门槛）
 
 TASK-017E-R4 新增 `tests/test_search_probe.py`（61 tests）。
 
@@ -129,6 +129,12 @@ go vet -mod=readonly ./...
 - internal/protocol：ok
 - internal/queue：ok
 - internal/store：ok
+- `internal/store` 存在 3 个 MySQL 跳过测试：
+  - `TestUpdateTaskSuccess`
+  - `TestUpdateTaskErrorOnInvalidDB`
+  - `TestUpdateTaskNonExistentRow`
+- 跳过原因：当前离线门禁环境没有可用 MySQL，测试按既有条件跳过
+- 没有连接真实 MySQL；跳过不是测试通过；这 3 项不属于 TASK-017 SearchPlan、URLMessage 或生产解码核心范围
 - internal/worker：ok
 - 无 test files 的包：client、config、httpx
 - `go vet -mod=readonly ./...`：通过
