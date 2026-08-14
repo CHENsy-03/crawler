@@ -2841,11 +2841,14 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 ### TASK-022C 当前状态
 - implementation=completed
 - tests=PASS
+- audit=TASK-022C-R5 PASS
+- acceptance=PASS
+- git_state=COMMITTED_LOCAL
+- implementation_seal_commit=c9d6ba1fbe40be0d4265cea2611efdc89b5f2764
 - production_wiring=NOT_STARTED
-- acceptance=WAITING_REAUDIT
-- git_state=UNCOMMITTED
 - deployment=BLOCKED
-- next_task=TASK-022C-R5
+- closure=CLOSED
+- next_task=TASK-022D
 - TASK-022D=NOT_STARTED
 - TASK-022C-R=FAIL
 - TASK-022C-FIX=implemented
@@ -2866,7 +2869,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - 新增 Python `crawler/security/pinned_connection.py`、`tls_policy.py`
 - 新增 Go `go-spider/internal/security/pinned_target.go`、`pinned_dialer.go`、`pinned_transport.go`
 - 新增共享 fixture：tests/fixtures/pinned_connection_contract.json（35 cases）
-- 新增 ADR-018-pinned-address-transport.md（状态 proposed）
+- 新增 ADR-018-pinned-address-transport.md（状态 accepted）
 - 本轮未接入现有生产 HTTP 请求链；当前版本不可部署
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛

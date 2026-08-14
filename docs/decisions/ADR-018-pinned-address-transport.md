@@ -1,8 +1,12 @@
 # ADR-018：Pinned Address Transport（TASK-022C）
 
-**状态：** proposed
+**状态：** accepted
 **日期：** 2026-08-14
 **关联：** TASK-022C，ADR-016/017 保持 accepted
+**acceptance：** TASK-022C-R5 PASS
+**implementation_commit：** c9d6ba1fbe40be0d4265cea2611efdc89b5f2764
+**production_wiring：** deferred
+**next_task：** TASK-022D
 
 ## 背景
 
