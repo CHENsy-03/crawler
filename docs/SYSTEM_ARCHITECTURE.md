@@ -429,3 +429,12 @@ TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTML
 - 安全拒绝 fail closed；不得伪造 v1 成功或 `extract_failed`。
 - 测试 loopback 许可通过依赖注入实现，不得变成生产开关。
 - 未完成 022B–022H 前，不得宣称生产级 SSRF 防护。
+
+## 32. 出站安全基础库（TASK-022B）
+
+- Python 新增 `crawler/security`：`url_normalizer`、`ip_policy`、`dns_policy`、`outbound_policy`、`models`。
+- Go 新增 `go-spider/internal/security`：`url_normalizer.go`、`ip_policy.go`、`dns_policy.go`、`outbound_policy.go`、`models.go`。
+- Python/Go 读取同一份 `tests/fixtures/outbound_request_security_contract.json`（164 cases），不维护第二份期望结果。
+- IDNA 使用 UTS #46 lookup profile；Python `idna==3.18` 已直接声明，Go `golang.org/x/net/idna v0.52.0` 已提升为直接依赖。
+- 本轮基础库不接入现有 HTTP 客户端、Adapter、Worker、queue 或 protocol；生产请求链行为不变。
+- 固定连接属于 TASK-022C，生产接线属于 TASK-022G；当前版本不可部署。

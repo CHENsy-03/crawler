@@ -178,7 +178,7 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 
 ## 5. 当前实施状态
 
-- 本文件是合同，不是实现。
-- 当前生产路径仍存在 `docs/OUTBOUND_REQUEST_INVENTORY.md` 所列风险。
-- TASK-022B 尚未开始。
+- 本文件是合同；TASK-022B 已实现基础库（URL 规范化、IP 分类、DNS 全地址验证、exact host 策略判定）。
+- 基础库尚未接入现有生产 HTTP 请求链；生产路径仍存在 `docs/OUTBOUND_REQUEST_INVENTORY.md` 所列风险。
+- TASK-022C 尚未开始。
 - 当前版本不可部署。

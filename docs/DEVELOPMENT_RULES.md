@@ -1,6 +1,6 @@
 # 开发规则
 
-**状态：** 2026-08-14 由 TASK-022A 补充；原 `docs/DEVELOPMENT_RULES.md` 在仓库中缺失，本文件作为项目长期规则入口。D-01 至 D-12 已于 TASK-022A-R 批准冻结，但安全 Transport 尚未实现。
+**状态：** 2026-08-14 由 TASK-022A 补充；原 `docs/DEVELOPMENT_RULES.md` 在仓库中缺失，本文件作为项目长期规则入口。D-01 至 D-12 已于 TASK-022A-R 批准冻结；TASK-022B 已实现基础库但尚未接入安全 Transport，当前版本不可部署。
 
 ## 1. 出站请求安全规则
 
@@ -37,3 +37,20 @@ TASK-020B
 
 - 遵循根级 `AGENTS.md` 与本仓库 `AGENTS.md`。
 - 最小修改、文档同步、真实测试、敏感信息保护和 Git 授权边界以其为准。
+
+## 4. TASK-022B 基础库边界
+
+- `crawler/security` 与 `go-spider/internal/security` 是当前唯一允许的出站安全纯函数入口。
+- 本轮禁止生产模块 import 基础库；接线属于 TASK-022G。
+- 新增出站路径实现前必须复用该基础库，不得自行复制规范化、IP 分类或 DNS 验证逻辑。
+## 5. TASK-022B-FIX 记录
+
+- Unicode-to-IP 映射必须拒绝。
+- authority/port 使用严格词法校验。
+- pre-DNS policy gate 在 host/HTTP/port/downgrade 拒绝时不得调用 Resolver。
+- Go `OutboundPolicy` 不可变，构造与 getter 均深拷贝。
+## 6. TASK-022B-FIX2 记录
+
+- 纯 Unicode 数字型主机外观拒绝。
+- IDNA 后整体成为 IP/歧义 IP 时拒绝。
+- 普通 IDN 中包含 Unicode 数字不构成拒绝理由。

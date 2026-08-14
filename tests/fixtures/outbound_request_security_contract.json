@@ -1,0 +1,1932 @@
+{
+  "url_cases": [
+    {
+      "id": "url-001",
+      "raw": "https://example.com",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-002",
+      "raw": "http://example.com",
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "http://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-003",
+      "raw": "HTTP://Example.COM",
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "http://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-004",
+      "raw": "https://Example.COM:443",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": true,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-005",
+      "raw": "http://example.com:80",
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 80,
+      "expected_explicit_port": true,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "http://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-006",
+      "raw": "http://example.com:8080",
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 8080,
+      "expected_explicit_port": true,
+      "expected_authority": "example.com:8080",
+      "expected_normalized_url": "http://example.com:8080/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-007",
+      "raw": "https://example.com:8443",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 8443,
+      "expected_explicit_port": true,
+      "expected_authority": "example.com:8443",
+      "expected_normalized_url": "https://example.com:8443/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-008",
+      "raw": "https://bücher.example",
+      "expected_scheme": "https",
+      "expected_host": "xn--bcher-kva.example",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "xn--bcher-kva.example",
+      "expected_normalized_url": "https://xn--bcher-kva.example/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-009",
+      "raw": "https://例え.テスト",
+      "expected_scheme": "https",
+      "expected_host": "xn--r8jz45g.xn--zckzah",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "xn--r8jz45g.xn--zckzah",
+      "expected_normalized_url": "https://xn--r8jz45g.xn--zckzah/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-010",
+      "raw": "https://example.com./",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-011",
+      "raw": "https://example.com..",
+      "expected_reason": "invalid_host"
+    },
+    {
+      "id": "url-012",
+      "raw": "https://.example.com",
+      "expected_reason": "invalid_host"
+    },
+    {
+      "id": "url-013",
+      "raw": "https://exa..mple.com",
+      "expected_reason": "invalid_host"
+    },
+    {
+      "id": "url-014",
+      "raw": "https://@label@.example.com/",
+      "expected_reason": "label_too_long",
+      "label_length": 64
+    },
+    {
+      "id": "url-015",
+      "raw": "https://@host@/",
+      "expected_reason": "host_too_long",
+      "host_length": 254
+    },
+    {
+      "id": "url-016",
+      "raw": "https://127.0.0.1/",
+      "expected_scheme": "https",
+      "expected_host": "127.0.0.1",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "127.0.0.1",
+      "expected_normalized_url": "https://127.0.0.1/",
+      "expected_is_ip_literal": true
+    },
+    {
+      "id": "url-017",
+      "raw": "https://[::1]/",
+      "expected_scheme": "https",
+      "expected_host": "::1",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "[::1]",
+      "expected_normalized_url": "https://[::1]/",
+      "expected_is_ip_literal": true
+    },
+    {
+      "id": "url-018",
+      "raw": "https://[2001:0db8:0000::1]/",
+      "expected_scheme": "https",
+      "expected_host": "2001:db8::1",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "[2001:db8::1]",
+      "expected_normalized_url": "https://[2001:db8::1]/",
+      "expected_is_ip_literal": true
+    },
+    {
+      "id": "url-019",
+      "raw": "https://[fe80::1%25eth0]/",
+      "expected_reason": "invalid_host"
+    },
+    {
+      "id": "url-020",
+      "raw": "https://127.1/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-021",
+      "raw": "https://2130706433/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-022",
+      "raw": "https://0177.0.0.1/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-023",
+      "raw": "https://0x7f000001/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-024",
+      "raw": "https://0x7f.0.0.1/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-025",
+      "raw": "https://999.1.1.1/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-026",
+      "raw": "https://user@example.com/",
+      "expected_reason": "userinfo_not_allowed"
+    },
+    {
+      "id": "url-027",
+      "raw": "https://:pass@example.com/",
+      "expected_reason": "userinfo_not_allowed"
+    },
+    {
+      "id": "url-028",
+      "raw": "https://@example.com/",
+      "expected_reason": "userinfo_not_allowed"
+    },
+    {
+      "id": "url-029",
+      "raw": "https://example.com\\@evil.com/",
+      "expected_reason": "backslash_not_allowed"
+    },
+    {
+      "id": "url-030",
+      "raw": "https://example.com/\u0000",
+      "expected_reason": "control_character"
+    },
+    {
+      "id": "url-031",
+      "raw": "https://example.com/a b",
+      "expected_reason": "control_character"
+    },
+    {
+      "id": "url-032",
+      "raw": "https://example.com/​",
+      "expected_reason": "control_character"
+    },
+    {
+      "id": "url-033",
+      "raw": "https://example.com/path#frag",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/path",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-034",
+      "raw": "https://example.com/中文",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/%E4%B8%AD%E6%96%87",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-035",
+      "raw": "https://example.com/?q=中文",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/?q=%E4%B8%AD%E6%96%87",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-036",
+      "raw": "https://example.com/%2f",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/%2F",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-037",
+      "raw": "https://example.com/%2e%2e/secret",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/secret",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-038",
+      "raw": "https://example.com/a/./b/../c",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/a/c",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-039",
+      "raw": "https://example.com/a//b",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/a//b",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-040",
+      "raw": "https://example.com/%41bc",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/Abc",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-041",
+      "raw": "https://example.com/%7euser",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/~user",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-042",
+      "raw": "https://example.com/%00",
+      "expected_reason": "invalid_percent_encoding"
+    },
+    {
+      "id": "url-043",
+      "raw": "https://example.com/%0a",
+      "expected_reason": "invalid_percent_encoding"
+    },
+    {
+      "id": "url-044",
+      "raw": "https://example.com/%zz",
+      "expected_reason": "invalid_percent_encoding"
+    },
+    {
+      "id": "url-045",
+      "raw": "https://example.com/?a=1&b=2&a=3",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/?a=1&b=2&a=3",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-046",
+      "raw": "https://example.com/?q=a+b",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/?q=a+b",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-047",
+      "raw": "https://example.com/?q=%2b",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/?q=%2B",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-048",
+      "raw": "file:///etc/passwd",
+      "expected_reason": "scheme_not_allowed"
+    },
+    {
+      "id": "url-049",
+      "raw": "ftp://example.com",
+      "expected_reason": "scheme_not_allowed"
+    },
+    {
+      "id": "url-050",
+      "raw": "javascript:alert(1)",
+      "expected_reason": "scheme_not_allowed"
+    },
+    {
+      "id": "url-051",
+      "raw": "example.com/path",
+      "expected_reason": "absolute_url_required"
+    },
+    {
+      "id": "url-052",
+      "raw": "//example.com/path",
+      "expected_reason": "absolute_url_required"
+    },
+    {
+      "id": "url-053",
+      "raw": "https:///path",
+      "expected_reason": "authority_required"
+    },
+    {
+      "id": "url-054",
+      "raw": "https://example.com:0/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-055",
+      "raw": "https://example.com:99999/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-056",
+      "raw": "https://example.com:-1/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-057",
+      "raw": "https://example.com:/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-058",
+      "raw": "https://example.com:abc/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-059",
+      "raw": "https://exa%6dple.com/",
+      "expected_reason": "invalid_host"
+    },
+    {
+      "id": "url-060",
+      "raw": "https://xn--a/",
+      "expected_reason": "invalid_idna"
+    },
+    {
+      "id": "url-061",
+      "raw": "",
+      "expected_reason": "empty_url"
+    },
+    {
+      "id": "url-062",
+      "raw": "https://example.com/@path@",
+      "expected_reason": "url_too_long",
+      "path_length": 9000
+    },
+    {
+      "id": "url-063",
+      "raw": "https://[::ffff:127.0.0.1]/",
+      "expected_scheme": "https",
+      "expected_host": "::ffff:127.0.0.1",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "[::ffff:127.0.0.1]",
+      "expected_normalized_url": "https://[::ffff:127.0.0.1]/",
+      "expected_is_ip_literal": true
+    },
+    {
+      "id": "url-064",
+      "raw": "https://Example.COM/%41",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/A",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-065",
+      "raw": "http://example.com?q=1",
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "http://example.com/?q=1",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-066",
+      "raw": "https://example.com/a?x=1#frag",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/a?x=1",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-067",
+      "raw": "https://example.com/%2e",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-068",
+      "raw": "https://example.com/a/..",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-069",
+      "raw": "https://example.com/%3Fq=1",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/%3Fq=1",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-070",
+      "raw": "https://example.com/?a=%2F",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/?a=%2F",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-071",
+      "raw": "https://example.com/%E4%B8%AD",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/%E4%B8%AD",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-072",
+      "raw": "https://example.com/a%2Fb",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/a%2Fb",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-073",
+      "raw": "https://example.com:443/",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": true,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-074",
+      "raw": "http://[::1]:80/",
+      "expected_scheme": "http",
+      "expected_host": "::1",
+      "expected_port": 80,
+      "expected_explicit_port": true,
+      "expected_authority": "[::1]",
+      "expected_normalized_url": "http://[::1]/",
+      "expected_is_ip_literal": true
+    },
+    {
+      "id": "url-075",
+      "raw": "https://[::1]:8443/",
+      "expected_scheme": "https",
+      "expected_host": "::1",
+      "expected_port": 8443,
+      "expected_explicit_port": true,
+      "expected_authority": "[::1]:8443",
+      "expected_normalized_url": "https://[::1]:8443/",
+      "expected_is_ip_literal": true
+    },
+    {
+      "id": "url-076",
+      "raw": "https://example.com/%C3%A9",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/%C3%A9",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-077",
+      "raw": "https://example.com/?q=%e4%b8%ad",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/?q=%E4%B8%AD",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-078",
+      "raw": "https://example.com/%252f",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/%252f",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-079",
+      "raw": "https://[::ffff:8.8.8.8]/",
+      "expected_scheme": "https",
+      "expected_host": "::ffff:8.8.8.8",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "[::ffff:8.8.8.8]",
+      "expected_normalized_url": "https://[::ffff:8.8.8.8]/",
+      "expected_is_ip_literal": true
+    },
+    {
+      "id": "url-080",
+      "raw": "https://example.com/a%3Fb",
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "https://example.com/a%3Fb",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-081",
+      "raw": "http://１２７.０.０.１/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-082",
+      "raw": "http://١٢٧.٠.٠.١/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-083",
+      "raw": "http://127.０.０.１/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-084",
+      "raw": "http://１２７．０．０．１/",
+      "expected_reason": "ambiguous_ip_literal"
+    },
+    {
+      "id": "url-085",
+      "raw": "http://example.com:+80/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-086",
+      "raw": "http://example.com:+443/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-087",
+      "raw": "http://example.com:-80/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-088",
+      "raw": "http://example.com: 80/",
+      "expected_reason": "control_character"
+    },
+    {
+      "id": "url-089",
+      "raw": "http://example.com:80 /",
+      "expected_reason": "control_character"
+    },
+    {
+      "id": "url-090",
+      "raw": "http://[::1]extra/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-091",
+      "raw": "http://[::1]x/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-092",
+      "raw": "http://[::1/",
+      "expected_reason": "invalid_url"
+    },
+    {
+      "id": "url-093",
+      "raw": "http://example.com:８０/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-094",
+      "raw": "http://example.com:%38%30/",
+      "expected_reason": "invalid_port"
+    },
+    {
+      "id": "url-095",
+      "raw": "http://例１.example/",
+      "expected_scheme": "http",
+      "expected_host": "xn--1-kb7a.example",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "xn--1-kb7a.example",
+      "expected_normalized_url": "http://xn--1-kb7a.example/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-096",
+      "raw": "http://１２７.example/",
+      "expected_scheme": "http",
+      "expected_host": "127.example",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "127.example",
+      "expected_normalized_url": "http://127.example/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-097",
+      "raw": "http://a１２７.example/",
+      "expected_scheme": "http",
+      "expected_host": "a127.example",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "a127.example",
+      "expected_normalized_url": "http://a127.example/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-098",
+      "raw": "http://١٢٧.example/",
+      "expected_scheme": "http",
+      "expected_host": "127.example",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "127.example",
+      "expected_normalized_url": "http://127.example/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-099",
+      "raw": "http://foo.１２７.example/",
+      "expected_scheme": "http",
+      "expected_host": "foo.127.example",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "foo.127.example",
+      "expected_normalized_url": "http://foo.127.example/",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-100",
+      "raw": "http://example.com/１",
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "http://example.com/%EF%BC%91",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-101",
+      "raw": "http://example.com/?q=１",
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 80,
+      "expected_explicit_port": false,
+      "expected_authority": "example.com",
+      "expected_normalized_url": "http://example.com/?q=%EF%BC%91",
+      "expected_is_ip_literal": false
+    },
+    {
+      "id": "url-102",
+      "raw": "http://１２７。０。０。１/",
+      "expected_reason": "ambiguous_ip_literal"
+    }
+  ],
+  "ip_cases": [
+    {
+      "id": "ip-001",
+      "address": "0.0.0.0",
+      "expected_category": "protocol",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-002",
+      "address": "0.0.0.1",
+      "expected_category": "protocol",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-003",
+      "address": "10.0.0.0",
+      "expected_category": "private",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-004",
+      "address": "10.255.255.255",
+      "expected_category": "private",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-005",
+      "address": "100.64.0.0",
+      "expected_category": "shared",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-006",
+      "address": "100.127.255.255",
+      "expected_category": "shared",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-007",
+      "address": "127.0.0.0",
+      "expected_category": "loopback",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-008",
+      "address": "127.255.255.255",
+      "expected_category": "loopback",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-009",
+      "address": "169.254.0.0",
+      "expected_category": "link_local",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-010",
+      "address": "169.254.255.255",
+      "expected_category": "link_local",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-011",
+      "address": "172.16.0.0",
+      "expected_category": "private",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-012",
+      "address": "172.31.255.255",
+      "expected_category": "private",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-013",
+      "address": "192.0.0.0",
+      "expected_category": "protocol",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-014",
+      "address": "192.0.0.255",
+      "expected_category": "protocol",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-015",
+      "address": "192.0.2.0",
+      "expected_category": "documentation",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-016",
+      "address": "192.0.2.255",
+      "expected_category": "documentation",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-017",
+      "address": "192.168.0.0",
+      "expected_category": "private",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-018",
+      "address": "192.168.255.255",
+      "expected_category": "private",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-019",
+      "address": "198.18.0.0",
+      "expected_category": "benchmark",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-020",
+      "address": "198.19.255.255",
+      "expected_category": "benchmark",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-021",
+      "address": "198.51.100.0",
+      "expected_category": "documentation",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-022",
+      "address": "198.51.100.255",
+      "expected_category": "documentation",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-023",
+      "address": "203.0.113.0",
+      "expected_category": "documentation",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-024",
+      "address": "203.0.113.255",
+      "expected_category": "documentation",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-025",
+      "address": "224.0.0.0",
+      "expected_category": "multicast",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-026",
+      "address": "239.255.255.255",
+      "expected_category": "multicast",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-027",
+      "address": "240.0.0.0",
+      "expected_category": "reserved",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-028",
+      "address": "255.255.255.255",
+      "expected_category": "reserved",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-029",
+      "address": "8.8.8.8",
+      "expected_category": "global",
+      "expected_allowed": true
+    },
+    {
+      "id": "ip-030",
+      "address": "1.1.1.1",
+      "expected_category": "global",
+      "expected_allowed": true
+    },
+    {
+      "id": "ip-031",
+      "address": "::",
+      "expected_category": "unspecified",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-032",
+      "address": "::1",
+      "expected_category": "loopback",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-033",
+      "address": "::ffff:127.0.0.1",
+      "expected_category": "mapped_ipv4",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-034",
+      "address": "::ffff:8.8.8.8",
+      "expected_category": "mapped_ipv4",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-035",
+      "address": "64:ff9b::1",
+      "expected_category": "transition",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-036",
+      "address": "2001:db8::1",
+      "expected_category": "documentation",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-037",
+      "address": "2002::1",
+      "expected_category": "transition",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-038",
+      "address": "fc00::1",
+      "expected_category": "private",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-039",
+      "address": "fe80::1",
+      "expected_category": "link_local",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-040",
+      "address": "fec0::1",
+      "expected_category": "reserved",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-041",
+      "address": "ff00::1",
+      "expected_category": "multicast",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-042",
+      "address": "2001:4860:4860::8888",
+      "expected_category": "global",
+      "expected_allowed": true
+    },
+    {
+      "id": "ip-043",
+      "address": "2606:4700:4700::1111",
+      "expected_category": "global",
+      "expected_allowed": true
+    },
+    {
+      "id": "ip-044",
+      "address": "100::1",
+      "expected_category": "reserved",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-045",
+      "address": "3fff::1",
+      "expected_category": "documentation",
+      "expected_allowed": false
+    },
+    {
+      "id": "ip-046",
+      "address": "2001:2::1",
+      "expected_category": "benchmark",
+      "expected_allowed": false
+    }
+  ],
+  "dns_cases": [
+    {
+      "id": "dns-001",
+      "host": "example.com",
+      "addresses": [
+        "93.184.216.34"
+      ],
+      "expected_reason": "",
+      "expected_addresses": [
+        "93.184.216.34"
+      ]
+    },
+    {
+      "id": "dns-002",
+      "host": "example.com",
+      "addresses": [
+        "8.8.8.8",
+        "1.1.1.1"
+      ],
+      "expected_reason": "",
+      "expected_addresses": [
+        "1.1.1.1",
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "dns-003",
+      "host": "example.com",
+      "addresses": [
+        "8.8.8.8",
+        "10.0.0.1"
+      ],
+      "expected_reason": "ip_not_allowed",
+      "expected_addresses": [
+        "8.8.8.8",
+        "10.0.0.1"
+      ]
+    },
+    {
+      "id": "dns-004",
+      "host": "example.com",
+      "addresses": [],
+      "expected_reason": "dns_no_addresses",
+      "expected_addresses": []
+    },
+    {
+      "id": "dns-005",
+      "host": "example.com",
+      "addresses": [
+        "8.8.8.8",
+        "8.8.8.8"
+      ],
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "dns-006",
+      "host": "example.com",
+      "addresses": [
+        "1.1.1.1",
+        "8.8.8.8",
+        "8.8.4.4",
+        "9.9.9.9",
+        "208.67.222.222",
+        "208.67.220.220",
+        "76.76.2.0",
+        "76.76.10.0",
+        "185.228.168.9",
+        "185.228.169.9",
+        "94.140.14.14",
+        "94.140.15.15",
+        "149.112.112.112",
+        "149.112.113.113",
+        "84.200.69.80",
+        "84.200.70.40",
+        "77.88.8.8"
+      ],
+      "expected_reason": "dns_too_many_addresses",
+      "expected_addresses": []
+    },
+    {
+      "id": "dns-007",
+      "host": "example.com",
+      "addresses": [
+        "not-an-ip"
+      ],
+      "expected_reason": "invalid_dns_answer",
+      "expected_addresses": []
+    },
+    {
+      "id": "dns-008",
+      "host": "example.com",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "resolver_behavior": "timeout",
+      "expected_reason": "dns_timeout",
+      "expected_addresses": []
+    },
+    {
+      "id": "dns-009",
+      "host": "example.com",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "resolver_behavior": "error",
+      "expected_reason": "dns_failed",
+      "expected_addresses": []
+    },
+    {
+      "id": "dns-010",
+      "host": "8.8.8.8",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "dns-011",
+      "host": "example.com",
+      "addresses": [
+        "2606:4700:4700::1111"
+      ],
+      "expected_reason": "",
+      "expected_addresses": [
+        "2606:4700:4700::1111"
+      ]
+    },
+    {
+      "id": "dns-012",
+      "host": "example.com",
+      "addresses": [
+        "::ffff:8.8.8.8"
+      ],
+      "expected_reason": "ip_not_allowed",
+      "expected_addresses": [
+        "::ffff:8.8.8.8"
+      ]
+    },
+    {
+      "id": "dns-013",
+      "host": "example.com",
+      "addresses": [
+        "1.1.1.1",
+        "8.8.8.8",
+        "8.8.4.4",
+        "9.9.9.9",
+        "208.67.222.222",
+        "208.67.220.220",
+        "76.76.2.0",
+        "76.76.10.0",
+        "185.228.168.9",
+        "185.228.169.9",
+        "94.140.14.14",
+        "94.140.15.15",
+        "149.112.112.112",
+        "149.112.113.113",
+        "84.200.69.80",
+        "84.200.70.40"
+      ],
+      "expected_reason": "",
+      "expected_addresses": [
+        "1.1.1.1",
+        "8.8.4.4",
+        "8.8.8.8",
+        "9.9.9.9",
+        "76.76.2.0",
+        "76.76.10.0",
+        "84.200.69.80",
+        "84.200.70.40",
+        "94.140.14.14",
+        "94.140.15.15",
+        "149.112.112.112",
+        "149.112.113.113",
+        "185.228.168.9",
+        "185.228.169.9",
+        "208.67.220.220",
+        "208.67.222.222"
+      ]
+    },
+    {
+      "id": "dns-014",
+      "host": "example.com",
+      "addresses": [
+        "2606:4700:4700::1111",
+        "8.8.8.8"
+      ],
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8",
+        "2606:4700:4700::1111"
+      ]
+    },
+    {
+      "id": "dns-015",
+      "host": "example.com",
+      "addresses": [
+        "64:ff9b::1"
+      ],
+      "expected_reason": "ip_not_allowed",
+      "expected_addresses": [
+        "64:ff9b::1"
+      ]
+    }
+  ],
+  "policy_cases": [
+    {
+      "id": "policy-001",
+      "raw": "https://example.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "policy-002",
+      "raw": "https://sub.example.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "host_not_allowed",
+      "expected_addresses": []
+    },
+    {
+      "id": "policy-003",
+      "raw": "http://example.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "http_not_allowed",
+      "expected_addresses": []
+    },
+    {
+      "id": "policy-004",
+      "raw": "http://example.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": true,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "policy-005",
+      "raw": "https://example.com:8080/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "port_not_allowed",
+      "expected_addresses": []
+    },
+    {
+      "id": "policy-006",
+      "raw": "https://example.com:8443/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443,
+            8443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "policy-007",
+      "raw": "https://example.com/",
+      "addresses": [
+        "10.0.0.1"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "ip_not_allowed",
+      "expected_addresses": [
+        "10.0.0.1"
+      ]
+    },
+    {
+      "id": "policy-008",
+      "raw": "https://127.0.0.1/",
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "127.0.0.1"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "ip_not_allowed",
+      "expected_addresses": [
+        "127.0.0.1"
+      ]
+    },
+    {
+      "id": "policy-009",
+      "raw": "https://example.com/",
+      "addresses": [],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "dns_no_addresses",
+      "expected_addresses": []
+    },
+    {
+      "id": "policy-010",
+      "raw": "https://example.com/",
+      "addresses": [
+        "1.1.1.1",
+        "8.8.8.8",
+        "8.8.4.4",
+        "9.9.9.9",
+        "208.67.222.222",
+        "208.67.220.220",
+        "76.76.2.0",
+        "76.76.10.0",
+        "185.228.168.9",
+        "185.228.169.9",
+        "94.140.14.14",
+        "94.140.15.15",
+        "149.112.112.112",
+        "149.112.113.113",
+        "84.200.69.80",
+        "84.200.70.40",
+        "77.88.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "dns_too_many_addresses",
+      "expected_addresses": []
+    },
+    {
+      "id": "policy-011",
+      "raw": "https://badexample.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "host_not_allowed",
+      "expected_addresses": []
+    },
+    {
+      "id": "policy-012",
+      "raw": "https://Example.COM/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "policy-013",
+      "raw": "https://example.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "policy-014",
+      "raw": "https://example.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "policy-015",
+      "raw": "http://example.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": true,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80,
+            8080
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    }
+  ],
+  "redirect_cases": [
+    {
+      "id": "redirect-001",
+      "previous": "https://example.com/a",
+      "raw": "http://example.com/b",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": true,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "https_downgrade",
+      "expected_addresses": []
+    },
+    {
+      "id": "redirect-002",
+      "previous": "https://example.com/a",
+      "raw": "https://other.example/b",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "redirect_host_not_allowed",
+      "expected_addresses": []
+    },
+    {
+      "id": "redirect-003",
+      "previous": "https://example.com/a",
+      "raw": "https://example.com/b",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "redirect-004",
+      "previous": "http://example.com/a",
+      "raw": "https://example.com/b",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": true,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "",
+      "expected_addresses": [
+        "8.8.8.8"
+      ]
+    },
+    {
+      "id": "redirect-005",
+      "previous": "https://example.com/a",
+      "raw": "https://example.com:8080/b",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "port_not_allowed",
+      "expected_addresses": []
+    },
+    {
+      "id": "redirect-006",
+      "previous": "https://example.com/a",
+      "raw": "http://example.com/b",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "http_not_allowed",
+      "expected_addresses": []
+    },
+    {
+      "id": "redirect-007",
+      "previous": "https://example.com/a",
+      "raw": "https://sub.example.com/b",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "redirect_host_not_allowed",
+      "expected_addresses": []
+    },
+    {
+      "id": "redirect-008",
+      "previous": "https://example.com/a",
+      "raw": "https://example.com/b",
+      "addresses": [
+        "10.0.0.1"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "ip_not_allowed",
+      "expected_addresses": [
+        "10.0.0.1"
+      ]
+    }
+  ]
+}

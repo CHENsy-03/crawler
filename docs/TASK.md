@@ -2756,10 +2756,10 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 
 ### 状态
 - in_progress
-- current_stage=TASK-022A-R（已关闭）
+- current_stage=TASK-022B
 - TASK-019 已关闭并本地封板
 - TASK-022A=CLOSED
-- TASK-022B=NOT_STARTED
+- TASK-022B=IN_PROGRESS（实现完成，等待复核）
 
 ### TASK-022A 当前状态
 - audit=completed
@@ -2768,7 +2768,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - acceptance=PASS
 - closure=CLOSED
 - next_task=TASK-022B
-- TASK-022B=NOT_STARTED
+- TASK-022B=IN_PROGRESS（实现完成，等待复核）
 - D-01 至 D-12 已批准并冻结
 - 新增审计文档：docs/OUTBOUND_REQUEST_INVENTORY.md、docs/SECURITY_THREAT_MODEL.md、docs/OUTBOUND_REQUEST_SECURITY_CONTRACT.md、docs/decisions/ADR-016-outbound-request-security-boundary.md
 - 补充长期规则：docs/DEVELOPMENT_RULES.md（原文件缺失，本轮补建）
@@ -2809,6 +2809,27 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - 未修改生产代码、测试、配置、依赖、协议、migration、schema、Compose 或脚本。
 - 未连接真实外部网站、Redis、MySQL，未启动 Docker。
 
+
+
+### TASK-022B 当前状态
+- implementation=completed
+- tests=PASS
+- production_wiring=NOT_STARTED
+- acceptance=WAITING_REAUDIT
+- git_state=UNCOMMITTED
+- deployment=BLOCKED
+- next_task=TASK-022C_AFTER_APPROVAL
+- TASK-022C=NOT_STARTED
+- TASK-022B-R=FAIL
+- TASK-022B-FIX=implemented
+- TASK-022B-R2=FAIL
+- TASK-022B-FIX2=implemented
+- 修复缺陷1–5：Unicode IP 绕过、端口歧义、IPv6 后缀 reason、pre-DNS policy gate、Go Policy 不可变性
+- FIX2：移除 Unicode 数字一刀切拒绝；仅拒绝纯 Unicode 数字型主机外观，普通 IDN 含 Unicode 数字正常通过
+- 新增 Python `crawler/security` 与 Go `internal/security` 基础库
+- 新增共享 fixture：tests/fixtures/outbound_request_security_contract.json（186 cases）
+- 新增 ADR-017-url-dns-security-foundation.md（状态 proposed）
+- 本轮未接入现有生产 HTTP 请求链；当前版本不可部署
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛
 

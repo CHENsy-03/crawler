@@ -1,11 +1,11 @@
 # 出站请求清单（TASK-022A 只读审计）
 
-**状态：** TASK-022A-R / 合同已批准 / 实现未开始
+**状态：** TASK-022B / 基础库已实现 / 未接入生产
 **日期：** 2026-08-14
 **分支：** feat/task-022-outbound-security
 **基准 HEAD：** 66ef9a73a9d219529dee12179a100a8f49a6c22f
 
-本文件是本轮真实代码审计的路径清单。它不改变任何生产行为；`docs/OUTBOUND_REQUEST_SECURITY_CONTRACT.md` 已批准并冻结，但实现尚未开始。
+本文件是本轮真实代码审计的路径清单。它不改变任何生产行为；`docs/OUTBOUND_REQUEST_SECURITY_CONTRACT.md` 已批准并冻结，TASK-022B 基础库已实现但尚未接入生产。
 
 ## 1. 审计方法
 
@@ -196,3 +196,11 @@
 - `docs/DEVELOPMENT_RULES.md` 原文件缺失，已在 TASK-022A 补建，并在 TASK-022A-R 记录 D-01 至 D-12 冻结状态。
 - `docs/UNIFIED_SEARCH_ADAPTER.md` 的历史路线 `TASK-018 → TASK-022 → TASK-020` 已在 TASK-022A-R 标记为历史旧路线/SUPERSEDED，并指向当前唯一完整路线 `TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B`。
 - `docs/TASK_019_ACCEPTANCE.md` 的 `TASK-022A=NOT_STARTED` 已保留为 E-3 封板时快照，并增加后续状态说明。
+
+## 8. TASK-022B 基础库（未接线）
+
+- 新增 `crawler/security` 与 `go-spider/internal/security` 纯函数基础库。
+- 实现 URL 规范化、显式 IP 分类表、可注入 Resolver 全地址验证、exact host/scheme/port/redirect 策略判定。
+- Python/Go 读取同一份 `tests/fixtures/outbound_request_security_contract.json`（164 cases）。
+- 当前没有生产调用方；现有 HTTP 客户端、Adapter、Worker、queue、protocol 均未 import 新包。
+- 固定连接、重定向/代理/资源预算、生产接线分别属于 TASK-022C/022D/022G。
