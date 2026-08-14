@@ -438,3 +438,11 @@ TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTML
 - IDNA 使用 UTS #46 lookup profile；Python `idna==3.18` 已直接声明，Go `golang.org/x/net/idna v0.52.0` 已提升为直接依赖。
 - 本轮基础库不接入现有 HTTP 客户端、Adapter、Worker、queue 或 protocol；生产请求链行为不变。
 - 固定连接属于 TASK-022C，生产接线属于 TASK-022G；当前版本不可部署。
+## 33. Pinned Address Transport（TASK-022C）
+
+- Python 新增 `crawler/security/pinned_connection.py` 与 `tls_policy.py`。
+- Go 新增 `go-spider/internal/security/pinned_target.go`、`pinned_dialer.go`、`pinned_transport.go`。
+- `PinnedTarget` 保存规范化 host、有效端口、Host header、server_name、已验证地址与策略身份；不保存原始 URL、userinfo、fragment、Cookie 或 header。
+- TCP 只连接已验证数字 IP；HTTPS 使用原规范化 hostname 作为 ServerName 并正常验证证书链与 hostname/IP SAN。
+- 本地 loopback 测试通过测试内部构造方式注入；生产公开 API 无 allow_loopback/test_mode/skip_policy/insecure。
+- 当前没有生产调用方；生产接线属于 TASK-022G。

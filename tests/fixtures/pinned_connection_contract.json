@@ -1,0 +1,611 @@
+{
+  "plan_cases": [
+    {
+      "id": "plan-001",
+      "raw": "http://example.com/",
+      "addresses": [
+        "93.184.216.34"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": true,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 80,
+      "expected_authority": "example.com",
+      "expected_host_header": "example.com",
+      "expected_server_name": "example.com",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_is_ip_literal": false,
+      "expected_reason": ""
+    },
+    {
+      "id": "plan-002",
+      "raw": "https://example.com:8443/",
+      "addresses": [
+        "93.184.216.34"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443,
+            8443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 8443,
+      "expected_authority": "example.com:8443",
+      "expected_host_header": "example.com:8443",
+      "expected_server_name": "example.com",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_is_ip_literal": false,
+      "expected_reason": ""
+    },
+    {
+      "id": "plan-003",
+      "raw": "https://bücher.example/",
+      "addresses": [
+        "93.184.216.34"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "xn--bcher-kva.example"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_scheme": "https",
+      "expected_host": "xn--bcher-kva.example",
+      "expected_port": 443,
+      "expected_authority": "xn--bcher-kva.example",
+      "expected_host_header": "xn--bcher-kva.example",
+      "expected_server_name": "xn--bcher-kva.example",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_is_ip_literal": false,
+      "expected_reason": ""
+    },
+    {
+      "id": "plan-004",
+      "raw": "https://93.184.216.34/",
+      "addresses": [
+        "93.184.216.34"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "93.184.216.34"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_scheme": "https",
+      "expected_host": "93.184.216.34",
+      "expected_port": 443,
+      "expected_authority": "93.184.216.34",
+      "expected_host_header": "93.184.216.34",
+      "expected_server_name": "93.184.216.34",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_is_ip_literal": true,
+      "expected_reason": ""
+    },
+    {
+      "id": "plan-005",
+      "raw": "https://[2606:4700:4700::1111]/",
+      "addresses": [
+        "2606:4700:4700::1111"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "2606:4700:4700::1111"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_scheme": "https",
+      "expected_host": "2606:4700:4700::1111",
+      "expected_port": 443,
+      "expected_authority": "[2606:4700:4700::1111]",
+      "expected_host_header": "[2606:4700:4700::1111]",
+      "expected_server_name": "2606:4700:4700::1111",
+      "expected_addresses": [
+        "2606:4700:4700::1111"
+      ],
+      "expected_is_ip_literal": true,
+      "expected_reason": ""
+    },
+    {
+      "id": "plan-006",
+      "raw": "http://example.com:8080/",
+      "addresses": [
+        "93.184.216.34"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": true,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80,
+            8080
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_scheme": "http",
+      "expected_host": "example.com",
+      "expected_port": 8080,
+      "expected_authority": "example.com:8080",
+      "expected_host_header": "example.com:8080",
+      "expected_server_name": "example.com",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_is_ip_literal": false,
+      "expected_reason": ""
+    },
+    {
+      "id": "plan-007",
+      "raw": "https://example.com/",
+      "addresses": [
+        "93.184.216.34",
+        "93.184.216.34"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_authority": "example.com",
+      "expected_host_header": "example.com",
+      "expected_server_name": "example.com",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_is_ip_literal": false,
+      "expected_reason": ""
+    },
+    {
+      "id": "plan-008",
+      "raw": "https://example.com/",
+      "addresses": [
+        "2606:4700:4700::1111",
+        "8.8.8.8",
+        "1.1.1.1"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_scheme": "https",
+      "expected_host": "example.com",
+      "expected_port": 443,
+      "expected_authority": "example.com",
+      "expected_host_header": "example.com",
+      "expected_server_name": "example.com",
+      "expected_addresses": [
+        "1.1.1.1",
+        "8.8.8.8",
+        "2606:4700:4700::1111"
+      ],
+      "expected_is_ip_literal": false,
+      "expected_reason": ""
+    },
+    {
+      "id": "plan-009",
+      "raw": "https://example.com/",
+      "addresses": [],
+      "forged": true,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "empty_addresses"
+    },
+    {
+      "id": "plan-010",
+      "raw": "https://example.com/",
+      "addresses": [
+        "1.1.1.1",
+        "8.8.8.8",
+        "8.8.4.4",
+        "9.9.9.9",
+        "208.67.222.222",
+        "208.67.220.220",
+        "76.76.2.0",
+        "76.76.10.0",
+        "185.228.168.9",
+        "185.228.169.9",
+        "94.140.14.14",
+        "94.140.15.15",
+        "149.112.112.112",
+        "149.112.113.113",
+        "84.200.69.80",
+        "84.200.70.40",
+        "77.88.8.8"
+      ],
+      "forged": true,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "too_many_addresses"
+    },
+    {
+      "id": "plan-011",
+      "raw": "https://example.com/",
+      "addresses": [
+        "10.0.0.1"
+      ],
+      "forged": true,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "ip_not_allowed"
+    },
+    {
+      "id": "plan-012",
+      "raw": "https://example.com/",
+      "addresses": [
+        "8.8.8.8"
+      ],
+      "forged": true,
+      "policy": {
+        "allowed_hosts": [],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "expected_reason": "policy_not_allowed"
+    }
+  ],
+  "host_header_cases": [
+    {
+      "id": "host-001",
+      "scheme": "http",
+      "host": "example.com",
+      "port": 80,
+      "request_host": "",
+      "expected": "example.com"
+    },
+    {
+      "id": "host-002",
+      "scheme": "https",
+      "host": "example.com",
+      "port": 443,
+      "request_host": "",
+      "expected": "example.com"
+    },
+    {
+      "id": "host-003",
+      "scheme": "https",
+      "host": "example.com",
+      "port": 8443,
+      "request_host": "",
+      "expected": "example.com:8443"
+    },
+    {
+      "id": "host-004",
+      "scheme": "http",
+      "host": "93.184.216.34",
+      "port": 80,
+      "request_host": "",
+      "expected": "93.184.216.34"
+    },
+    {
+      "id": "host-005",
+      "scheme": "http",
+      "host": "93.184.216.34",
+      "port": 8080,
+      "request_host": "",
+      "expected": "93.184.216.34:8080"
+    },
+    {
+      "id": "host-006",
+      "scheme": "https",
+      "host": "2606:4700:4700::1111",
+      "port": 443,
+      "request_host": "",
+      "expected": "[2606:4700:4700::1111]"
+    },
+    {
+      "id": "host-007",
+      "scheme": "https",
+      "host": "2606:4700:4700::1111",
+      "port": 8443,
+      "request_host": "",
+      "expected": "[2606:4700:4700::1111]:8443"
+    },
+    {
+      "id": "host-008",
+      "scheme": "http",
+      "host": "example.com",
+      "port": 80,
+      "request_host": "example.com",
+      "expected": "example.com"
+    },
+    {
+      "id": "host-009",
+      "scheme": "http",
+      "host": "example.com",
+      "port": 80,
+      "request_host": "other.example",
+      "expected_reason": "host_header_mismatch"
+    },
+    {
+      "id": "host-010",
+      "scheme": "https",
+      "host": "xn--bcher-kva.example",
+      "port": 443,
+      "request_host": "",
+      "expected": "xn--bcher-kva.example"
+    }
+  ],
+  "dial_cases": [
+    {
+      "id": "dial-001",
+      "addresses": [
+        "93.184.216.34"
+      ],
+      "port": 443,
+      "fail_first": false,
+      "expected_sequence": [
+        "93.184.216.34"
+      ],
+      "expected_reason": ""
+    },
+    {
+      "id": "dial-002",
+      "addresses": [
+        "1.1.1.1",
+        "8.8.8.8"
+      ],
+      "port": 443,
+      "fail_first": true,
+      "expected_sequence": [
+        "1.1.1.1",
+        "8.8.8.8"
+      ],
+      "expected_reason": ""
+    },
+    {
+      "id": "dial-003",
+      "addresses": [
+        "1.1.1.1",
+        "8.8.8.8"
+      ],
+      "port": 443,
+      "fail_first": false,
+      "fail_all": true,
+      "expected_sequence": [
+        "1.1.1.1",
+        "8.8.8.8"
+      ],
+      "expected_reason": "connection_failed"
+    },
+    {
+      "id": "dial-004",
+      "addresses": [],
+      "port": 443,
+      "fail_first": false,
+      "expected_sequence": [],
+      "expected_reason": "empty_addresses"
+    },
+    {
+      "id": "dial-005",
+      "addresses": [
+        "2606:4700:4700::1111"
+      ],
+      "port": 443,
+      "fail_first": false,
+      "expected_sequence": [
+        "2606:4700:4700::1111"
+      ],
+      "expected_reason": ""
+    },
+    {
+      "id": "dial-006",
+      "addresses": [
+        "2606:4700:4700::1111",
+        "8.8.8.8",
+        "1.1.1.1"
+      ],
+      "port": 443,
+      "fail_first": false,
+      "expected_sequence": [
+        "1.1.1.1"
+      ],
+      "expected_reason": ""
+    }
+  ],
+  "authority_cases": [
+    {
+      "id": "auth-001",
+      "request_authority": "example.com",
+      "scheme": "http",
+      "host": "example.com",
+      "port": 80,
+      "expected_reason": ""
+    },
+    {
+      "id": "auth-002",
+      "request_authority": "other.example",
+      "scheme": "http",
+      "host": "example.com",
+      "port": 80,
+      "expected_reason": "authority_mismatch"
+    },
+    {
+      "id": "auth-003",
+      "request_authority": "example.com:8080",
+      "scheme": "http",
+      "host": "example.com",
+      "port": 80,
+      "expected_reason": "authority_mismatch"
+    },
+    {
+      "id": "auth-004",
+      "request_authority": "https://example.com/",
+      "scheme": "http",
+      "host": "example.com",
+      "port": 80,
+      "expected_reason": "scheme_mismatch"
+    }
+  ],
+  "tls_cases": [
+    {
+      "id": "tls-001",
+      "server_name": "fixture.example",
+      "expected_server_name": "fixture.example",
+      "insecure_skip_verify": false,
+      "expected_reason": ""
+    },
+    {
+      "id": "tls-002",
+      "server_name": "fixture.example",
+      "expected_server_name": "fixture.example",
+      "insecure_skip_verify": true,
+      "expected_reason": "insecure_tls_context"
+    },
+    {
+      "id": "tls-003",
+      "server_name": "127.0.0.1",
+      "expected_server_name": "fixture.example",
+      "insecure_skip_verify": false,
+      "expected_reason": "tls_server_name_mismatch"
+    }
+  ]
+}

@@ -54,3 +54,19 @@ TASK-020B
 - 纯 Unicode 数字型主机外观拒绝。
 - IDNA 后整体成为 IP/歧义 IP 时拒绝。
 - 普通 IDN 中包含 Unicode 数字不构成拒绝理由。
+## 7. TASK-022C Pinned Transport 边界
+
+- 生产出站连接只允许使用 PinnedTarget 中已验证的数字 IP。
+- HTTPS ServerName 必须使用规范化 hostname，不得使用连接 IP。
+- 禁止通过公开 API/config/env/CLI/API 参数启用 loopback 测试许可。
+- 新 Pinned Transport 未接入生产前，不得替换现有 HTTP 客户端。
+## 8. TASK-022C-FIX 记录
+
+- 测试专用 loopback/private 构造器必须只存在于 `tests/` 或 `*_test.go`。
+- `crawler/` 与 Go 非测试生产 `.go` 不得包含测试构造器。
+- 禁止以“下划线开头”作为测试旁路安全边界。
+## 9. TASK-022C-FIX2 记录
+
+- Python `PinnedTarget` 不得公开可伪造字段构造器；只有正式 builder 能签发。
+- `connect_pinned` 必须在创建 socket 前验证来源与结构；未签发对象返回 `invalid_pinned_target`。
+- 测试 loopback 只能通过测试侧路由转发，不能进入生产 target 地址集合。

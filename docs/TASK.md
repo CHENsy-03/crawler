@@ -2756,10 +2756,11 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 
 ### 状态
 - in_progress
-- current_stage=TASK-022B（已关闭）
+- current_stage=TASK-022C
 - TASK-019 已关闭并本地封板
 - TASK-022A=CLOSED
 - TASK-022B=CLOSED（本地封板）
+- TASK-022C=IN_PROGRESS（实现完成，等待复核）
 
 ### TASK-022A 当前状态
 - audit=completed
@@ -2769,6 +2770,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - closure=CLOSED
 - next_task=TASK-022B
 - TASK-022B=CLOSED（本地封板）
+- TASK-022C=IN_PROGRESS（实现完成，等待复核）
 - D-01 至 D-12 已批准并冻结
 - 新增审计文档：docs/OUTBOUND_REQUEST_INVENTORY.md、docs/SECURITY_THREAT_MODEL.md、docs/OUTBOUND_REQUEST_SECURITY_CONTRACT.md、docs/decisions/ADR-016-outbound-request-security-boundary.md
 - 补充长期规则：docs/DEVELOPMENT_RULES.md（原文件缺失，本轮补建）
@@ -2822,7 +2824,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - deployment=BLOCKED
 - closure=CLOSED
 - next_task=TASK-022C
-- TASK-022C=NOT_STARTED
+- TASK-022C=IN_PROGRESS（实现完成，等待复核）
 - TASK-022B-R=FAIL
 - TASK-022B-FIX=implemented
 - TASK-022B-R2=FAIL
@@ -2833,6 +2835,38 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - 新增 Python `crawler/security` 与 Go `internal/security` 基础库
 - 新增共享 fixture：tests/fixtures/outbound_request_security_contract.json（186 cases）
 - 新增 ADR-017-url-dns-security-foundation.md（状态 accepted）
+- 本轮未接入现有生产 HTTP 请求链；当前版本不可部署
+
+
+### TASK-022C 当前状态
+- implementation=completed
+- tests=PASS
+- production_wiring=NOT_STARTED
+- acceptance=WAITING_REAUDIT
+- git_state=UNCOMMITTED
+- deployment=BLOCKED
+- next_task=TASK-022C-R5
+- TASK-022D=NOT_STARTED
+- TASK-022C-R=FAIL
+- TASK-022C-FIX=implemented
+- TASK-022C-R2=FAIL
+- TASK-022C-FIX2=implemented
+- TASK-022C-R3=FAIL
+- 原因：模块级 `_SOURCE_TOKEN` 可直接 import，来源标记可被复制后用于伪造其他 PinnedTarget
+- TASK-022C-FIX3=implemented
+- 签发改为闭包内随机密钥和内容绑定 HMAC-SHA-256
+- TASK-022C-R4=FAIL
+- 缺陷：`isinstance` 允许动态子类及验证/拨号字段重读 TOCTOU
+- TASK-022C-FIX4=implemented
+- 精确类型检查和不可变快照已实现
+- 缺陷1：loopback/private 测试构造器曾泄漏到生产源码，已移出
+- 缺陷2：公开 Python dataclass 可直接伪造 PinnedTarget，已封闭直接构造并在 connect_pinned 前增加来源与结构验证
+- 缺陷3：模块级来源标记泄漏，已改为闭包内随机密钥与内容绑定 HMAC；复制证明后修改任何字段都会在 socket 前拒绝
+- 缺陷4：子类与验证/拨号字段重读 TOCTOU，已改为精确类型检查和一次性不可变快照
+- 新增 Python `crawler/security/pinned_connection.py`、`tls_policy.py`
+- 新增 Go `go-spider/internal/security/pinned_target.go`、`pinned_dialer.go`、`pinned_transport.go`
+- 新增共享 fixture：tests/fixtures/pinned_connection_contract.json（35 cases）
+- 新增 ADR-018-pinned-address-transport.md（状态 proposed）
 - 本轮未接入现有生产 HTTP 请求链；当前版本不可部署
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛

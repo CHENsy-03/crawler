@@ -204,3 +204,9 @@
 - Python/Go 读取同一份 `tests/fixtures/outbound_request_security_contract.json`（164 cases）。
 - 当前没有生产调用方；现有 HTTP 客户端、Adapter、Worker、queue、protocol 均未 import 新包。
 - 固定连接、重定向/代理/资源预算、生产接线分别属于 TASK-022C/022D/022G。
+## 9. TASK-022C Pinned Transport（未接线）
+
+- `PinnedTarget` 绑定已验证地址、端口、Host header 与 server_name；TCP 只连接数字 IP。
+- Host header 使用规范化 hostname；HTTPS ServerName 与证书校验使用原 hostname。
+- 本地 loopback 测试通过测试内部构造注入；生产公开 API 无测试开关。
+- 当前没有生产调用方；代理、redirect、资源预算与生产接线分别属于 TASK-022D/022G。
