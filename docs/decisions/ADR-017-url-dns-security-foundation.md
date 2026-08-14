@@ -1,6 +1,10 @@
 # ADR-017：URL、DNS 与 IP 安全基础库（TASK-022B）
 
-**状态：** proposed
+**状态：** accepted
+**acceptance：** TASK-022B-R3 PASS
+**implementation_commit：** 194fba1062b5cffa1c7aa8911a83a3c39136012f
+**production_wiring：** deferred
+**TASK-022C：** NOT_STARTED
 **日期：** 2026-08-14
 **关联：** TASK-022B，ADR-016 保持 accepted
 
