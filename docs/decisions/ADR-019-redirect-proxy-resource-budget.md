@@ -1,8 +1,14 @@
 # ADR-019：Redirect Per-Hop Revalidation, Proxy Disablement and Resource Budget（TASK-022D-1）
 
-**状态：** proposed
+**状态：** accepted
 **日期：** 2026-08-14
 **关联：** TASK-022D，ADR-016/017/018 保持 accepted
+**acceptance：** TASK-022D-1-R2 PASS
+**implementation_commit：** 228ac0420daaf695f02090661422952b0900d749
+**contract_scope：** redirect/proxy/transport-budget pure policy
+**production_wiring：** deferred
+**runtime_enforcement：** deferred to TASK-022D-2/TASK-022D-3
+**next_task：** TASK-022D-2
 
 ## 背景
 
@@ -31,3 +37,4 @@ TASK-022B 已提供 URL/DNS/IP/policy 判定，TASK-022C 已提供 PinnedTarget 
 - scheme-relative `//host/path` 继承当前规范化 URL 的 scheme 解析为绝对 URL，再完整执行 TASK-022B/C 重验；Python 与 Go 结果一致，不允许绕过 host/port/downgrade 策略。
 - `remaining_deadline(total, total)=0` 仅表示总预算耗尽；`capped_stage_timeout` 在 remaining=0 时必须返回 `total_timeout_exceeded`，不得返回 0 表示无超时；remaining=1 返回 1ms，stage=remaining 返回 stage。
 - 共享 fixture 扩展至 60 case；Python/Go harness 维护已执行 ID 集合并断言与 fixture ID 集合完全相同，未知 action 直接失败；Go 对 JSON bool 输入在 harness 边界明确断言类型拒绝。
+- ADR-019 接受的是冻结策略和纯合同；实际响应流式读取、header/body 限制、read-idle timer、并发限流和生产 Transport 组合尚未实现；不得声称资源预算已在生产请求链强制执行。

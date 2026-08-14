@@ -179,10 +179,16 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 ## 5. 当前实施状态
 
 - TASK-022C pinned transport foundation = SEALED_LOCAL（R5 PASS，生产接线未开始）
-- TASK-022D-1 pure decision layer = IMPLEMENTED_LOCAL（redirect/预算/代理合同未接线）
+- TASK-022D-1 pure policy contract = SEALED_LOCAL（R2 PASS，纯策略合同未接线）
 - TASK-022D-1-R=FAIL，FIX implemented；remaining=0 视为预算耗尽，scheme-relative 双端统一，Location 非字符串/空白 fail closed
-- ADR-019-redirect-proxy-resource-budget = proposed
+- ADR-019-redirect-proxy-resource-budget = accepted（冻结策略与纯合同）
 - TASK-022B foundation = SEALED_LOCAL
+- TASK-022D-1 已由 R2 审计通过并本地封板
+- 60-case 跨语言 fixture 已冻结
+- D1 只提供纯策略合同
+- 实际运行时执行留给 TASK-022D-2/D3
+- production wiring 仍为 NOT_STARTED
+- deployment 仍为 BLOCKED
 - TASK-022C=R5 PASS，production wiring NOT_STARTED
 - implementation_commit=194fba1062b5cffa1c7aa8911a83a3c39136012f
 - production integration = NOT_STARTED
