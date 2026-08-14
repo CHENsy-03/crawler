@@ -2755,9 +2755,23 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 ## TASK-022：生产请求安全与 SSRF 残余风险
 
 ### 状态
-- defined
-- not_started
-- TASK-019 关闭前不得开始
+- in_progress
+- current_stage=TASK-022A-R（已关闭）
+- TASK-019 已关闭并本地封板
+- TASK-022A=CLOSED
+- TASK-022B=NOT_STARTED
+
+### TASK-022A 当前状态
+- audit=completed
+- contract=FROZEN
+- decision=APPROVED
+- acceptance=PASS
+- closure=CLOSED
+- next_task=TASK-022B
+- TASK-022B=NOT_STARTED
+- D-01 至 D-12 已批准并冻结
+- 新增审计文档：docs/OUTBOUND_REQUEST_INVENTORY.md、docs/SECURITY_THREAT_MODEL.md、docs/OUTBOUND_REQUEST_SECURITY_CONTRACT.md、docs/decisions/ADR-016-outbound-request-security-boundary.md
+- 补充长期规则：docs/DEVELOPMENT_RULES.md（原文件缺失，本轮补建）
 
 ### 进入条件
 - TASK-019 实现和总验收完成
@@ -2785,6 +2799,15 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - 所有 022A–H 通过
 - 连接级绑定与逐跳安全可证明
 - 无生产 transport 旁路
+
+### TASK-022A 合同冻结记录（2026-08-14）
+- 已枚举 Python/Go 生产出站 HTTP 路径、legacy/v1/v2 边界、休眠辅助函数与内部服务连接。
+- 已建立威胁模型、安全合同与 ADR-016；ADR-016 状态为 accepted。
+- 12 项策略决策（D-01–D-12）已批准并冻结。
+- 安全合同状态为 APPROVED / FROZEN FOR IMPLEMENTATION。
+- 本轮仅冻结合同；未实现安全 Transport；当前版本不可部署。
+- 未修改生产代码、测试、配置、依赖、协议、migration、schema、Compose 或脚本。
+- 未连接真实外部网站、Redis、MySQL，未启动 Docker。
 
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛
@@ -2905,6 +2928,6 @@ TASK-020B 通过后只能称为“单站点 Web V1 完成”，不得称为企�
 - deployment=BLOCKED
 - closure=CLOSED
 - next_task=TASK-022A
-- TASK-022A=NOT_STARTED
+- TASK-022A=CLOSED（E-3 封板时点为 NOT_STARTED；当前状态见 TASK-022 章节）
 
 正式路线：`TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B`。

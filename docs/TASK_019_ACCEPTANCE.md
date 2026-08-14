@@ -138,6 +138,8 @@ TASK-019 包含 B1–B8R-B、C1–C2 全部阶段，覆盖 v2 协议、搜索生
 - next_task=TASK-022A
 - TASK-022A=NOT_STARTED
 
+> 上述 `TASK-022A=NOT_STARTED` 是 TASK-019E-3 封板时快照。TASK-022A 此后已独立启动并完成合同阶段；当前状态以 `docs/TASK.md` 和 TASK-022 安全文档为准。不改变 TASK-019 验收结论。
+
 ## 10. TASK-022 进入条件
 
 - TASK-019 实现和总验收完成

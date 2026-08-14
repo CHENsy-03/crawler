@@ -408,3 +408,24 @@ TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTML
 - 在调用旧 PDF/DOCX/XLSX 辅助函数前执行资源预检，超限整体拒绝。
 - 不接 Worker/Redis/API/数据库，不保存附件。
 - 未来接入生产前必须强制只使用安全入口。
+
+## 31. 出站请求安全边界（TASK-022A-R 合同已冻结）
+
+`docs/OUTBOUND_REQUEST_SECURITY_CONTRACT.md` 与 ADR-016 已于 TASK-022A-R 批准冻结（D-01 至 D-12），但生产代码尚未统一接入安全 transport，当前版本不可部署。
+
+已知出站面：
+
+- Python legacy `requests` 链：CLI、legacy 搜索插件、详情抓取、v1 搜索 Worker。
+- Python v2 Analyzer 入口抓取：预检 IP 后仍由 requests 二次解析，存在 TOCTOU。
+- Python v2 PinnedProbeFetcher：全地址 IP 分类并固定连接，是当前安全形态最完整的一条路径。
+- Go RestyFetcher：v2/legacy 下载，默认环境代理、默认自动重定向、无 IP/DNS/域名/响应体策略。
+- Go `SearchArticles` 与 `internal/httpx.Client`：当前无生产调用方，属于休眠路径，不得绕过后续统一 transport。
+- Redis/MySQL 属于内部服务边界，不作为普通出站 HTTP 处理，但属于 SSRF 威胁模型资产。
+
+实施原则：
+
+- 所有正式出站路径共享安全 transport，不允许 Probe、Adapter、Worker、redirect、proxy、legacy/v1 旁路。
+- 连接固定到已验证 IP，Host/SNI/证书使用原 hostname。
+- 安全拒绝 fail closed；不得伪造 v1 成功或 `extract_failed`。
+- 测试 loopback 许可通过依赖注入实现，不得变成生产开关。
+- 未完成 022B–022H 前，不得宣称生产级 SSRF 防护。

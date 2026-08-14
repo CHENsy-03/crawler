@@ -434,7 +434,7 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 15. Go 完整回归和 `go vet` 通过；
 16. 文档与实际测试一致。
 
-## 19. 后续顺序与版本策略
+## 19. 历史后续顺序与版本策略（SUPERSEDED）
 
 正式冻结：
 
@@ -443,6 +443,9 @@ TASK-018：统一正式执行 Adapter
 → TASK-022：生产级 SSRF 与连接级安全
 → TASK-020：未知站点 MVP 验收
 ```
+
+> 历史旧路线，SUPERSEDED，已被替代，不得作为当前执行门禁。
+> 当前唯一完整路线：`TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B`。
 
 版本、tag、release 策略推迟到 TASK-020 MVP 验收通过后定义。
 
