@@ -21,6 +21,25 @@ from crawler.security.pinned_connection import (
 )
 from crawler.security.tls_policy import TLSPolicyError, secure_ssl_context, validate_ssl_context, validate_tls_server_name, wrap_client_socket
 from crawler.security.url_normalizer import URLNormalizationError, normalize_outbound_url
+from crawler.security.transport_budget import (
+    BudgetError,
+    BudgetProfile,
+    TransportBudget,
+    budget_for,
+    capped_stage_timeout,
+    check_request_body_size,
+    check_response_body_size,
+    check_response_headers_size,
+    remaining_deadline,
+    validate_proxy,
+)
+from crawler.security.redirect_policy import (
+    RedirectHop,
+    RedirectPlan,
+    RedirectPolicyError,
+    plan_redirect_hop,
+    plan_redirects,
+)
 
 __all__ = [
     "DNSValidationError",
@@ -47,5 +66,20 @@ __all__ = [
     "validate_request_authority",
     "validate_ssl_context",
     "validate_tls_server_name",
+    "BudgetError",
+    "BudgetProfile",
+    "RedirectHop",
+    "RedirectPlan",
+    "RedirectPolicyError",
+    "TransportBudget",
+    "budget_for",
+    "capped_stage_timeout",
+    "check_request_body_size",
+    "check_response_body_size",
+    "check_response_headers_size",
+    "plan_redirect_hop",
+    "plan_redirects",
+    "remaining_deadline",
+    "validate_proxy",
     "wrap_client_socket",
 ]

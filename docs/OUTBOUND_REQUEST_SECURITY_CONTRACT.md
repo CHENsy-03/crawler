@@ -179,6 +179,9 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 ## 5. 当前实施状态
 
 - TASK-022C pinned transport foundation = SEALED_LOCAL（R5 PASS，生产接线未开始）
+- TASK-022D-1 pure decision layer = IMPLEMENTED_LOCAL（redirect/预算/代理合同未接线）
+- TASK-022D-1-R=FAIL，FIX implemented；remaining=0 视为预算耗尽，scheme-relative 双端统一，Location 非字符串/空白 fail closed
+- ADR-019-redirect-proxy-resource-budget = proposed
 - TASK-022B foundation = SEALED_LOCAL
 - TASK-022C=R5 PASS，production wiring NOT_STARTED
 - implementation_commit=194fba1062b5cffa1c7aa8911a83a3c39136012f

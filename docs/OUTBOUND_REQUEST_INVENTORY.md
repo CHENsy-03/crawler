@@ -210,3 +210,10 @@
 - Host header 使用规范化 hostname；HTTPS ServerName 与证书校验使用原 hostname。
 - 本地 loopback 测试通过测试内部构造注入；生产公开 API 无测试开关。
 - 当前没有生产调用方；代理、redirect、资源预算与生产接线分别属于 TASK-022D/022G。
+## 10. TASK-022D-1 纯决策层（未接线）
+
+- Python/Go 新增固定预算模型：整数 ms/bytes，probe/search/detail 三类 total deadline 与 response body 上限；未知 profile、bool/负值/超限稳定拒绝。
+- redirect planner 每跳重新规范化并执行完整 policy/DNS/IP/pin 重验，禁止 HTTPS→HTTP，最多 3 跳，不自动跟随网络请求。
+- proxy 合同拒绝任意非空代理配置，安全包不读取环境代理。
+- 共享 fixture：tests/fixtures/outbound_transport_policy_contract.json（44 cases：budget 21、redirect 17、proxy 6）。
+- 当前没有生产调用方；实际响应读取、流式计数、idle timer、并发限流与生产接线属于 TASK-022D-2/022G。

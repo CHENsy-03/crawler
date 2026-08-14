@@ -446,3 +446,10 @@ TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTML
 - TCP 只连接已验证数字 IP；HTTPS 使用原规范化 hostname 作为 ServerName 并正常验证证书链与 hostname/IP SAN。
 - 本地 loopback 测试通过测试内部构造方式注入；生产公开 API 无 allow_loopback/test_mode/skip_policy/insecure。
 - 当前没有生产调用方；生产接线属于 TASK-022G。
+## 34. Redirect, Proxy and Resource Budget（TASK-022D-1）
+
+- Python 新增 `crawler/security/transport_budget.py`、`redirect_policy.py`；Go 新增 `transport_budget.go`、`redirect_policy.go`。
+- 固定整数 ms/bytes 预算模型覆盖 DNS/connect/TLS/header/read idle/request body/response headers/redirects/并发；probe/search/detail 三类 total deadline 与 response body 上限不可变。
+- redirect planner 只做纯决策：每跳重新规范化 URL、执行 scheme/exact host/port/DNS/IP/https-downgrade 校验并生成全新 PinnedTarget，不执行网络请求。
+- V1 代理合同拒绝任意非空代理配置，安全包不读取环境代理。
+- 当前没有生产调用方；实际响应读取、流式计数、idle timer、并发限流与生产接线属于 TASK-022D-2/022G。

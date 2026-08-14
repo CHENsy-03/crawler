@@ -2849,7 +2849,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - deployment=BLOCKED
 - closure=CLOSED
 - next_task=TASK-022D
-- TASK-022D=NOT_STARTED
+- TASK-022D=IN_PROGRESS
 - TASK-022C-R=FAIL
 - TASK-022C-FIX=implemented
 - TASK-022C-R2=FAIL
@@ -2871,6 +2871,23 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - 新增共享 fixture：tests/fixtures/pinned_connection_contract.json（35 cases）
 - 新增 ADR-018-pinned-address-transport.md（状态 accepted）
 - 本轮未接入现有生产 HTTP 请求链；当前版本不可部署
+### TASK-022D 当前状态
+- TASK-022D=IN_PROGRESS
+- TASK-022D-1 implementation=completed
+- TASK-022D-1 tests=PASS
+- TASK-022D-1 acceptance=WAITING_REAUDIT
+- TASK-022D-1 git_state=UNCOMMITTED
+- TASK-022D-1-R=FAIL
+- 缺陷：Location 类型异常、whitespace Location、scheme-relative 跨语言差异、remaining=0 语义缺失、Go fixture bool case 漏测
+- TASK-022D-1-FIX=implemented
+- production_wiring=NOT_STARTED
+- deployment=BLOCKED
+- next_task=TASK-022D-1-R2
+- TASK-022D-2=NOT_STARTED
+- 新增 Python `transport_budget.py`、`redirect_policy.py` 与 Go `transport_budget.go`、`redirect_policy.go` 纯决策层
+- 新增共享 fixture：tests/fixtures/outbound_transport_policy_contract.json（60 cases：budget 26、redirect 28、proxy 6）
+- 新增 ADR-019-redirect-proxy-resource-budget.md（状态 proposed）
+- 本轮未接入现有 HTTP 客户端、Adapter、Worker、queue 或 protocol；当前版本不可部署
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛
 
