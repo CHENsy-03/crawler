@@ -71,7 +71,7 @@ class HTMLSearchAdapter:
     def execute(
         self,
         plan: SearchPlan,
-        keywords: tuple[str, ...],
+        query_term: str,
         *,
         fetcher: SearchProbeFetcher,
         policy: SearchProbePolicy,
@@ -85,14 +85,14 @@ class HTMLSearchAdapter:
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "html_adapter")
         if not (plan.selectors.result_item and plan.selectors.title and plan.selectors.url):
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "html_adapter")
-        if not keywords:
+        if not isinstance(query_term, str) or not query_term:
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "html_adapter")
         try:
             validate_search_plan(plan)
         except ProtocolError:
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "html_adapter")
 
-        keyword = keywords[0]
+        keyword = query_term
         accumulated: list[SearchResultItem] = []
         for page_index in range(plan.pagination.max_pages):
             try:

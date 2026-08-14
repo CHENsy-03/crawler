@@ -52,7 +52,7 @@ class FakeAdapter:
         self.adapter_name = name
         self.calls = []
 
-    def execute(self, plan, keywords, *, fetcher, policy):
+    def execute(self, plan, query_term, *, fetcher, policy):
         self.calls.append(plan)
         return SearchPlanExecutionResult(plan.plan_id, "ok", (), "text/html")
 
@@ -83,14 +83,14 @@ def test_registry_plan_executor_uses_injected_registry():
     adapter = FakeAdapter(ADAPTER_HTML)
     registry.register(adapter)
     executor = RegistryPlanExecutor(registry)
-    result = executor(_plan(), ("k",), fetcher=None, policy=POLICY)
+    result = executor(_plan(), "k", fetcher=None, policy=POLICY)
     assert result.success
     assert len(adapter.calls) == 1
 
 
 def test_registry_executor_has_no_fallback_for_missing_adapter():
     registry = AdapterRegistry()
-    result = execute_plan_with_registry(_plan(), ("k",), registry=registry, fetcher=None, policy=POLICY)
+    result = execute_plan_with_registry(_plan(), "k", registry=registry, fetcher=None, policy=POLICY)
     assert result.failure_code == "plan_invalid"
 
 
@@ -101,7 +101,7 @@ def test_strategy_and_source_do_not_affect_dispatch():
     plan = _plan(ADAPTER_HTML)
     plan = replace(plan, discovery=replace(plan.discovery, source="trs_signature"), plan_id="")
     plan = replace(plan, plan_id=compute_plan_id(plan))
-    result = execute_plan_with_registry(plan, ("k",), registry=registry, fetcher=None, policy=POLICY)
+    result = execute_plan_with_registry(plan, "k", registry=registry, fetcher=None, policy=POLICY)
     assert result.success
     assert adapter.calls
 

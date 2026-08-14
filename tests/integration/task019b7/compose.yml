@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.0
+    pull_policy: missing
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${TASK019B7_MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: crawler_b7
+      MYSQL_USER: crawler_b7
+      MYSQL_PASSWORD: ${TASK019B7_MYSQL_USER_PASSWORD}
+    ports:
+      - "127.0.0.1::3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - type: bind
+        source: ../../../migrations/mysql/0001_articles_task_articles_v2.sql
+        target: /migrations/0001_articles_task_articles_v2.sql
+        read_only: true
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    labels:
+      - "task019b7.isolated=true"
+
+  redis:
+    image: redis:7-alpine
+    pull_policy: missing
+    restart: "no"
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "127.0.0.1::6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 5s
+    labels:
+      - "task019b7.isolated=true"
+
+volumes:
+  mysql_data:

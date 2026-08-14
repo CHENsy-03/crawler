@@ -134,13 +134,13 @@ def _ok_body():
 
 
 def test_valid_get_plan_executes():
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response(_ok_body())]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response(_ok_body())]), policy=POLICY)
     assert result.success
     assert len(result.items) == 2
 
 
 def test_valid_post_plan_executes():
-    result = GenericJSONSearchAdapter().execute(_post_plan(), ("k",), fetcher=FakeFetcher([_response(_ok_body(), url=POST_ENDPOINT)]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_post_plan(), "k", fetcher=FakeFetcher([_response(_ok_body(), url=POST_ENDPOINT)]), policy=POLICY)
     assert result.success
 
 
@@ -155,13 +155,13 @@ def test_invalid_combinations_return_plan_invalid():
     ]:
         bad = replace(plan, plan_id="", **kwargs)
         bad = replace(bad, plan_id=compute_plan_id(bad))
-        result = adapter.execute(bad, ("k",), fetcher=FakeFetcher(), policy=POLICY)
+        result = adapter.execute(bad, "k", fetcher=FakeFetcher(), policy=POLICY)
         assert result.failure_code == "plan_invalid", kwargs
 
 
 def test_get_request_construction():
     fetcher = FakeFetcher([_response(_ok_body())])
-    GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=fetcher, policy=POLICY)
+    GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=fetcher, policy=POLICY)
     request = fetcher.calls[0]
     assert "q=k" in request.url
     assert "api=1" in request.url
@@ -172,7 +172,7 @@ def test_get_request_construction():
 
 def test_post_request_construction():
     fetcher = FakeFetcher([_response(_ok_body(), url=POST_ENDPOINT)])
-    GenericJSONSearchAdapter().execute(_post_plan(), ("k",), fetcher=fetcher, policy=POLICY)
+    GenericJSONSearchAdapter().execute(_post_plan(), "k", fetcher=fetcher, policy=POLICY)
     request = fetcher.calls[0]
     body = json.loads(request.body.decode("utf-8"))
     assert body == {"query": {"kw": "k"}, "page": 1, "size": 10}
@@ -187,7 +187,7 @@ def test_pointer_escape_parsing():
         plan_id="",
     )
     plan = replace(plan, plan_id=compute_plan_id(plan))
-    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(plan, "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.success
     assert result.items[0].title == "A/B"
 
@@ -196,55 +196,55 @@ def test_top_level_array_parsing():
     body = json.dumps([{"title": "A", "url": "/a"}], ensure_ascii=False)
     plan = replace(_get_plan(), selectors=SearchSelectors("", "/title", "/url", "", ""), plan_id="")
     plan = replace(plan, plan_id=compute_plan_id(plan))
-    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(plan, "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.success
     assert result.items[0].url == "https://api.example.gov.cn/a"
 
 
 def test_missing_result_pointer_is_selector_mismatch():
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response('{"data":{}}')]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response('{"data":{}}')]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
 
 
 def test_wrong_container_type_is_selector_mismatch():
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response('{"data":{"items":{}}}')]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response('{"data":{"items":{}}}')]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
 
 
 def test_missing_title_or_url_is_selector_mismatch():
     body = '{"data":{"items":[{"title":"A"}]}}'
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
 
 
 def test_first_page_empty_is_no_results():
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response('{"data":{"items":[]}}')]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response('{"data":{"items":[]}}')]), policy=POLICY)
     assert result.status == "ok"
     assert result.failure_code == "no_results"
     assert result.items == ()
 
 
 def test_invalid_json_is_response_rejected():
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response("{bad")]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response("{bad")]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_duplicate_json_key_is_response_rejected():
     body = '{"data":{"items":[]},"data":{"items":[]}}'
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_dangerous_result_url_is_response_rejected():
     body = '{"data":{"items":[{"title":"A","url":"javascript:alert(1)"}]}}'
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
     assert result.items == ()
 
 
 def test_cross_scope_result_url_is_response_rejected():
     body = '{"data":{"items":[{"title":"A","url":"https://other.example/a"}]}}'
-    result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
@@ -255,7 +255,7 @@ def test_multipage_aggregates_and_dedupes():
     page2 = json.dumps({"data": {"items": [{"title": "C", "url": "/c.html"}]}}, ensure_ascii=False)
     duplicate = _ok_body()
     fetcher = FakeFetcher([_response(_ok_body()), _response(page2), _response(duplicate)])
-    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 3
     assert len(result.items) == 3
@@ -266,7 +266,7 @@ def test_duplicate_page_stops():
     plan = replace(_get_plan(), pagination=pagination, plan_id="")
     plan = replace(plan, plan_id=compute_plan_id(plan))
     fetcher = FakeFetcher([_response(_ok_body()), _response(_ok_body())])
-    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 2
     assert len(result.items) == 2
@@ -277,7 +277,7 @@ def test_later_page_failure_is_fail_closed():
     plan = replace(_get_plan(), pagination=pagination, plan_id="")
     plan = replace(plan, plan_id=compute_plan_id(plan))
     fetcher = FakeFetcher([_response(_ok_body())], error=RuntimeError("boom"))
-    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.status == "failed"
     assert result.failure_code == "transport_failure"
     assert result.items == ()
@@ -286,7 +286,7 @@ def test_later_page_failure_is_fail_closed():
 def test_executor_delegates_to_generic_json_adapter():
     plan = _get_plan()
     fetcher = FakeFetcher([_response(_ok_body())])
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.success
 
 
@@ -304,7 +304,7 @@ def test_no_network_dns_or_redis_access():
 
     fetcher = FakeFetcher([_response(_ok_body())])
     with patch("socket.getaddrinfo", side_effect=fail), patch("urllib.request.urlopen", side_effect=fail):
-        result = GenericJSONSearchAdapter().execute(_get_plan(), ("k",), fetcher=fetcher, policy=POLICY)
+        result = GenericJSONSearchAdapter().execute(_get_plan(), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 1
 
@@ -313,7 +313,7 @@ def test_path_prefix_boundary_is_enforced():
     plan = replace(_get_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
     plan = replace(plan, plan_id=compute_plan_id(plan))
     body = "{\"data\":{\"items\":[{\"title\":\"A\",\"url\":\"/news-old/a\"}]}}"
-    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(plan, "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
     assert result.items == ()
 
@@ -322,7 +322,7 @@ def test_disabled_pagination_executes_single_page():
     plan = replace(_get_plan(), pagination=SearchPagination(), plan_id="")
     plan = replace(plan, plan_id=compute_plan_id(plan))
     fetcher = FakeFetcher([_response(_ok_body())])
-    result = GenericJSONSearchAdapter().execute(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = GenericJSONSearchAdapter().execute(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 1
     assert "page=" not in fetcher.calls[0].url

@@ -31,7 +31,7 @@ class SearchAdapter(Protocol):
     def execute(
         self,
         plan: SearchPlan,
-        keywords: tuple[str, ...],
+        query_term: str,
         *,
         fetcher: SearchProbeFetcher,
         policy: SearchProbePolicy,

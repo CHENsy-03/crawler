@@ -25,12 +25,44 @@ type RestyFetcher struct {
 
 func NewRestyFetcher(delaySec float64) *RestyFetcher {
 	c := resty.New().
-		SetTimeout(15 * time.Second).
+		SetTimeout(15*time.Second).
 		SetRetryCount(3).
-		SetRetryWaitTime(1 * time.Second).
+		SetRetryWaitTime(1*time.Second).
 		SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36").
 		SetHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 	return &RestyFetcher{client: c, delay: time.Duration(delaySec * float64(time.Second))}
+}
+
+type HTMLFetchResult struct {
+	Body        string
+	FinalURL    string
+	ContentType string
+}
+
+func (f *RestyFetcher) FetchHTML(url string) (HTMLFetchResult, error) {
+	if f.delay > 0 {
+		time.Sleep(f.delay)
+	}
+	resp, err := f.client.R().Get(url)
+	if err != nil {
+		return HTMLFetchResult{}, fmt.Errorf("fetch html %s: %w", url, err)
+	}
+	if resp.StatusCode() >= 400 {
+		return HTMLFetchResult{}, fmt.Errorf("fetch html %s: HTTP %d", url, resp.StatusCode())
+	}
+	finalURL := url
+	if resp.RawResponse != nil && resp.RawResponse.Request != nil && resp.RawResponse.Request.URL != nil {
+		finalURL = resp.RawResponse.Request.URL.String()
+	}
+	contentType := strings.ToLower(strings.TrimSpace(strings.SplitN(resp.Header().Get("Content-Type"), ";", 2)[0]))
+	body := resp.String()
+	if contentType != "text/html" && contentType != "application/xhtml+xml" {
+		return HTMLFetchResult{}, fmt.Errorf("fetch html %s: unsupported content type %q", url, contentType)
+	}
+	if body == "" {
+		return HTMLFetchResult{}, fmt.Errorf("fetch html %s: empty body", url)
+	}
+	return HTMLFetchResult{Body: body, FinalURL: finalURL, ContentType: contentType}, nil
 }
 
 func (f *RestyFetcher) Fetch(url string) (string, error) {

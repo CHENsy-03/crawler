@@ -66,3 +66,11 @@ go vet ./go-spider/...
 git status --short
 git log --oneline --decorate -10
 `
+
+## 7. TASK-019B-8：本地全链 v2 E2E
+
+- 使用 `scripts/task019b8-e2e.ps1` 与 `tests/integration/task019b8/compose.yml`。
+- 从 URLMessageV2 开始，本地 httptest，隔离 Redis/MySQL。
+- 覆盖多 hit 一次下载、长正文、canonical、标题/日期、accepted/review_required/irrelevant/extract_failed、PDF MIME 拒绝、非法版本隔离、重复投递。
+- 正式路径为 `crawler:url → Go 下载 → crawler:html → Python parser → crawler:result → Go 持久化`。
+- 未覆盖 `crawler:search/SearchPlan`。

@@ -18,6 +18,8 @@ class SearchResultItem:
     url: str
     snippet: str = ""
     body: str = ""
+    published_at: str = ""
+    source: str = ""
 
     def __repr__(self) -> str:
         return f"SearchResultItem(url={self.url!r}, title_len={len(self.title)})"

@@ -67,7 +67,7 @@ class TRSSearchAdapter:
     def execute(
         self,
         plan: SearchPlan,
-        keywords: tuple[str, ...],
+        query_term: str,
         *,
         fetcher: SearchProbeFetcher,
         policy: SearchProbePolicy,
@@ -92,14 +92,14 @@ class TRSSearchAdapter:
             or pagination.page_size < 1
         ):
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "trs_adapter")
-        if not keywords:
+        if not isinstance(query_term, str) or not query_term:
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "trs_adapter")
         try:
             validate_search_plan(plan)
         except ProtocolError:
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "trs_adapter")
 
-        keyword = keywords[0]
+        keyword = query_term
         accumulated: list[SearchResultItem] = []
         page_size = pagination.page_size or 1
         for page_index in range(pagination.max_pages):

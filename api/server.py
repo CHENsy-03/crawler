@@ -1,4 +1,4 @@
-import json, os, logging, threading
+import json, os, logging
 
 try:
     from fastapi import FastAPI, Query, HTTPException
@@ -94,55 +94,8 @@ if FASTAPI_OK:
         collector = get_collector()
         return PlainTextResponse(collector.dump_prometheus(), media_type='text/plain')
 
-    @app.on_event('startup')
-    async def startup_parser_worker():
-        if os.environ.get('PARSER_WORKER_ENABLED', '').lower() not in ('1', 'true'):
-            log.info('Parser worker disabled (env PARSER_WORKER_ENABLED != true)')
-            return
-        threading.Thread(target=_run_parser_worker, daemon=True).start()
-        log.info('Parser worker started (bg)')
-
 else:
     app = None
-
-
-def _run_parser_worker():
-    import time
-    try:
-        import redis as _redis
-    except ImportError:
-        log.warning('redis-py not installed, parser worker disabled')
-        return
-    r = _redis.Redis(host='localhost', port=6379, decode_responses=True)
-    log.info('Parser worker listening on crawler:html')
-    while True:
-        try:
-            result = r.brpop('crawler:html', timeout=5)
-            if result is None:
-                continue
-            _, data = result
-            payload = json.loads(data)
-            url = payload.get('url', '')
-            html = payload.get('html', '')
-            title = payload.get('title', '')
-            if not html or len(html) < 100:
-                continue
-            parsed_title = extract_title(html) or title
-            parsed_date = extract_date(html)
-            parsed_content = extract_content(html)
-            score_result = score_article({'title': parsed_title, 'content': parsed_content, 'url': url}, ('',))
-            result_payload = json.dumps({
-                'url': url, 'title': parsed_title, 'publish_date': parsed_date,
-                'content': parsed_content, 'score': score_result['score'],
-            }, ensure_ascii=False)
-            r.lpush('crawler:result', result_payload)
-            collector = get_collector()
-            collector.inc('parse_total')
-            collector.inc('parse_success')
-            log.info('PARSED -> result_queue: %s (%d chars)', parsed_title[:50], len(parsed_content or ''))
-        except Exception as e:
-            log.error('Parser worker error: %s', e)
-            time.sleep(2)
 
 
 def create_app():

@@ -160,7 +160,7 @@ class FakeExecutor:
         self.result = result
         self.calls = []
 
-    def __call__(self, plan, keywords, *, fetcher, policy):
+    def __call__(self, plan, query_term, *, fetcher, policy):
         self.calls.append(plan)
         return self.result
 

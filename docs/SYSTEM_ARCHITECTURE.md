@@ -63,8 +63,9 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 | Go CLI | go-spider/main.go | go run . --site X --keywords Y | 采集任务 |
 | Go API | go-spider/main.go --api | go run . --api 8080 | API 服务 |
 | Python CLI | main.py | python main.py --site X --keywords Y | 采集任务 |
-| Python API | api/server.py | uvicorn api.server:app --port 8000 | 调试/Parser |
-| Python Worker | parser/redis_worker.py | python parser/redis_worker.py | Redis 消费 |
+| Python API | api/server.py | uvicorn api.server:app --port 8000 | HTTP 调试/解析，不消费 Redis 队列 |
+| Python Worker | workers/parser_worker.py | python workers/parser_worker.py | Redis 消费（正式链，crawler:html 单消费者） |
+| Python Worker（历史） | parser/redis_worker.py | 已删除 | 历史入口，已于 TASK-019B-4C 退役 |
 
 ## 5. Redis 消息协议
 
@@ -108,7 +109,7 @@ workspace/crawler/
 - main.py                     Python CLI 入口
 - AGENTS.md                   项目开发规则
 - docker-compose.yml          监控栈
-- api/server.py               FastAPI 服务
+- api/server.py               FastAPI 服务（仅 HTTP API，不消费 crawler:html）
 - config/                     配置 (site/http/score/parser/system/keywords)
 - core/                       关键词扩展
 - crawler/pipeline.py         采集管线
@@ -307,3 +308,103 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 正式调用链为：Analyzer/Candidate evidence → PlanBuilder → SearchPlan v2 → cache/orchestrator → PlanExecutor → AdapterRegistry → Adapter → URLMessage publication。
 - 真实 Analyzer 只有 HTML GET/POST 可自动生成 ready plan；TRS、JPAAS、Generic JSON GET/POST 仍需显式正式 Candidate/SearchPlan 或后续生产者补齐。
 - TASK-018H 最终交付门禁已通过；TASK-022 连接级安全仍不在本轮范围。
+
+
+
+## 21. ArticleResult v2 协议合同
+
+TASK-019B-1 冻结 ArticleResult v2 消息族：
+
+- `URLMessageV2`：type=url，队列目标仍为 `crawler:url`
+- `HTMLMessageV2`：type=html，队列目标仍为 `crawler:html`
+- `ArticleResultV2`：type=article_result，队列目标仍为 `crawler:result`
+
+协议版本显式使用 `2.0`，与 v1 共存；v1 消息、fixture 和运行行为保持不变。本轮只建立协议模型、共享 fixture 和 Go/Python 双端契约测试，未接入 Redis 生产消费，未修改 Worker、Parser、数据库或现有运行逻辑。
+
+
+
+## 22. TASK-019B-2：SearchHit → URLMessageV2
+
+Python v2 orchestrator 已按规范化关键词顺序串行执行 SearchPlan，并把每个 SearchResultItem 构造成 SearchHit 与 URLMessageV2，再通过 `RedisURLMessagePublisher` 写入 `crawler:url`。
+
+- 执行器与四类 Adapter 使用单 `query_term`，不再丢弃 `keywords[0]` 之外的关键词。
+- `hit_id` 由 `protocol_version/task_id/plan_id/original_query/query_term/url` 的 canonical SHA-256 确定性生成。
+- 同一 URL 被不同查询词命中时保留多个逻辑命中记录。
+- TRS/JPAAS 日期映射到 `published_at`。
+- TASK-019B-3 已接通 Go 下载消费者；当前检查点仍不可部署。
+
+
+## 23. TASK-019B-4：Python v2 详情提取与 ArticleResultV2 发布
+
+TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTMLMessageV2 严格解码 → 正文提取/详情重评分 → ArticleResultV2 → crawler:result`。
+
+- `crawler:html` 仍只有一个 Python BRPOP 消费者；缺版本与 `protocol_version=1.0` 走原 legacy/v1 路径，`2.0` 走独立 v2 路径。
+- v2 严格解码失败、显式 null、非字符串版本、未知版本、非对象 JSON 均拒绝，不回退 v1，不伪造 v1 ErrorMessage。
+- v2 站点配置按 `final_url.hostname` 精确匹配 `config/site.json`；未命中时使用通用提取，不报 unknown site。
+- 正文提取策略按实际成功结果记录：`site_selector/cms_rule/ai/density/fallback/none`；v2 不应用 3000/10000 字截断。
+- 标题顺序：站点/CMS规则 → h1 → og:title → html title → 消息标题回退；发布日期详情页优先，消息 `published_at` 规范化回退；canonical 只读取 `<link rel="canonical">` 的合法绝对 URL。
+- summary 优先使用纯文本化 snippet，否则取正文前 500 字符；content 来源摘要不重复计分。
+- 详情评分使用 `config/score.json` 的 `title_weight/body_weight/url_weight/threshold`；URL 候选为 canonical_url 非空时优先。
+- accepted 必须由详情页标题或正文的 original evidence 达到阈值；搜索标题、search snippet、expanded 或 URL 单独命中最高为 review_required。
+- ArticleResultV2 发布到 `crawler:result`，accepted/review_required/irrelevant/extract_failed 均保留。
+- B3 Windows Race Detector 已正式通过，本机已记录环境、命令与 exit code=0 结果；B4 未修改 Go 代码，也未重复执行 Race Detector。
+- 当前检查点不可部署；Go 持久化消费者与数据库合同等待 TASK-019B-5。
+- TASK-019B-4C 已退役并删除 `parser/redis_worker.py`；正式链唯一 Python 消费者为 `workers/parser_worker.py`。
+
+- TASK-019B-4D 已退役 `api/server.py` 内联 Redis Parser；`api/server.py` 仅承担 HTTP API，不消费 `crawler:html`。
+
+## 24. TASK-019B-5：ArticleResultV2 MySQL 持久化合同
+
+- 旧 `article/task/crawl_log` 表保留，继续服务 legacy/v1。
+- 新增 v2 表 `articles/task_articles` 及迁移合同，但未自动迁移、未接入生产消费者。
+- `ArticleV2` 保存 URL 身份与正文版本；`TaskArticleV2` 保存任务命中结果与全部状态。
+- `MySQLStore.PersistArticleResultV2` 是单事务入口，支持幂等重放与 `ErrArticleResultConflict`。
+- 当前正式链仍为 `crawler:result → 旧 ResultMessage v1 消费者 → 旧 article`。
+- ArticleResultV2 仍发布到 `crawler:result`，但 Go v2 生产消费者尚未接入。
+
+## 25. TASK-019B-6：crawler:result 显式版本分流
+
+- `crawler:result` 正式链使用单次 `PopResultDispatch()`。
+- 缺失版本与 `1.0` 继续走旧 ResultMessage v1 消费、旧 `article` 表和旧任务统计。
+- `2.0` 严格解码为 ArticleResultV2 并调用 `PersistArticleResultV2` 写入 `articles/task_articles`。
+- v2 不更新旧 task 状态、不修改 article_count、不经过旧 URL 去重。
+- `PopResultMessage/PopResult` 保留兼容但不再作为生产入口。
+- 未新增第二个 `crawler:result` 消费者；迁移未自动执行。
+
+## 26. TASK-019B-6R：Legacy GORM 表名固化
+
+- 旧 GORM 模型显式映射 singular 表：`Article → article`、`Task → task`、`CrawlLog → crawl_log`。
+- v2 模型保持：`ArticleV2 → articles`、`TaskArticleV2 → task_articles`。
+- 不启用全局 SingularTable；AutoMigrate 仍只管理三个 legacy 模型。
+- 五个表名无冲突；config/schema.sql、Python MySQL 和 Go GORM 表名一致。
+- B5 migration 仍独立显式执行，未自动接入。
+
+## 27. TASK-019B-7：一次性隔离 E2E 已验证
+
+- 使用唯一 Compose project 和 loopback 随机端口验证真实 MySQL/Redis。
+- Legacy AutoMigrate 只创建 singular 表；B5 migration 显式执行两次成功。
+- 五表并存，正式结果消费者到 MySQL 的真实路径通过。
+- replay、conflict rollback、五种状态、legacy/v1 共存和非法版本隔离均通过。
+- 精确项目容器/网络/卷残留为 0；migration 仍不属于自动启动流程。
+
+## 28. TASK-019B-8/8R：本地全链 v2 E2E
+
+- 本地 httptest + 隔离 Redis/MySQL 贯通 URLMessageV2 到 MySQL 持久化。
+- `PopURLDispatch` 使用显式 protocol_version 键存在性判定，null/非字符串不再回退 legacy。
+- 多 hit 共用一次下载；accepted/review_required/irrelevant/extract_failed 真实贯通。
+- PDF MIME 被下载边界拒绝；非法消息请求数为 0。
+- migration 独立执行，未自动接入生产启动。
+
+## 29. TASK-019C-1：PDF/Office 安全回归边界
+
+- PDF/DOCX/XLSX 解析函数当前为库级休眠能力，无生产调用方。
+- v2 下载链通过 MIME 拒绝 PDF/Office，不进入 Python 详情处理或持久化。
+- 新增离线能力矩阵、安全副作用测试与资源风险记录。
+- 不新增 OCR、解密、复杂解析、Office/COM、subprocess 或附件保存。
+
+## 30. TASK-019C-2：文档解析安全门
+
+- `safe_parse_document` 作为独立安全入口，当前无生产调用方。
+- 在调用旧 PDF/DOCX/XLSX 辅助函数前执行资源预检，超限整体拒绝。
+- 不接 Worker/Redis/API/数据库，不保存附件。
+- 未来接入生产前必须强制只使用安全入口。

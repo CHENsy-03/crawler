@@ -36,14 +36,14 @@ class RegistryPlanExecutor:
     def __call__(
         self,
         plan: SearchPlan,
-        keywords: tuple[str, ...],
+        query_term: str,
         *,
         fetcher: SearchProbeFetcher,
         policy: SearchProbePolicy,
     ) -> SearchPlanExecutionResult:
         return execute_plan_with_registry(
             plan,
-            keywords,
+            query_term,
             registry=self._registry,
             fetcher=fetcher,
             policy=policy,
@@ -52,7 +52,7 @@ class RegistryPlanExecutor:
 
 def execute_plan_with_registry(
     plan: SearchPlan,
-    keywords: tuple[str, ...],
+    query_term: str,
     *,
     registry: AdapterRegistry,
     fetcher: SearchProbeFetcher,
@@ -66,18 +66,18 @@ def execute_plan_with_registry(
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
     if plan.plan_id != compute_plan_id(plan):
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "plan_validation")
-    if not keywords:
+    if not isinstance(query_term, str) or not query_term:
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "plan_validation")
 
     resolution = registry.resolve_plan(plan)
     if not resolution.found or resolution.adapter is None:
         return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "registry")
-    return resolution.adapter.execute(plan, keywords, fetcher=fetcher, policy=policy)
+    return resolution.adapter.execute(plan, query_term, fetcher=fetcher, policy=policy)
 
 
 def execute_search_plan(
     plan: SearchPlan,
-    keywords: tuple[str, ...],
+    query_term: str,
     *,
     fetcher: SearchProbeFetcher,
     policy: SearchProbePolicy,
@@ -85,7 +85,7 @@ def execute_search_plan(
     """Default production executor backed by a fresh default registry."""
     return execute_plan_with_registry(
         plan,
-        keywords,
+        query_term,
         registry=build_default_adapter_registry(),
         fetcher=fetcher,
         policy=policy,

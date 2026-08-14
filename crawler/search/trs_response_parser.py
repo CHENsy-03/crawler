@@ -61,6 +61,7 @@ def parse_trs_response(response: SearchProbeResponse, keyword: str) -> TRSPagePa
                 url=normalized_url,
                 snippet=parsed.get("summary", ""),
                 body=parsed.get("content", ""),
+                published_at=parsed.get("publish_date", ""),
             )
         )
     return TRSPageParseOutcome(tuple(items), len(docs))

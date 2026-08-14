@@ -2,6 +2,36 @@
 本文件只描述当前正在执行的任务。
 当前只能启用一个任务，不得同时混入其他重构、修复或功能开发。
 执行本任务前必须先阅读项目根目录的 AGENTS.md。
+## 当前冻结任务路线（唯一规范）
+
+正式执行路线：
+
+```text
+TASK-019
+→ TASK-022
+→ TASK-021A
+→ TASK-020A
+→ TASK-020B
+```
+
+后续路线：
+
+```text
+TASK-020B
+→ TASK-021B
+```
+
+说明：
+
+- TASK-020 是父任务。
+- TASK-020A 是 Web V1 实现任务。
+- TASK-020B 是单站点 Web V1 最终总验收。
+- TASK-021 是恢复的可靠性父任务。
+- TASK-021A 是阻挡单站点 Web V1 的可靠性子集。
+- TASK-021B 是 TASK-020B 之后实施的企业级可靠性扩展。
+- `TASK-019 → TASK-022 → TASK-020` 只是父任务级简写。
+- 简写不得替代完整执行门禁；进入条件、退出证据、阻挡关系和执行顺序必须使用完整路线。
+
 
 1. 任务基本信息
 项目	内容
@@ -586,7 +616,7 @@ git diff
 - Go API：go-spider/main.go --api
 - Python CLI：main.py
 - Python API：pi/server.py
-- Python Worker：parser/redis_worker.py
+- Python Worker：parser/redis_worker.py（历史入口，已于 TASK-019B-4C 退役）
 
 当前存在以下重复能力：
 
@@ -2343,9 +2373,10 @@ TASK-018B 不得顺手实现完整 HTML/TRS/JPAAS/Generic JSON Adapter。
 - 未修改 SearchPlan/cache schema、Redis key/TTL/fingerprint、外部消息协议、错误码、Go 或 legacy 行为。
 - TASK-022 残余安全风险仍存在；TASK-018 不得声称未知站点可自动发现并执行。
 
+
 ### 后续顺序
 
-正式冻结：
+历史旧路线（SUPERSEDED/已被替代，不得用于当前任务门禁）：
 
 ```text
 TASK-018：统一正式执行 Adapter
@@ -2353,4 +2384,512 @@ TASK-018：统一正式执行 Adapter
 → TASK-020：未知站点 MVP 验收
 ```
 
+当前唯一规范路线见“当前冻结任务路线（唯一规范）”。
+
+
 版本、tag、release 策略推迟到 TASK-020 MVP 验收通过后定义。
+
+
+## TASK-019B-1：ArticleResult v2 协议合同固化
+
+### 基本信息
+- 状态：completed
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：协议合同固化
+- 本轮不接入 Redis 生产消费，不修改 Worker/Parser/数据库运行逻辑。
+
+### 已实现
+- Python：`URLMessageV2`、`HTMLMessageV2`、`MatchedEvidence`、`ArticleResultV2` 及严格 `decode_v2_article_message`。
+- Go：对应 v2 模型、严格 Unmarshal、校验和 `DecodeV2ArticleMessage`。
+- 共享 fixture：`tests/fixtures/article_result_v2_contract.json`。
+- Python 契约测试：`tests/test_article_result_v2.py`。
+- Go 契约测试：`go-spider/internal/protocol/article_result_v2_test.go`。
+- 文档：`docs/REDIS_PROTOCOL.md`、`docs/SYSTEM_ARCHITECTURE.md`、`docs/decisions/ADR-006-article-result-v2.md`。
+
+### 冻结要点
+- v2 消息族 type：`url`、`html`、`article_result`。
+- `protocol_version` 固定为 `2.0`，显式分流。
+- `ArticleResultV2.status` 和 `extraction_method` 枚举冻结。
+- `matched_evidence` 空集合输出 `[]`。
+- 正文非空时 `content_hash` 必须是正文 UTF-8 的 SHA-256 小写十六进制。
+- 显式 null、未知字段、非法 URL/状态/哈希/score/evidence 两端一致拒绝。
+- v1 消息、fixture 和运行行为保持不变。
+
+### 当前路线
+```text
+TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
+```
+
+下一步建议：`TASK-019B-2：接通 SearchHit → URLMessageV2，并修复多关键词来源保留`，本轮不执行。
+
+
+
+## TASK-019B-2：接通 SearchHit → URLMessageV2，并保留多关键词查询来源
+
+### 基本信息
+- 状态：completed
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：Python 生产侧接通
+- 本轮未修改 Go 生产代码、Parser、数据库或 v1 路径。
+
+### 已实现
+- 执行器和四个 Adapter 改为单 `query_term` 输入，不再使用 `keywords[0]`。
+- 按 `SearchRequestedMessage.keywords` 顺序串行执行，保留每个 `original_query/query_term`。
+- 新增 `crawler/search/search_hit_builder.py`：确定性 hit_id 和 SearchHit 映射。
+- 每条 SearchHit 生成一条 URLMessageV2，message_id 每消息独立生成。
+- `RedisURLMessagePublisher` 继续写入 `crawler:url`。
+- TRS/JPAAS 已解析日期映射到 `published_at`，不再丢失。
+- 多关键词 no_results、fail-fast、publish_failure 和缓存语义已覆盖。
+
+### 测试
+- Python：compileall 通过，pytest 728 passed / 7 skipped，pip check 无 broken。
+- Go：`go test -mod=readonly -count=1 ./...` 与 `go vet -mod=readonly ./...` 均通过。
+- Race：`go test -race -mod=readonly -count=1 ./internal/worker ./internal/queue ./internal/store` 通过，exit code=0，无 DATA RACE。
+
+### 当前边界
+- Python 已开始发布正式 URLMessageV2，但 Go 下载消费者尚未接入。
+- 当前检查点不可部署，不得启动真实完整 Worker 链。
+- v1 消息、fixture 和运行行为保持不变。
+- TASK-019B-1 冻结协议文件和 fixture 未修改。
+
+下一步建议：`TASK-019B-3：Go 消费 URLMessageV2，完成一次下载与多 SearchHit 的 HTMLMessageV2 透传`，本轮不执行。
+
+
+
+## TASK-019B-3：Go 消费 URLMessageV2，单次下载与多 SearchHit HTMLMessageV2 透传
+
+### 基本信息
+- 状态：completed
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：Go 生产侧接通
+- 本轮未修改 Python 生产链、Parser、数据库或 B1/B2 冻结文件。
+
+### 已实现
+- `RedisQueue.PopURLDispatch()`：单次 BRPOP 后按 protocol_version 显式分流。
+- `URLMessageV2` 使用 B1 严格解码；旧过渡 2.0 + site/keyword 被拒绝。
+- `RestyFetcher.FetchHTML()`：返回 Body/FinalURL/ContentType，保留旧 `Fetch()` 不变。
+- `V2DownloadCoordinator`：按 `(task_id, url)` 合并单次逻辑下载，按 hit_id 扇出 HTMLMessageV2。
+- `PushHTMLMessageV2()`：写入 `crawler:html` 并执行严格校验。
+- `Pool.StartRedisConsumer()` 改用唯一版本分流入口；legacy/v1 路径保持不变。
+- v2 统计按逻辑下载计数，不按 hit 数伪装下载次数。
+- `Pool.Stop()` 释放 v2 内存状态。
+
+### 测试
+- Python：compileall 通过，pytest 728 passed / 7 skipped，pip check 无 broken。
+- Go：`go test -mod=readonly -count=1 ./...` 与 `go vet -mod=readonly ./...` 均通过。
+- Race：`go test -race -mod=readonly -count=1 ./internal/worker ./internal/queue ./internal/store` 通过，exit code=0，无 DATA RACE。
+
+### 当前边界
+- Go 已消费 URLMessageV2 并发布 HTMLMessageV2，但任务结束合同尚未接通。
+- 当前检查点不可部署。
+- 不生成 ArticleResultV2，不写数据库，不改变任务状态。
+
+下一步建议：`TASK-019B-4：Python 消费 HTMLMessageV2，完成 HTML 正文提取、详情后重评分与 ArticleResultV2 生成（暂不入库）`，本轮不执行。
+
+
+## TASK-019B-4：Python 消费 HTMLMessageV2，完成正文提取、重评分与 ArticleResultV2 生成
+
+### 基本信息
+- 状态：completed（本轮实现完成，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：Python 生产侧 v2 详情链
+- 本轮未修改 Go 生产代码、Go 测试、B1/B2/B3 冻结代码、数据库或部署配置。
+
+### B3 Race Detector 最终事实
+- Windows 本机已正式通过 Go Race Detector，不再视为残余风险。
+- 环境：GOOS=windows、GOARCH=amd64、CGO_ENABLED=1、CC=C:\msys64\ucrt64\bin\gcc.exe、CXX=C:\msys64\ucrt64\bin\g++.exe、GCC 16.2.0、MSYS2 UCRT64。
+- 命令：`go test -race -mod=readonly -count=1 ./internal/worker ./internal/queue ./internal/client`
+- 结果：worker/queue/client 全部通过，exit code=0，未报告 DATA RACE。
+- 随后 `go test -mod=readonly -count=1 ./...` 与 `go vet -mod=readonly ./...` 均通过。
+- B4 本轮不修改 Go 代码，也不重复执行 Race Detector；普通 Go test/vet 回归已执行。
+
+### 已实现
+- `workers/parser_worker.py`：单 BRPOP 消费者内显式分流；缺版本与 `1.0` 走 legacy/v1，`2.0` 严格走 v2；显式 null、非字符串版本、未知版本和非法 JSON 拒绝且不回退。
+- v2 使用 B1 `HTMLMessageV2` 严格解码；解码失败不发布、不生成 v1 ErrorMessage。
+- 未命中 `config/site.json` 的域名使用通用 HTML 提取，不报 unknown site。
+- 新增 `crawler/detail/extraction_v2.py`：噪声标签剔除、完整规范化正文、标题/日期/canonical 提取、真实 `extraction_method`。
+- 新增 `crawler/detail/relevance_v2.py`：确定性详情重评分，使用 `title_weight/body_weight/url_weight/threshold`，original/expanded 证据顺序稳定。
+- 新增 `crawler/detail/article_result_builder.py`：summary 来源、SHA-256、ArticleResultV2 构造与严格验证。
+- 每条合法 HTMLMessageV2 发布一条 ArticleResultV2 到 `crawler:result`；accepted/review_required/irrelevant/extract_failed 均保留发布。
+- 搜索标题或 search snippet 单独命中不能 accepted；详情标题或正文 original evidence 达标才可 accepted。
+- v2 正文不应用 3000/10000 字截断；legacy/v1 3000 字行为不变。
+- 本轮不写 MySQL/DuckDB/文件，不保存原始 HTML。
+
+### 测试
+- `python -m compileall crawler parser extractor search workers protocol tests`：通过。
+- `python -m pytest -q`：713 passed / 7 skipped / 0 failed。
+- `python -m pip check`：No broken requirements found。
+- Go 普通回归：`go test -mod=readonly -count=1 ./...` 通过；`go vet -mod=readonly ./...` 通过。
+- B3 Windows Race Detector 已正式通过，文档不再保留未启动或压力测试替代的过期描述。
+
+### 测试
+- Python：compileall 通过，pytest 728 passed / 7 skipped，pip check 无 broken。
+- Go：`go test -mod=readonly -count=1 ./...` 与 `go vet -mod=readonly ./...` 均通过。
+- Race：`go test -race -mod=readonly -count=1 ./internal/worker ./internal/queue ./internal/store` 通过，exit code=0，无 DATA RACE。
+
+### 当前边界
+- 当前检查点不可部署。
+- ArticleResultV2 已发布到 `crawler:result`，但 Go 持久化消费者尚未接通。
+- 未修改或连接数据库，未访问外部网站/Redis/MySQL/DuckDB，未调用外部 AI。
+- B1/B2/B3 冻结代码、fixture 和测试哈希保持不变。
+
+下一步建议：`TASK-019B-5：固化 articles/task_articles MySQL 增量迁移与 Go 持久化合同（暂不接 ArticleResultV2 生产消费者）`，本轮不执行。
+
+## TASK-019B-4C：退役 parser/redis_worker.py，固化 crawler:html 单一 Python 消费者
+
+### 基本信息
+- 状态：completed（本轮实现完成，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：历史入口退役与单一消费者固化
+- 本轮只删除 `parser/redis_worker.py`，未修改 B1/B2/B3/B4 生产实现。
+
+### 退役记录
+- 删除原因：旧 `parser/redis_worker.py` 默认消费 `crawler:html`，可与正式 Worker 竞争同一队列消息，且不支持 v2 严格版本分流。
+- 删除文件：`parser/redis_worker.py`。
+- 唯一正式 Python 消费者：`workers/parser_worker.py`。
+- legacy/v1 能力未删除，统一由 `workers/parser_worker.py._process_message()` 承接。
+- v2 严格分流、HTMLMessageV2 解码、详情提取、重评分和 ArticleResultV2 发布行为不变。
+- 不再使用旧 Worker 的本地 JSON 存储路径；`workers/parser_worker.py` 不调用 `save_results`、`DedupDB` 或 `storage.json_store`。
+- 新增 `tests/test_parser_worker_retirement.py`，覆盖文件已删除、模块不可导入、唯一生产消费者、legacy/v1/v2 仍由正式入口处理。
+- 完整回归：compileall 通过；pytest 720 passed / 7 skipped；pip check 无 broken；Go test/vet 通过。
+- 当前检查点仍不可部署。
+
+下一步建议：`TASK-019B-5：固化 articles/task_articles MySQL 增量迁移与 Go 持久化合同（暂不接 ArticleResultV2 生产消费者）`，本轮不执行。
+
+## TASK-019B-4D：退役 api/server.py 内联 Redis Parser
+
+### 基本信息
+- 状态：completed（本轮实现完成，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：API 内联消费者退役与全仓单一消费者固化
+- 本轮只修改 `api/server.py`，新增 API 退役测试，更新文档。
+
+### 退役记录
+- 删除 `api/server.py` 中的 `startup_parser_worker()`、`PARSER_WORKER_ENABLED`、`_run_parser_worker()`、后台线程启动、`r.brpop("crawler:html")` 和直接写入 `crawler:result` 的旧逻辑。
+- 删除不再使用的 `threading` import；`api/server.py` 不再导入 Redis，不再消费或读取 Redis 队列。
+- `parser/redis_worker.py` 保持由 TASK-019B-4C 删除后的状态，不恢复。
+- `workers/parser_worker.py` 现在是全仓唯一正式 `crawler:html` Python 消费者。
+- HTTP API 全部保留：FastAPI app、`create_app()`、`/parse`、`/health`、`/ready`、`/sites`、`/articles`、`/tasks`、`/statistics`、`/metrics`。
+- `/parse` 仍为同步 HTTP 解析接口，不参与 Redis 队列。
+- legacy/v1 与 v2 严格分流行为不变。
+- 新增 `tests/test_api_parser_worker_retirement.py`，覆盖源码审计、路由保留、`/parse` 离线调用和唯一消费者断言。
+- 完整回归：compileall 通过；pytest 728 passed / 7 skipped；pip check 无 broken；Go test/vet 通过。
+- 当前检查点仍不可部署。
+
+下一步建议：`TASK-019B-5：固化 articles/task_articles MySQL 增量迁移与 Go 持久化合同（暂不接 ArticleResultV2 生产消费者）`，本轮不执行。
+
+## TASK-019B-5：固化 articles/task_articles MySQL 增量迁移与 Go 持久化合同
+
+### 基本信息
+- 状态：completed（本轮实现完成，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：MySQL v2 存储合同，未接生产消费者
+
+### 已实现
+- 新增 `migrations/mysql/0001_articles_task_articles_v2.sql`，并在 `config/schema.sql` 末尾追加等价 bootstrap；未执行真实迁移。
+- 新增 Go store 文件：`article_result_v2.go`、`article_result_v2_persistence.go`。
+- 新增 `ArticleV2/TaskArticleV2` 模型，TableName 分别为 `articles/task_articles`。
+- 新增 `BuildArticleResultV2Records` 与 `MySQLStore.PersistArticleResultV2`，但未接入 queue/worker/API/CLI。
+- 固化 identity_url、identity_url_hash、article_key、result_hash、幂等重放和 ErrArticleResultConflict。
+- 空正文不创建 `articles`，`task_articles.article_id` 为 NULL，所有状态均保留。
+- 新增文档 `docs/MYSQL_PERSISTENCE_V2.md` 与 ADR-008。
+- 旧 `article/task/crawl_log`、旧 GORM 模型、旧 Python MySQL 模块和旧 AutoMigrate 均未修改。
+
+### 测试
+- Go store 定向测试：`go test ./internal/store` 通过。
+- 完整 Python：compileall 通过，pytest 728 passed / 7 skipped，pip check 无 broken。
+- 完整 Go：`go test -mod=readonly -count=1 ./...` 与 `go vet -mod=readonly ./...` 均通过。
+- 当前检查点仍不可部署。
+
+下一步建议：`TASK-019B-6：接通 Go crawler:result 显式版本分流与 ArticleResultV2 事务持久化，并完成幂等重放/冲突结果集成验证`，本轮不执行。
+
+## TASK-019B-6：接通 Go crawler:result 显式版本分流与 ArticleResultV2 事务持久化
+
+### 基本信息
+- 状态：completed（本轮实现完成，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：结果消费者接线与离线集成验证
+
+### 已实现
+- `queue.PopResultDispatch()`：单次 BRPOP 后按 `protocol_version` 显式分流，不再二次读取队列。
+- `StartResultConsumer()` 改为 `PopResultDispatch()`；`PopResultMessage/PopResult` 保留兼容。
+- legacy/v1 继续走 `consumeResult()`、旧 `article` 表、旧 URL 去重和任务统计。
+- v2 走 `MySQLStore.PersistArticleResultV2()`，不经过 SaveArticle、旧去重或 UpdateTask。
+- 同 URL 不同 hit_id 分别持久化；全部合法 status 保留。
+- Replay、Conflict 和普通持久化错误均不终止消费者，不回退 v1。
+- 新增 queue/worker 离线测试；B5 “未接线”静态测试仅做最小同步，允许正式 Worker 引用 `PersistArticleResultV2`。
+- 未新增第二个 `crawler:result` 消费者；未执行真实迁移；API 未切换新表。
+
+### 测试
+- Python：compileall 通过，pytest 728 passed / 7 skipped，pip check 无 broken。
+- Go：`go test -mod=readonly -count=1 ./...` 与 `go vet -mod=readonly ./...` 均通过。
+- Race：`go test -race -mod=readonly -count=1 ./internal/worker ./internal/queue ./internal/store` 通过，exit code=0，无 DATA RACE。
+
+### 当前边界
+- migration 未在真实 MySQL 执行。
+- 当前 Redis List 使用 BRPOP，消息在持久化前已出队；无 ACK、重试、死信或背压，数据库瞬时失败可能丢失消息。
+- 该残余风险由 TASK-021 处理；当前检查点不可部署。
+
+下一步建议：`TASK-019B-7：在一次性隔离 Redis/MySQL 环境验证 v2 迁移、ArticleResultV2 持久化、幂等重放与冲突回滚 E2E`，本轮不执行。
+
+## TASK-019B-6R：修复 legacy GORM 表名与 v2 articles 表名冲突
+
+### 基本信息
+- 状态：completed（本轮实现完成，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：阻塞修复，表名合同固化
+
+### 已实现
+- `Article/Task/CrawlLog` 增加显式值接收者 TableName，映射 `article/task/crawl_log`。
+- `ArticleV2/TaskArticleV2` 保持 `articles/task_articles`。
+- 未启用全局 SingularTable，未修改 AutoMigrate 参数和旧方法。
+- 新增 `table_name_contract_test.go`，通过 GORM schema 离线解析验证五个表名唯一。
+- 未修改 B5 migration、v2 store、B6 queue/worker 或 Python 生产链。
+- 未连接或修改真实数据库；历史 plural 表必须在部署前人工审计。
+
+### 测试
+- Python：compileall 通过，pytest 728 passed / 7 skipped，pip check 无 broken。
+- Go：`go test -mod=readonly -count=1 ./...` 与 `go vet -mod=readonly ./...` 均通过。
+- Race：`go test -race -mod=readonly -count=1 ./internal/store ./internal/worker ./internal/queue` 通过，exit code=0，无 DATA RACE。
+
+下一步建议：`TASK-019B-7：在全新一次性隔离 Redis/MySQL 环境验证 migration、legacy/v2 表并存、ArticleResultV2 持久化、幂等重放和冲突回滚 E2E`，本轮不执行。
+
+## TASK-019B-7：一次性隔离 Redis/MySQL E2E
+
+### 基本信息
+- 状态：completed（已通过，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：隔离集成验证
+
+### 验证结果
+- Docker/Compose/MySQL/Redis 前置检查通过；Linux 容器正常。
+- 唯一 Compose project、loopback 随机端口、随机密码、精确资源清理均通过。
+- Legacy AutoMigrate 只创建 `article/task/crawl_log`；B5 migration 连续执行两次成功。
+- 五表并存，schema 合同验证通过。
+- 正式 `crawler:result → PopResultDispatch → PersistArticleResultV2` 真实路径通过。
+- accepted 长正文、replay、conflict rollback、同 URL 多 hit、五种状态、legacy/v1 共存、非法版本隔离均通过。
+- 容器/网络/卷残留均为 0。
+
+### 测试
+- B7 store E2E、worker E2E 及 race 版 worker E2E 均通过。
+- Python 全量 728 passed / 7 skipped；Go test/vet 通过；Race Detector 通过。
+
+下一步建议：`TASK-019B-8：使用本地 HTTP 夹具与隔离 Redis/MySQL 贯通 URLMessageV2 → Go 下载 → HTMLMessageV2 → Python 详情处理 → ArticleResultV2 → Go 持久化的全链 E2E（不访问外部网站）`，本轮不执行。
+
+## TASK-019B-8R：修复 PopURLDispatch 显式版本判定并完整重跑 B8
+
+### 基本信息
+- 状态：completed（已通过，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：缺陷修复 + 全链 E2E 重跑
+
+### 首次失败与修复
+- 首次 B8 失败：`PopURLDispatch()` 将 `protocol_version` 解码为 string，显式 null 被 Go 静默转为空字符串并落入 legacy 分支，导致非法消息触发 HTTP 下载。
+- 修复：改为 `map[string]json.RawMessage` 键存在性判定；字段不存在才 legacy，键存在时必须是精确 `"1.0"`/`"2.0"`。
+- 显式 null、空、空白、数字、boolean、object、array、未知版本、顶层非对象均拒绝。
+- 新增 `url_dispatch_protocol_version_test.go` 定向回归测试。
+
+### B8 全链 E2E
+- URLMessageV2 → Go 下载 → HTMLMessageV2 → Python parser → ArticleResultV2 → Go 持久化真实贯通。
+- 多 hit 共用一次下载；长正文、canonical、标题、日期、评分、状态均通过。
+- accepted/review_required/irrelevant/extract_failed 均持久化；PDF MIME 拒绝；非法 null 请求次数为 0。
+- 重复投递不产生重复记录，不触发额外 HTTP。
+- Docker 容器/网络/卷残留均为 0。
+- Python：compileall 通过，pytest 728 passed / 7 skipped，pip check 无 broken。
+- Go：`go test ./...`、`go vet ./...`、全包 Race Detector 均通过。
+
+下一步建议：`TASK-019C-1：审计并固化 PDF/Office 现有能力的安全回归合同（不新增复杂解析）`，本轮不执行。
+
+## TASK-019C-1：PDF/Office 现有能力安全回归合同
+
+### 基本信息
+- 状态：completed（本轮实现完成，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：只读能力审计 + 离线回归合同
+
+### 已实现
+- 审计 `crawler/parser/format.py`、`pdf.py`、`office.py` 及全仓调用链。
+- 确认四个解析函数均无生产调用方，属于库级休眠能力。
+- v2 Go 下载链仍只接受 HTML MIME，PDF/Office 不会进入 v2 生产链。
+- 新增 `tests/test_document_format_contract.py`，35 项离线测试，10 次重复全部通过。
+- 新增 `docs/DOCUMENT_FORMAT_SAFETY.md` 与 ADR-014。
+- 明确记录 PDF 仅文本层、DOCX 仅段落、XLSX 直接入口可用但统一入口无法到达、DOC/XLS/PPT/PPTX 不支持。
+- 记录资源限制缺口：无大小/页数/行数/输出长度上限、无超时、无沙箱、无附件隔离。
+- 定向测试 35 项，10 次重复全部通过；Python 全量 763 passed / 7 skipped；Go test/vet/race 通过。
+
+下一步建议：`TASK-019C-2：为现有 PDF/DOCX/XLSX 辅助函数设计最小安全门合同（输入字节、PDF页数、Office解压规模、XLSX行单元格数量、输出长度与失败状态），仍不接生产链`，本轮不执行。
+
+## TASK-019C-2：PDF/DOCX/XLSX 最小安全门合同
+
+### 基本信息
+- 状态：completed（本轮实现完成，未提交、未推送）
+- 分支：main
+- HEAD：3723892e6c0987b3830394ef485258ac6a623901
+- 类型：独立安全门，不接生产链
+
+### 已实现
+- 新增 `crawler/parser/document_safety.py`，唯一入口 `safe_parse_document`。
+- 新增 `DocumentSafetyPolicy` 与 `DocumentParseResult`。
+- 默认 V1 安全值：20MiB 输入、500 PDF 页、2048 ZIP 成员、100MiB 解压总量、50MiB 单成员、压缩比 100、20000 DOCX 段落、32 XLSX 表、100000 行、1000000 单元格、2000000 输出字符。
+- 超限整体拒绝，不截断。
+- ZIP 只读预检，不调用 extract/extractall，拒绝穿越/绝对路径/加密/符号链接。
+- 新增 `tests/test_document_safety.py`，49 项离线测试；与 C1 合同合并 84 项，10 次重复全部通过。
+- 新增 `docs/DOCUMENT_SAFETY_GATE.md` 与 ADR-015。
+- 安全门没有生产调用方；未接入 Worker/Redis/API/数据库。
+- Python 全量 812 passed / 7 skipped；Go test/vet/race 通过。
+
+下一步建议：`TASK-019D：TASK-019 最终总验收、文档一致性、未提交变更边界与进入 TASK-022 前置条件审计（不再新增功能）`，本轮不执行。
+
+## TASK-022：生产请求安全与 SSRF 残余风险
+
+### 状态
+- defined
+- not_started
+- TASK-019 关闭前不得开始
+
+### 进入条件
+- TASK-019 实现和总验收完成
+- 用户明确批准进入 TASK-022
+- 当前代码、依赖、出站路径和 legacy 边界重新只读审计
+
+### 总目标
+- 解决生产请求安全和 SSRF 残余风险
+- 所有正式出站路径共享安全 transport
+- 不允许 Probe、Adapter、Worker、redirect、proxy 或 legacy 路径旁路
+- 不得在 TASK-022 完成前宣称生产级 SSRF 防护
+
+### 正式阶段
+- 022A：安全契约、威胁模型、全部出站路径、legacy 边界、当前依赖 API、ADR 草案、只读审计和文档；用户接受安全契约前不得进入 022B。
+- 022B：URL 规范化、IDNA 与端口、IP 分类、DNS 全部答案、多 IP 策略、pure function 与 fake resolver 离线测试。
+- 022C：连接到已验证 IP、保留原 Host、TLS SNI 使用原 hostname、证书按 hostname 验证、底层不得二次解析 hostname。
+- 022D：每跳 redirect 重新校验、禁止未授权 proxy、connect/read/write/pool timeout、总 deadline、header/body/解压/请求数等资源预算。
+- 022E：生产域名策略、allowed_domains、子域、redirect 域名、端口、HTTP 策略；配置错误时启动失败。
+- 022F：安全事件、日志字段、低基数 metrics；禁止记录完整 URL/query/凭据/payload。
+- 022G：v2 Probe、六类 Adapter 与 Go Worker 全部接入共享安全 transport，不允许旁路。
+- 022H：完整离线对抗测试、完整回归、安全交付门禁、稳定 CI 不访问真实外网/DNS/Redis/MySQL。
+
+### 关闭证据
+- ADR 接受
+- 所有 022A–H 通过
+- 连接级绑定与逐跳安全可证明
+- 无生产 transport 旁路
+
+
+## TASK-021：任务可靠性、状态、幂等与持久化收敛
+
+### 父任务状态
+- 历史定义保留
+- 待代码审计
+- 不假定当前已有代码完成
+
+### TASK-021A
+执行位置：TASK-022 之后、TASK-020A 之前。
+
+范围：
+- task_id 状态
+- 合法状态迁移
+- 取消
+- 迟到消息和取消竞态
+- 事件回放
+- 幂等入库
+- article/task_article 关联
+- 重复消息不重复计数
+- Web/API/Excel/CSV/MySQL 结果一致性
+- 任务最终状态和计数一致
+
+完成证据：
+- 状态转换测试
+- 取消竞态测试
+- 重复消息测试
+- 存储重试/重放测试
+- 页面/API/导出/数据库一致性测试
+- 终态不被迟到消息覆盖
+
+### TASK-021B
+执行位置：TASK-020B 关闭之后。
+
+范围：
+- 多任务并发隔离
+- 死信
+- 背压
+- 人工恢复
+- 队列容量
+- 数据库容量
+- 运维恢复证据
+
+TASK-021B 不得阻挡单站点 Web V1。
+
+
+## TASK-020：单站点 Web V1 父任务
+
+### TASK-020A：Web V1 实现任务
+
+进入条件：
+- TASK-019 关闭
+- TASK-022 关闭
+- TASK-021A 关闭
+- Web API 契约稳定
+
+范围：
+- React + TypeScript + Vite 独立前端
+- 单管理员登录
+- Secure/HttpOnly/SameSite 会话
+- 独立 JSON API 令牌
+- CSRF 保护
+- SSE 任务进度
+- 定时轮询降级
+- 同源 HTTPS
+- 单机内网 Docker Compose
+- 快速/专业模式
+- 任务创建、推荐确认、取消、结果、正文、导出
+- MySQL LONGTEXT 规范化正文
+- 默认不保存原始 HTML/附件
+
+### TASK-020B：单站点 Web V1 最终总验收
+
+性质：
+- 单站点 Web V1 最终总验收
+- 不承担大规模功能开发
+
+进入条件：
+- TASK-020A 实现完成并冻结
+- 验收环境和数据集冻结
+
+验收：
+- F01–F12
+- P01–P10
+- 认证
+- API 令牌
+- CSRF
+- SSE 与轮询
+- Docker Compose
+- 请求安全
+- 取消
+- 部分成功
+- 页面/API/导出/MySQL 一致性
+- 升级与回退
+
+TASK-020B 通过后只能称为“单站点 Web V1 完成”，不得称为企业级全部产品完成。
+
+## TASK-019 验收状态（TASK-019D）
+
+- implementation=completed
+- acceptance=PASS
+- git_state=UNCOMMITTED
+- deployment=BLOCKED
+- closure=WAITING_USER_APPROVAL
+- next=用户明确批准封板提交后进入 TASK-022
+
+正式路线：`TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B`。

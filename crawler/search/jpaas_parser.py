@@ -121,6 +121,7 @@ def parse_jpaas_response(response: SearchProbeResponse, keyword: str) -> JPAASPa
                 url=normalized_url,
                 snippet=clean_text(fields["content"]),
                 body=fields["content"],
+                published_at=fields["publish_date"],
             )
         )
     return JPAASPageParseOutcome(tuple(items), len(docs))
