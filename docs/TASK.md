@@ -2911,11 +2911,35 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - deployment=BLOCKED
 - closure=CLOSED
 - next_task=TASK-022D-3
-- TASK-022D-3=NOT_STARTED
+- TASK-022D-3=IN_PROGRESS
 - 新增 Python `bounded_io.py`、`concurrency_limiter.py` 与 Go `bounded_io.go`、`concurrency_limiter.go` 运行时基础原语
 - 新增共享 fixture：tests/fixtures/outbound_runtime_limits_contract.json（105 cases：size 40、read 26、concurrency 39）
 - 新增 ADR-020-bounded-io-concurrency-runtime.md（状态 accepted）
 - 本轮未接入现有 HTTP 客户端、Adapter、Probe、Worker、queue 或 protocol；当前版本不可部署
+### TASK-022D-3 当前状态
+- implementation=completed
+- tests=PASS
+- audit=TASK-022D-3-R FAIL
+- audit=TASK-022D-3-R2 FAIL
+- audit=TASK-022D-3-R3 FAIL
+- fix=implemented
+- fix2=implemented
+- fix3=implemented
+- acceptance=WAITING_REAUDIT
+- git_state=UNCOMMITTED
+- production_wiring=ISOLATED_ONLY
+- existing_client_wiring=NOT_STARTED
+- deployment=BLOCKED
+- next_task=TASK-022D-3-R4
+- TASK-022E=NOT_STARTED
+- TASK-022D-3-R=FAIL：HTTP/1.1 解析与测试合同缺陷（1xx/101、CL+TE、TE 组合、header token/CRLF、trailer、fixture 消费、goroutine join）
+- TASK-022D-3-FIX=implemented：严格 HTTP/1.0/1.1 状态行、CRLF-only、header token、1xx interim 累计上限、101 拒绝、CL+TE fail closed、仅单一 chunked、chunk extension 拒绝、空 trailer 合同、Go expected==executed 与确定性退出
+- TASK-022D-3-FIX2=implemented：状态行 reason phrase 拒绝 bare LF/CR/NUL/C0 控制字符/DEL；HEAD/204/304 在空正文返回前先执行 CL+TE 与 TE coding 前置校验
+- TASK-022D-3-FIX3=implemented：正文响应错误优先级统一为 response syntax → framing → no-body decision → content encoding → body；CL+TE 无论 Content-Encoding 一律 invalid_transfer_encoding，合法 framing + 非 identity Content-Encoding 返回 unsupported_content_encoding
+- 新增 Python `crawler/security/http_transport.py`、`http_executor.py` 与 Go `go-spider/internal/security/http_transport.go`、`http_executor.go` 隔离安全 HTTP/1.1 执行器
+- 新增共享 fixture：tests/fixtures/secure_http_transport_contract.json（FIX3 后 103 cases：request 18、response 61、redirect 16、resource 8）
+- 新增 ADR-021-secure-http-transport-composition.md（状态 proposed）
+- V1 禁用 keep-alive，实际 idle=0；未接入现有 Resty/requests/httpx 或 Adapter/Probe/Worker；当前版本不可部署
 
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛

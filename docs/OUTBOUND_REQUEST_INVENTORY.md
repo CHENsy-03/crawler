@@ -220,5 +220,13 @@
 ## 11. TASK-022D-2 运行时基础原语（未接线）
 
 - 大小门、有界读取、read-idle/total timeout、全局/单 hostname 并发限流仅作为未接线安全基础库。
-- 实际 socket/HTTP Transport 适配、wire-level header 计数、idle pool=2 与生产组合属于 TASK-022D-3。
-- 共享 fixture：tests/fixtures/outbound_runtime_limits_contract.json（48 cases：size 18、read 15、concurrency 15）。
+- 实际 socket/HTTP Transport 适配、wire-level header 计数、idle pool 与生产组合属于 TASK-022D-3。
+- 共享 fixture：tests/fixtures/outbound_runtime_limits_contract.json（105 cases：size 40、read 26、concurrency 39）。
+## 12. TASK-022D-3 隔离安全 HTTP 执行器（未接线生产）
+
+- Python 新增 `crawler/security/http_transport.py`、`http_executor.py`；Go 新增 `go-spider/internal/security/http_transport.go`、`http_executor.go`。
+- 执行器实现单跳完整调用顺序、阶段 timeout 与 total deadline 联合、raw response header 前置计数、Content-Length 预检、bounded body、逐跳 redirect 重验和共享 limiter Lease 清理。
+- V1 只实现 HTTP/1.1，固定 `Connection: close`，实际 idle=0；不启用 HTTP/2 多路复用，不声称实现连接复用。
+- 共享 fixture：tests/fixtures/secure_http_transport_contract.json（FIX 后 84 cases：request 18、response 42、redirect 16、resource 8）。
+- FIX 后响应解析仅接受 HTTP/1.0/1.1 严格 CRLF header、1xx interim 累计上限、101/CL+TE/非单一 chunked/extension/非空 trailer 均 fail closed。
+- 当前没有生产调用方；Resty、requests/httpx、Adapter、Probe、Worker、queue、protocol、store 均未切换；生产接线属于 TASK-022G。

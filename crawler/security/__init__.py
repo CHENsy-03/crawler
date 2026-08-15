@@ -44,6 +44,16 @@ from crawler.security.bounded_io import (
     validate_content_length,
     validate_content_lengths,
 )
+from crawler.security.http_transport import (
+    SecureHTTPError,
+    SecureHTTPRequest,
+    SecureHTTPResponse,
+    build_request_bytes,
+    read_raw_response,
+    validate_request,
+)
+from crawler.security.http_executor import SecureHTTPExecutor
+
 from crawler.security.concurrency_limiter import (
     ConcurrencyError,
     ConcurrencyLimiter,
@@ -84,6 +94,13 @@ __all__ = [
     "validate_ssl_context",
     "validate_tls_server_name",
     "BoundedIOError",
+    "SecureHTTPError",
+    "SecureHTTPExecutor",
+    "SecureHTTPRequest",
+    "SecureHTTPResponse",
+    "build_request_bytes",
+    "read_raw_response",
+    "validate_request",
     "BoundedReadResult",
     "BudgetError",
     "ConcurrencyError",

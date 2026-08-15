@@ -457,4 +457,15 @@ TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTML
 
 - Python 新增 `crawler/security/bounded_io.py`、`concurrency_limiter.py`；Go 新增 `bounded_io.go`、`concurrency_limiter.go`。
 - D2 从 D1 TransportBudget 读取全部固定限制，实现请求体/响应头/响应体大小门、deadline-aware 有界读取、read-idle/total 联合约束与 fail-fast 全局/单 hostname 限流。
-- 实际 socket/HTTP Transport 适配、wire-level header 计数、idle pool=2 与生产组合由 TASK-022D-3 完成；本轮不接入生产请求链。
+- 实际 socket/HTTP Transport 适配、wire-level header 计数、idle pool 与生产组合由 TASK-022D-3 完成；本轮不接入生产请求链。
+## 36. Isolated Secure HTTP Transport Composition（TASK-022D-3）
+
+- Python 新增 `crawler/security/http_transport.py`、`http_executor.py`；Go 新增 `go-spider/internal/security/http_transport.go`、`http_executor.go`。
+- 执行器把 URL/PolicyDecision → PinnedTarget → 共享 ConcurrencyLimiter → 数字 IP 连接 → Host/SNI/证书校验 → HTTP 请求 → raw response header 上限 → Content-Length 预检 → deadline-aware bounded body → 逐跳 redirect 重验组合为单一隔离路径。
+- 阶段 timeout：DNS/connect/TLS 5s、response header 10s、read idle 15s、total probe/search 30s、detail 60s；每阶段取 `min(阶段, remaining)`，remaining=0 不开始下一阶段；redirect 不重置 total deadline。
+- raw response header 上限 262144 bytes（含状态行、字段行与终止空行），前置固定 buffer 限制，超 1 byte 即拒绝；interim 1xx 与最终响应共享累计上限，101 与 CL+TE 一律 fail closed，TE 仅单一 chunked，chunk extension 与非空 trailer 拒绝。
+- V1 只实现 HTTP/1.1，请求固定 `Connection: close`，不启用 HTTP/2 多路复用；实际 idle=0，满足 per-host idle<=2 但不声称实现连接复用。
+- redirect 301/302/303/307/308 最多 3 跳，每跳重新 policy/DNS/IP/pin 验证并生成新 PinnedTarget；POST redirect 一律拒绝重放；跨 hostname 剥离 Authorization/Proxy-Authorization/Cookie。
+- 新执行器只在 security 包、测试和文档中出现；Resty、requests/httpx、Adapter、Probe、Worker、queue、protocol、store 均未切换。
+- 共享 fixture：tests/fixtures/secure_http_transport_contract.json（FIX 后 84 cases：request 18、response 42、redirect 16、resource 8）；ADR-021 状态 proposed。
+- 当前没有生产请求走该执行器；当前版本不可部署。

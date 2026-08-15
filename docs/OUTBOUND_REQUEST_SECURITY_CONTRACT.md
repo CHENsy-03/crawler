@@ -189,7 +189,21 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 - TASK-022D-2-R2=FAIL，FIX2 implemented；空 Content-Length 集合、DNS label hyphen、Lease registry 绑定已收紧
 - TASK-022D-2-R3 PASS；D2 实现与 105-case fixture 已本地封板
 - D2 实现的是运行时安全原语；实际 Resty/Python HTTP Transport 尚未接线
-- wire-level header 限制与 per-host idle=2 尚未配置到真实连接池
+- TASK-022D-3 isolated secure HTTP executor = IMPLEMENTED_LOCAL（未接线生产）
+- D3 实现单跳组合、阶段 timeout/total deadline、raw response header 前置计数、Content-Length 预检、bounded body、逐跳 redirect 重验与共享 limiter 清理
+- D3 V1 禁用 keep-alive，实际 idle=0，不启用 HTTP/2 多路复用；不声称实现连接复用
+- TASK-022D-3-R=FAIL，FIX implemented：HTTP/1.1 解析与测试合同已收紧
+- TASK-022D-3-R2=FAIL，FIX2 implemented：状态行 reason phrase 拒绝 bare LF/CR/NUL/C0/DEL；HEAD/204/304 空正文返回前执行 CL+TE 与 TE coding 前置校验
+- TASK-022D-3-R3=FAIL，FIX3 implemented：正文响应错误优先级统一为 response syntax → framing → no-body decision → content encoding → body；CL+TE 无论 Content-Encoding 一律 invalid_transfer_encoding
+- 仅接受严格 HTTP/1.0/1.1 状态行与 CRLF header；bare LF/CR、NUL、obs-fold、非 token 字段名稳定拒绝
+- 1xx interim（除 101）与最终响应共享累计 256KiB header 上限；101 返回 `protocol_upgrade_not_allowed`
+- Content-Length 与 Transfer-Encoding 同时存在一律 `invalid_transfer_encoding`；TE 仅允许单一 `chunked`
+- chunk extension 拒绝（`chunk_extension_not_allowed`）；zero chunk 后仅空 trailer 允许，非空 trailer 返回 `invalid_chunked_trailer`
+- raw header 达到 262144 且无完整终止空行返回 `response_headers_too_large`
+- D3 共享 fixture：tests/fixtures/secure_http_transport_contract.json（FIX3 后 103 cases：request 18、response 61、redirect 16、resource 8）
+- ADR-021-secure-http-transport-composition = proposed
+- 现有 Resty/requests/httpx、Adapter、Probe、Worker 均未切换；生产请求不得声称已受 D3 保护
+- wire-level header 限制与 per-host idle pool 尚未配置到真实生产连接池
 - deadline_capable=True 仅表示 D3 可信适配器契约，不代表任意第三方 reader 可中断
 - ADR-020-bounded-io-concurrency-runtime = proposed
 - D2 仅实现大小门、有界读取、read-idle/total timeout 与并发限流原语；实际 Transport 组合由 D3 接线
