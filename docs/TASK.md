@@ -2874,10 +2874,18 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 ### TASK-022D 当前状态
 - TASK-022D=IN_PROGRESS
 - TASK-022D implementation=completed
-- TASK-022D acceptance=WAITING_OVERALL_REVIEW
-- TASK-022D closure=OPEN
+- TASK-022D tests=PASS
+- TASK-022D audit=TASK-022D-R2 PASS
+- TASK-022D acceptance=PASS
+- TASK-022D git_state=COMMITTED_LOCAL
+- TASK-022D closure=CLOSED
+- TASK-022D production_wiring=ISOLATED_ONLY
+- TASK-022D existing_client_wiring=NOT_STARTED
 - TASK-022D deployment=BLOCKED
-- TASK-022D next_task=TASK-022D-R
+- TASK-022D next_task=TASK-022E_AFTER_USER_APPROVAL
+- TASK-022D-R=FAIL：canonical seal evidence mismatch（提交 blob 聚合与 R4 工作区聚合不一致，唯一差异为 fixture CRLF→LF 文本过滤）
+- TASK-022D-FIX=implemented：以 Git 提交 blob 为权威输入重新验证 canonical 聚合，并补齐封板哈希规则与 TASK-022E 进入条件
+- TASK-022D-R2=PASS：D1/D2/D3 组合合同、canonical 封板证据、489 fixture、生产隔离与 TASK-022E 进入条件验收通过
 - TASK-022D-1=CLOSED/PASS
 - TASK-022D-1 implementation=completed
 - TASK-022D-1 tests=PASS
@@ -2938,7 +2946,11 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - existing_client_wiring=NOT_STARTED
 - deployment=BLOCKED
 - closure=CLOSED
-- next_task=TASK-022D-R
+- next_task=TASK-022D-R2
+- canonical_commit_blob_aggregate=218625b04fcb3c870896030d185f14c0580a0582132ee9915482ba7d654af78d
+- historical_r4_worktree_aggregate=1aa1deeecff84e454d2c8987521d603f01b65a571ecf7fdf224650169ab6eb3e
+- difference=secure_http_transport_contract.json CRLF→LF Git text normalization only
+- canonical_blob_validation=PASS
 - TASK-022E=NOT_STARTED
 - TASK-022D-3-R=FAIL：HTTP/1.1 解析与测试合同缺陷（1xx/101、CL+TE、TE 组合、header token/CRLF、trailer、fixture 消费、goroutine join）
 - TASK-022D-3-FIX=implemented：严格 HTTP/1.0/1.1 状态行、CRLF-only、header token、1xx interim 累计上限、101 拒绝、CL+TE fail closed、仅单一 chunked、chunk extension 拒绝、空 trailer 合同、Go expected==executed 与确定性退出
@@ -2949,6 +2961,26 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - 新增共享 fixture：tests/fixtures/secure_http_transport_contract.json（FIX3 后 103 cases：request 18、response 61、redirect 16、resource 8）
 - 新增 ADR-021-secure-http-transport-composition.md（状态 accepted）
 - V1 禁用 keep-alive，实际 idle=0；未接入现有 Resty/requests/httpx 或 Adapter/Probe/Worker；当前版本不可部署
+
+### TASK-022E 进入条件
+- TASK-022E status=NOT_STARTED
+- TASK-022E authorization=WAITING_USER_APPROVAL
+- TASK-022E entry_conditions=DEFINED
+- TASK-022E deployment=BLOCKED
+- 进入条件必须同时满足：
+  1. TASK-022A、B、C、D 全部完成。
+  2. TASK-022D 总体审计 PASS。
+  3. TASK-022D 总体文档封板提交完成。
+  4. 用户明确批准进入 TASK-022E。
+  5. 进入 E 前重新只读审计：目标生产配置加载路径、allowed_domains 配置来源、当前站点配置兼容边界、legacy/v1 HTTP 调用方、现有生产 client/adapter 调用点。
+  6. 工作区和暂存区边界明确，用户 DOCX 继续排除。
+  7. D 阶段安全包和隔离执行器保持封板，不得在 E 中顺带重写。
+  8. TASK-022E 开始前，现有生产客户端仍不得切换。
+  9. E 的默认策略继续遵守 ADR-016：exact hostname 默认、controlled subdomains 默认关闭、http/https 限定、HTTPS→HTTP 禁止、端口受控、私网/loopback 默认拒绝、redirect 逐跳重验。
+  10. E 配置缺失、未知、类型错误、冲突或越权时必须启动失败/fail closed。
+  11. TASK-022E 完成也不自动解除 deployment block。
+  12. 后续安全拒绝事件、消费闭合及部署门禁仍按 TASK-022G、TASK-021A 等冻结路线执行。
+- 不得改变当前任务路线或提前开始 E。
 
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛

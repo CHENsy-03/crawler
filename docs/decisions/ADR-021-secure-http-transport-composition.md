@@ -5,11 +5,17 @@
 **关联：** TASK-022D，ADR-016/017/018/019/020 保持 accepted
 **acceptance：** TASK-022D-3-R4 PASS
 **implementation_commit：** 614cf45af3767d7f8f24c0edc2f8faaf704483b7
+**canonical_commit_blob_aggregate：** 218625b04fcb3c870896030d185f14c0580a0582132ee9915482ba7d654af78d
+**historical_r4_worktree_aggregate：** 1aa1deeecff84e454d2c8987521d603f01b65a571ecf7fdf224650169ab6eb3e
+**difference：** secure_http_transport_contract.json CRLF→LF Git text normalization only
+**canonical_blob_validation：** PASS
 **fixture：** 103 shared cases
 **production_wiring：** isolated_only
 **existing_client_wiring：** deferred
 **deployment：** blocked
-**next_task：** TASK-022D-R
+**task022d_overall_audit：** TASK-022D-R2 PASS
+**task022d_closure：** CLOSED
+**next_task：** WAITING_USER_APPROVAL_FOR_TASK-022E
 
 ## 背景
 
@@ -66,3 +72,10 @@ X-Test: y`）整体返回 `invalid_http_response`，不得进入 headers。
 - HEAD/204/304 仍先做 framing 校验，再直接返回空正文，不启动正文 reader。
 - 合法正文路径只执行一次 framing 判定，结果复用于后续正文读取。
 - FIX3 后共享 fixture 为 103 cases（request 18、response 61、redirect 16、resource 8）。
+
+## TASK-022D-FIX 补充
+
+- Git 提交 blob 是封板后唯一权威输入；commit blob aggregate 为 `218625b0…`。
+- R4 历史工作区聚合 `1aa1deee…` 为 Windows 工作区 CRLF 字节快照，仅作历史证据；与 canonical blob 的唯一差异是 `secure_http_transport_contract.json` 的 CRLF→LF 文本过滤。
+- 不得声称两个原始字节 hash 相等；canonical blob 已在独立临时目录完成完整 Python/Go 回归验证（PASS）。
+- 封板哈希规则已写入 docs/DEVELOPMENT_RULES.md。

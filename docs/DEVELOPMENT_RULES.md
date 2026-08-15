@@ -70,3 +70,11 @@ TASK-020B
 - Python `PinnedTarget` 不得公开可伪造字段构造器；只有正式 builder 能签发。
 - `connect_pinned` 必须在创建 socket 前验证来源与结构；未签发对象返回 `invalid_pinned_target`。
 - 测试 loopback 只能通过测试侧路由转发，不能进入生产 target 地址集合。
+
+## 10. 封板哈希规则（TASK-022D-FIX）
+
+- 未提交阶段：工作区 hash 只能作为临时诊断证据；若启用 text filter/core.autocrlf，工作区字节 hash 不得直接作为最终 seal hash。
+- 暂存阶段：应从 Git index 中的 blob 计算候选 seal hash；staged diff 通过后，index blob 是即将提交内容的权威输入。
+- 提交后：必须从 implementation commit tree/blob 重新计算最终 aggregate；commit blob aggregate 是恢复、审计、封板的唯一权威值。
+- 文本过滤：必须记录 working-tree encoding/line-ending 与 blob encoding/line-ending；CRLF/LF 差异不得伪装成内容一致，也不得因此强制仓库存储 CRLF；可通过规范化比较证明语义差异仅为行尾。
+- 文档 seal 提交修改状态文档后：验证实现时必须读取 implementation commit，不得用当前 HEAD 工作区的状态文档重新计算旧实现 aggregate。
