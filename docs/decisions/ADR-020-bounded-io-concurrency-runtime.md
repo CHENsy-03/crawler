@@ -1,8 +1,15 @@
 # ADR-020：Bounded I/O and Concurrency Runtime（TASK-022D-2）
 
-**状态：** proposed
+**状态：** accepted
 **日期：** 2026-08-15
 **关联：** TASK-022D，ADR-016/017/018/019 保持 accepted
+**acceptance：** TASK-022D-2-R3 PASS
+**implementation_commit：** 55ef24164536946cea3cdecfc37845002ec5f398
+**production_wiring：** deferred
+**transport_adapter：** deferred to TASK-022D-3
+**wire_header_enforcement：** deferred to TASK-022D-3
+**per_host_idle_pool：** deferred to TASK-022D-3
+**next_task：** TASK-022D-3
 
 ## 背景
 

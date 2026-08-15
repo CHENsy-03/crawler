@@ -187,6 +187,9 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 - TASK-022D-2 runtime primitives = IMPLEMENTED_LOCAL（未接线）
 - TASK-022D-2-R=FAIL，FIX implemented；Content-Length/clock/Lease/host key 已按合同收紧
 - TASK-022D-2-R2=FAIL，FIX2 implemented；空 Content-Length 集合、DNS label hyphen、Lease registry 绑定已收紧
+- TASK-022D-2-R3 PASS；D2 实现与 105-case fixture 已本地封板
+- D2 实现的是运行时安全原语；实际 Resty/Python HTTP Transport 尚未接线
+- wire-level header 限制与 per-host idle=2 尚未配置到真实连接池
 - deadline_capable=True 仅表示 D3 可信适配器契约，不代表任意第三方 reader 可中断
 - ADR-020-bounded-io-concurrency-runtime = proposed
 - D2 仅实现大小门、有界读取、read-idle/total timeout 与并发限流原语；实际 Transport 组合由 D3 接线

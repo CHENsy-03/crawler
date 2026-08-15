@@ -2902,15 +2902,19 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - TASK-022D-2-R2=FAIL
 - 缺陷：空 Content-Length 集合、DNS label hyphen、Python Lease host 篡改
 - TASK-022D-2-FIX2=implemented
-- acceptance=WAITING_REAUDIT
-- git_state=UNCOMMITTED
+- TASK-022D-2-R3=PASS
+- audit=TASK-022D-2-R3 PASS
+- acceptance=PASS
+- git_state=COMMITTED_LOCAL
+- implementation_seal_commit=55ef24164536946cea3cdecfc37845002ec5f398
 - production_wiring=NOT_STARTED
 - deployment=BLOCKED
-- next_task=TASK-022D-2-R3
+- closure=CLOSED
+- next_task=TASK-022D-3
 - TASK-022D-3=NOT_STARTED
 - 新增 Python `bounded_io.py`、`concurrency_limiter.py` 与 Go `bounded_io.go`、`concurrency_limiter.go` 运行时基础原语
 - 新增共享 fixture：tests/fixtures/outbound_runtime_limits_contract.json（105 cases：size 40、read 26、concurrency 39）
-- 新增 ADR-020-bounded-io-concurrency-runtime.md（状态 proposed）
+- 新增 ADR-020-bounded-io-concurrency-runtime.md（状态 accepted）
 - 本轮未接入现有 HTTP 客户端、Adapter、Probe、Worker、queue 或 protocol；当前版本不可部署
 
 
