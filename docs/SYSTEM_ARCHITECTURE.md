@@ -469,3 +469,11 @@ TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTML
 - 新执行器只在 security 包、测试和文档中出现；Resty、requests/httpx、Adapter、Probe、Worker、queue、protocol、store 均未切换。
 - 共享 fixture：tests/fixtures/secure_http_transport_contract.json（FIX 后 84 cases：request 18、response 42、redirect 16、resource 8）；ADR-021 状态 proposed。
 - 当前没有生产请求走该执行器；当前版本不可部署。
+
+
+## 37. Outbound Security Configuration Contract（TASK-022E-B）
+
+- 未来生产安全配置使用独立文件 `config/outbound_security.json`（本阶段只冻结路径，不创建生产文件）。
+- 合同结构：顶层 `config_version`（const "1.0"）与 `policies`；policy 为 `policy_id`、`allowed_domains`、`allowed_schemes`、`allowed_ports`；JSON Schema 位于 `config/outbound_security.schema.json`。
+- hostname 仅规范化小写 ASCII IDNA A-label；V1 仅 exact hostname；redirect 使用主 allowlist；禁止 IP literal；不修改 OutboundPolicy 模型。
+- 共享 fixture `tests/fixtures/outbound_security_config_contract.json`（104 cases）与 Python/Go 合同完整性测试已新增；生产 loader 与 site.json 迁移未实施。

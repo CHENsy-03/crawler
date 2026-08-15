@@ -78,3 +78,12 @@ TASK-020B
 - 提交后：必须从 implementation commit tree/blob 重新计算最终 aggregate；commit blob aggregate 是恢复、审计、封板的唯一权威值。
 - 文本过滤：必须记录 working-tree encoding/line-ending 与 blob encoding/line-ending；CRLF/LF 差异不得伪装成内容一致，也不得因此强制仓库存储 CRLF；可通过规范化比较证明语义差异仅为行尾。
 - 文档 seal 提交修改状态文档后：验证实现时必须读取 implementation commit，不得用当前 HEAD 工作区的状态文档重新计算旧实现 aggregate。
+
+## 11. TASK-022E-B 出站安全配置规则
+
+- 生产安全配置入口固定为 `config/outbound_security.json`；本阶段只冻结路径，不创建生产文件。
+- 配置 hostname 只允许规范化小写 ASCII IDNA A-label，且必须至少两个 DNS label；单标签 localhost/example 返回 config_invalid_hostname；禁止 root dot、scheme、userinfo、path/query/fragment、port、通配符与 IP literal。
+- V1 仅 exact hostname，不使用 `allowed_subdomain_roots`，不修改已封板 OutboundPolicy 模型。
+- redirect 使用主 `allowed_domains` 集合，不新增独立 redirect allowlist。
+- 仅禁止出站安全字段被环境变量、CLI 或 site 覆盖；基础设施 env（MYSQL_*、Redis 等）不受影响。
+- 配置级共享 fixture 必须被 Python/Go 生产 loader 真实消费；E-B 只冻结 fixture，生产 loader 留给 E-C。

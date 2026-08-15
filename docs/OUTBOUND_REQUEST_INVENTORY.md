@@ -230,3 +230,10 @@
 - 共享 fixture：tests/fixtures/secure_http_transport_contract.json（FIX 后 84 cases：request 18、response 42、redirect 16、resource 8）。
 - FIX 后响应解析仅接受 HTTP/1.0/1.1 严格 CRLF header、1xx interim 累计上限、101/CL+TE/非单一 chunked/extension/非空 trailer 均 fail closed。
 - 当前没有生产调用方；Resty、requests/httpx、Adapter、Probe、Worker、queue、protocol、store 均未切换；生产接线属于 TASK-022G。
+
+
+## 13. TASK-022E-B 配置合同（未接线生产）
+
+- 新增 `config/outbound_security.schema.json`、`docs/OUTBOUND_SECURITY_CONFIGURATION.md`、ADR-022（proposed）与共享配置 fixture（104 cases）。
+- 生产配置入口 `config/outbound_security.json` 仅冻结路径，未创建；site.json/http.json/system.json 未修改。
+- 生产 loader、站点迁移与生产客户端接线均 NOT_STARTED；deployment=BLOCKED。

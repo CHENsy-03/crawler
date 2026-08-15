@@ -2963,8 +2963,8 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - V1 禁用 keep-alive，实际 idle=0；未接入现有 Resty/requests/httpx 或 Adapter/Probe/Worker；当前版本不可部署
 
 ### TASK-022E 进入条件
-- TASK-022E status=NOT_STARTED
-- TASK-022E authorization=WAITING_USER_APPROVAL
+- TASK-022E status=IN_PROGRESS
+- TASK-022E authorization=USER_APPROVED_FOR_CONTRACT_AND_FIXTURE
 - TASK-022E entry_conditions=DEFINED
 - TASK-022E deployment=BLOCKED
 - 进入条件必须同时满足：
@@ -2981,6 +2981,39 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
   11. TASK-022E 完成也不自动解除 deployment block。
   12. 后续安全拒绝事件、消费闭合及部署门禁仍按 TASK-022G、TASK-021A 等冻结路线执行。
 - 不得改变当前任务路线或提前开始 E。
+
+### TASK-022E-A 前置只读审计
+- audit=completed
+- decisions=E-01..E-16 APPROVED
+- acceptance=PASS
+- closure=CLOSED
+
+### TASK-022E-B 配置合同冻结
+- scope=CONTRACT_SCHEMA_SHARED_FIXTURE_ONLY
+- implementation=completed
+- fix_completed=IMPLEMENTED
+- fix2=IMPLEMENTED
+- controlled_rebaseline=WAITING_REVIEW
+- historical_old96_snapshot=UNAVAILABLE
+- sealing_evidence_fix=IMPLEMENTED
+- canonical_blob_basis=INDEX_LF
+- staged_review=WAITING_REVIEW
+- production_logging_redaction=NOT_IMPLEMENTED
+- production_loader=NOT_STARTED
+- site_migration=NOT_STARTED
+- production_client_wiring=NOT_STARTED
+- tests=PASS
+- acceptance=WAITING_RE_REVIEW
+- git_state=UNCOMMITTED
+- deployment=BLOCKED
+- next_task=TASK-022E-B-S-R
+- S-FIX：封板证据口径修正为 index/commit canonical LF blob 权威；首次 S 因工作区 CRLF 与 index LF raw SHA 不一致 STOP，行为正确；工作区 raw 仅作 checkout 环境证据
+- B-FIX：单标签 hostname 拒绝、config_missing/config_invalid_json 回放 case、logging 6 case、迁移草案联网验证声明已补齐；fixture 增至 104 cases
+- B-FIX2：受控重基线（old96 快照不可得，不伪造历史证据）；l-001..l-006 强化为可执行 logging 合同；98 个非 logging case 指纹不变；新 104-case 指纹已写入 OUTBOUND_SECURITY_CONFIGURATION.md
+- 新增 config/outbound_security.schema.json、docs/OUTBOUND_SECURITY_CONFIGURATION.md、docs/decisions/ADR-022-outbound-security-configuration.md
+- 新增 tests/fixtures/outbound_security_config_contract.json、tests/test_outbound_security_config_contract.py、go-spider/internal/config/outbound_security_contract_test.go
+- 未创建 config/outbound_security.json；未修改 site.json/http.json/system.json；未接入生产客户端
+- TASK-022F=NOT_STARTED
 
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛

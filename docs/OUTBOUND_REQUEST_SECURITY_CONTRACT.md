@@ -233,3 +233,16 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 - URL/DNS 策略基础库封板不等于安全 Transport 已经启用。
 - TASK-022C、022D、022E、022F、022G、022H 以及 TASK-021A 未完成前不可部署。
 - 当前版本不可部署。
+
+## TASK-022E-B 配置合同状态
+
+- 生产出站安全配置合同、JSON Schema 与共享 fixture 已冻结（生产 loader 未实现）。
+- 配置入口固定为 `config/outbound_security.json`（本阶段不创建）；仅 `config_version`/`policies` 顶层字段与 `policy_id`/`allowed_domains`/`allowed_schemes`/`allowed_ports` policy 字段。
+- hostname 仅规范化小写 ASCII IDNA A-label，且至少两个 DNS label；单标签 localhost/example 返回 config_invalid_hostname；无 root dot/scheme/userinfo/path/port/通配符/IP literal。
+- V1 仅 exact hostname；不使用 `allowed_subdomain_roots`；不修改 OutboundPolicy 模型。
+- redirect 使用主 `allowed_domains` 集合，无独立 redirect allowlist；HTTPS→HTTP 始终拒绝。
+- `allowed_schemes` 仅 `["https"]` 或 `["http","https"]`；`allowed_ports` 整数 1–65535 且 key 与 schemes 精确一致。
+- 稳定 reason code 见 `docs/OUTBOUND_SECURITY_CONFIGURATION.md`；日志不记录原始配置/完整 URL/query/凭据。
+- 共享 fixture 104 cases（12 category，16 reason 全部可回放，logging=6）。
+- 迁移草案 hostname 清单尚未完成全部站点真实搜索结果/文章 URL/逐跳 redirect hostname 联网验证；后续真实 hostname 审计需另行联网授权并在站点迁移或生产接线封板前完成。
+- TASK-022E-B scope=CONTRACT_SCHEMA_SHARED_FIXTURE_ONLY；fix_completed=IMPLEMENTED；fix2=IMPLEMENTED；controlled_rebaseline=WAITING_REVIEW；historical_old96_snapshot=UNAVAILABLE；production_logging_redaction=NOT_IMPLEMENTED；acceptance=WAITING_RE_REVIEW；production_loader=NOT_STARTED；site_migration=NOT_STARTED；production_client_wiring=NOT_STARTED；deployment=BLOCKED。

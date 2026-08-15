@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "outbound_security.schema.json",
+  "title": "TASK-022E production outbound security configuration",
+  "description": "Static structure contract for config/outbound_security.json. Loader must additionally enforce duplicate keys, IDNA canonicalization, IP literal rejection, policy references, site cross-validation and exact scheme/port key equality.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "config_version",
+    "policies"
+  ],
+  "properties": {
+    "config_version": {
+      "const": "1.0"
+    },
+    "policies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "policy_id",
+          "allowed_domains",
+          "allowed_schemes",
+          "allowed_ports"
+        ],
+        "properties": {
+          "policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "allowed_domains": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+            }
+          },
+          "allowed_schemes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "type": "string",
+              "enum": [
+                "http",
+                "https"
+              ]
+            },
+            "enum": [
+              [
+                "https"
+              ],
+              [
+                "http",
+                "https"
+              ]
+            ]
+          },
+          "allowed_ports": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "propertyNames": {
+              "enum": [
+                "http",
+                "https"
+              ]
+            },
+            "patternProperties": {
+              "^(http|https)$": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
