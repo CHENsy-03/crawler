@@ -453,3 +453,8 @@ TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTML
 - redirect planner 只做纯决策：每跳重新规范化 URL、执行 scheme/exact host/port/DNS/IP/https-downgrade 校验并生成全新 PinnedTarget，不执行网络请求。
 - V1 代理合同拒绝任意非空代理配置，安全包不读取环境代理。
 - 当前没有生产调用方；实际响应读取、流式计数、idle timer、并发限流与生产接线属于 TASK-022D-2/022G。
+## 35. Bounded I/O and Concurrency Runtime（TASK-022D-2）
+
+- Python 新增 `crawler/security/bounded_io.py`、`concurrency_limiter.py`；Go 新增 `bounded_io.go`、`concurrency_limiter.go`。
+- D2 从 D1 TransportBudget 读取全部固定限制，实现请求体/响应头/响应体大小门、deadline-aware 有界读取、read-idle/total 联合约束与 fail-fast 全局/单 hostname 限流。
+- 实际 socket/HTTP Transport 适配、wire-level header 计数、idle pool=2 与生产组合由 TASK-022D-3 完成；本轮不接入生产请求链。

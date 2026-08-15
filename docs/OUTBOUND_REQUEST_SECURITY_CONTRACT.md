@@ -184,6 +184,12 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 - ADR-019-redirect-proxy-resource-budget = accepted（冻结策略与纯合同）
 - TASK-022B foundation = SEALED_LOCAL
 - TASK-022D-1 已由 R2 审计通过并本地封板
+- TASK-022D-2 runtime primitives = IMPLEMENTED_LOCAL（未接线）
+- TASK-022D-2-R=FAIL，FIX implemented；Content-Length/clock/Lease/host key 已按合同收紧
+- TASK-022D-2-R2=FAIL，FIX2 implemented；空 Content-Length 集合、DNS label hyphen、Lease registry 绑定已收紧
+- deadline_capable=True 仅表示 D3 可信适配器契约，不代表任意第三方 reader 可中断
+- ADR-020-bounded-io-concurrency-runtime = proposed
+- D2 仅实现大小门、有界读取、read-idle/total timeout 与并发限流原语；实际 Transport 组合由 D3 接线
 - 60-case 跨语言 fixture 已冻结
 - D1 只提供纯策略合同
 - 实际运行时执行留给 TASK-022D-2/D3

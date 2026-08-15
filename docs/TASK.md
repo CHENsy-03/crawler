@@ -2873,6 +2873,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - 本轮未接入现有生产 HTTP 请求链；当前版本不可部署
 ### TASK-022D 当前状态
 - TASK-022D=IN_PROGRESS
+- TASK-022D-1=CLOSED/PASS
 - TASK-022D-1 implementation=completed
 - TASK-022D-1 tests=PASS
 - TASK-022D-1 audit=TASK-022D-1-R2 PASS
@@ -2887,11 +2888,31 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - deployment=BLOCKED
 - closure=CLOSED
 - next_task=TASK-022D-2
-- TASK-022D-2=NOT_STARTED
+- TASK-022D-2=IN_PROGRESS
 - 新增 Python `transport_budget.py`、`redirect_policy.py` 与 Go `transport_budget.go`、`redirect_policy.go` 纯决策层
 - 新增共享 fixture：tests/fixtures/outbound_transport_policy_contract.json（60 cases：budget 26、redirect 28、proxy 6）
 - 新增 ADR-019-redirect-proxy-resource-budget.md（状态 accepted）
 - 本轮未接入现有 HTTP 客户端、Adapter、Worker、queue 或 protocol；当前版本不可部署
+### TASK-022D-2 当前状态
+- implementation=completed
+- tests=PASS
+- TASK-022D-2-R=FAIL
+- 缺陷：Content-Length 字符串解析、clock 异常、read 后 deadline 复核、Lease 伪造/复制、root dot/IPv4 host key、信任边界文档
+- TASK-022D-2-FIX=implemented
+- TASK-022D-2-R2=FAIL
+- 缺陷：空 Content-Length 集合、DNS label hyphen、Python Lease host 篡改
+- TASK-022D-2-FIX2=implemented
+- acceptance=WAITING_REAUDIT
+- git_state=UNCOMMITTED
+- production_wiring=NOT_STARTED
+- deployment=BLOCKED
+- next_task=TASK-022D-2-R3
+- TASK-022D-3=NOT_STARTED
+- 新增 Python `bounded_io.py`、`concurrency_limiter.py` 与 Go `bounded_io.go`、`concurrency_limiter.go` 运行时基础原语
+- 新增共享 fixture：tests/fixtures/outbound_runtime_limits_contract.json（105 cases：size 40、read 26、concurrency 39）
+- 新增 ADR-020-bounded-io-concurrency-runtime.md（状态 proposed）
+- 本轮未接入现有 HTTP 客户端、Adapter、Probe、Worker、queue 或 protocol；当前版本不可部署
+
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛
 

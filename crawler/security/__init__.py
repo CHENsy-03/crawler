@@ -33,6 +33,23 @@ from crawler.security.transport_budget import (
     remaining_deadline,
     validate_proxy,
 )
+from crawler.security.bounded_io import (
+    BoundedIOError,
+    BoundedReadResult,
+    MAX_READ_CHUNK_BYTES,
+    check_request_body_size,
+    check_response_body_size,
+    check_response_headers_size,
+    read_bounded,
+    validate_content_length,
+    validate_content_lengths,
+)
+from crawler.security.concurrency_limiter import (
+    ConcurrencyError,
+    ConcurrencyLimiter,
+    Lease,
+)
+
 from crawler.security.redirect_policy import (
     RedirectHop,
     RedirectPlan,
@@ -66,7 +83,19 @@ __all__ = [
     "validate_request_authority",
     "validate_ssl_context",
     "validate_tls_server_name",
+    "BoundedIOError",
+    "BoundedReadResult",
     "BudgetError",
+    "ConcurrencyError",
+    "ConcurrencyLimiter",
+    "Lease",
+    "MAX_READ_CHUNK_BYTES",
+    "check_request_body_size",
+    "check_response_body_size",
+    "check_response_headers_size",
+    "read_bounded",
+    "validate_content_length",
+    "validate_content_lengths",
     "BudgetProfile",
     "RedirectHop",
     "RedirectPlan",

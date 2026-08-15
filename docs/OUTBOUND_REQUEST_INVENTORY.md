@@ -217,3 +217,8 @@
 - proxy 合同拒绝任意非空代理配置，安全包不读取环境代理。
 - 共享 fixture：tests/fixtures/outbound_transport_policy_contract.json（44 cases：budget 21、redirect 17、proxy 6）。
 - 当前没有生产调用方；实际响应读取、流式计数、idle timer、并发限流与生产接线属于 TASK-022D-2/022G。
+## 11. TASK-022D-2 运行时基础原语（未接线）
+
+- 大小门、有界读取、read-idle/total timeout、全局/单 hostname 并发限流仅作为未接线安全基础库。
+- 实际 socket/HTTP Transport 适配、wire-level header 计数、idle pool=2 与生产组合属于 TASK-022D-3。
+- 共享 fixture：tests/fixtures/outbound_runtime_limits_contract.json（48 cases：size 18、read 15、concurrency 15）。
