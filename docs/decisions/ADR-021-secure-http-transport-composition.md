@@ -1,13 +1,15 @@
 # ADR-021：Isolated Secure HTTP Transport Composition（TASK-022D-3）
 
-**状态：** proposed
+**状态：** accepted
 **日期：** 2026-08-15
 **关联：** TASK-022D，ADR-016/017/018/019/020 保持 accepted
-**acceptance：** WAITING_REVIEW（TASK-022D-3-R）
-**production_wiring：** ISOLATED_ONLY
-**existing_client_wiring：** NOT_STARTED
-**deployment：** BLOCKED
-**next_task：** TASK-022D-3-R
+**acceptance：** TASK-022D-3-R4 PASS
+**implementation_commit：** 614cf45af3767d7f8f24c0edc2f8faaf704483b7
+**fixture：** 103 shared cases
+**production_wiring：** isolated_only
+**existing_client_wiring：** deferred
+**deployment：** blocked
+**next_task：** TASK-022D-R
 
 ## 背景
 

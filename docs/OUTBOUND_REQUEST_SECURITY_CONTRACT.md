@@ -195,6 +195,10 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 - TASK-022D-3-R=FAIL，FIX implemented：HTTP/1.1 解析与测试合同已收紧
 - TASK-022D-3-R2=FAIL，FIX2 implemented：状态行 reason phrase 拒绝 bare LF/CR/NUL/C0/DEL；HEAD/204/304 空正文返回前执行 CL+TE 与 TE coding 前置校验
 - TASK-022D-3-R3=FAIL，FIX3 implemented：正文响应错误优先级统一为 response syntax → framing → no-body decision → content encoding → body；CL+TE 无论 Content-Encoding 一律 invalid_transfer_encoding
+- TASK-022D-3-R4 PASS；D3 隔离安全 HTTP 执行器与 103-case fixture 已本地封板
+- implementation_seal_commit=614cf45af3767d7f8f24c0edc2f8faaf704483b7
+- production_wiring=ISOLATED_ONLY；existing_client_wiring=NOT_STARTED；deployment=BLOCKED
+- ADR-021=accepted；现有 Resty/requests/httpx 尚未切换；Python 真实 TLS E2E 留给 TASK-022H
 - 仅接受严格 HTTP/1.0/1.1 状态行与 CRLF header；bare LF/CR、NUL、obs-fold、非 token 字段名稳定拒绝
 - 1xx interim（除 101）与最终响应共享累计 256KiB header 上限；101 返回 `protocol_upgrade_not_allowed`
 - Content-Length 与 Transfer-Encoding 同时存在一律 `invalid_transfer_encoding`；TE 仅允许单一 `chunked`
