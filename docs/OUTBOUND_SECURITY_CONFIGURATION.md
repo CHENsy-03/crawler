@@ -48,9 +48,13 @@ Schema 无法单独验证：
 
 ## 3. 稳定 reason code
 
-`config_missing`、`config_invalid_json`、`config_invalid_top_level`、`config_unsupported_version`、`config_unknown_field`、`config_missing_field`、`config_invalid_type`、`config_duplicate`、`config_invalid_policy_id`、`config_invalid_hostname`、`config_forbidden_ip_literal`、`config_invalid_scheme`、`config_invalid_port`、`config_invalid_policy_reference`、`config_site_host_not_covered`、`config_conflict`。
+`config_missing`、`config_invalid_json`、`config_invalid_top_level`、`config_unsupported_version`、`config_unknown_field`、`config_missing_field`、`config_invalid_type`、`config_duplicate`、`config_invalid_policy_id`、`config_invalid_hostname`、`config_forbidden_ip_literal`、`config_invalid_scheme`、`config_invalid_port`、`config_invalid_policy_reference`、`config_site_host_not_covered`、`config_conflict`、`config_unreadable`、`config_limit_exceeded`。
 
-已删除不再适用的 `config_invalid_redirect_subset`。16 个 reason 全部具有可回放 fixture case。日志不得包含原始配置、完整 URL、query、Cookie、Authorization 或凭据。
+已删除不再适用的 `config_invalid_redirect_subset`。18 个 reason 全部具有可回放 fixture case。新增：
+- `config_unreadable`：固定路径目录项存在，但无法安全解析为可读配置源（权限拒绝、open/read 失败、目录/非普通文件、broken symlink、读取中 I/O 错误）；不得用于路径不存在、空文件、UTF-8/JSON/Schema 错误、大小/深度超限。
+- `config_limit_exceeded`：原始配置超过 1,048,576 bytes，或完整、语法合法 JSON 容器嵌套深度超过 32；不得用于权限/读取错误、非法 UTF-8、malformed JSON、普通字段/数组数量错误。
+
+日志不得包含原始配置、完整 URL、query、Cookie、Authorization 或凭据。
 
 ## 4. 决策摘要（E-01..E-16）
 
@@ -97,16 +101,29 @@ Schema 无法单独验证：
 
 豁免（写入本文档）：workers/parser_worker.py、Python FastAPI api/server.py、纯 monitor/metrics 进程、其他经静态审计确认无出站能力的独立工具。豁免名单一旦未来新增出站能力自动失效。
 
-## 8. Logging 合同
+## 8. Loader 输入与错误优先级决策（TASK-022E-C-A-D / E-B-AMEND-1）
+
+- 生产路径固定为 `config/outbound_security.json`，不允许 env/CLI/site 字段/运行时参数覆盖；复用现有项目 config-root 定位规则。核心内部 loader 允许显式 path 参数（fixture/单元测试），不暴露为用户 CLI/env 覆盖；生产 wrapper 无 path 参数。
+- symlink 允许，但最终目标必须是可读普通文件；打开后读取一次；broken symlink、目录、设备、FIFO 等返回 `config_unreadable`。
+- 每个出站进程仅在启动时加载一次并使用不可变字节快照；不监听、不热加载、不在请求期重读；本阶段不设计 reload API。
+- JSON 输入边界：路径不存在=`config_missing`；不可读/非普通文件=`config_unreadable`；>1,048,576 bytes=`config_limit_exceeded`；空文件/BOM/非 UTF-8/注释/尾随逗号/malformed/尾随第二 JSON 值=`config_invalid_json`；合法且深度>32=`config_limit_exceeded`；合法且重复 JSON key=`config_duplicate`；顶层非 object=`config_invalid_top_level`。深度定义：根 object/array=1，每层+1，scalar 不增加，最大 32，只有语法完整合法后裁决深度；读取限制为 MAX_BYTES+1，不能无界读入。
+- 生产 loader 只返回第一个稳定错误，不返回错误集合。安全错误对象只允许 reason/field_path/policy_id（适用时）/canonical hostname（合同允许时）；禁止原始配置、完整 URL、path/query/fragment、Authorization/Cookie/token/credential；底层异常仅作内部 cause。
+- 全局验证顺序：路径存在 → 可安全打开为普通文件 → byte 长度 → UTF-8/BOM/空文件 → 完整 JSON 词法与尾随值 → 容器深度 → 重复 JSON key → 顶层 object → 顶层字段结构 → config_version → policies 数组结构 → 每个 policy 结构与类型 → policy_id → IP literal → hostname → scheme → port → semantic duplicate → config_conflict → policy reference → site 静态交叉校验 → 完成编译。
+- 混合错误裁决：malformed+apparent duplicate=`config_invalid_json`；合法 duplicate JSON key+invalid type=`config_duplicate`；unknown+missing=`config_unknown_field`；semantic duplicate+invalid_type=`config_invalid_type`；IP literal+hostname 不合法=`config_forbidden_ip_literal`；unknown policy reference+site host uncovered=`config_invalid_policy_reference`；duplicate+conflict=`config_duplicate`。
+- 确定性顺序：object 未知字段按 ASCII 字段名排序报第一个，missing 按 Schema required 固定顺序，field type/value 按合同固定顺序；policies 按文件数组输入顺序；site 按 site_id ASCII 升序；site 静态字段顺序 domain → base_url → api_url → page_url；字段含多个 endpoint 时按数组输入顺序。
+- domain 必须是 lowercase ASCII 至少两 label hostname，不含 scheme/userinfo/port/path/query/fragment/root dot/IP literal，只做 exact hostname 命中。base_url/api_url/page_url 缺失/空串跳过，null/非字符串=`config_invalid_type`，非空必须是绝对 http/https URL，拒绝 userinfo/fragment/IP literal/root dot/相对 URL，hostname 必须已 lowercase canonical，scheme 必须允许，默认端口 http=80/https=443，port 必须属于对应 scheme；path/query 可存在但不参与 hostname 匹配且不得进入安全日志。先验证所有 site 的 outbound_policy_id 引用，再执行静态交叉校验。
+- 双端责任：Python/Go 分别独立读取同一 JSON；两端均执行完整 18-reason 验证、从 raw bytes 检测重复 key、编译为各自冻结 OutboundPolicy；不通过 HTTP/Redis/DB/临时文件传递已编译策略；loader 不执行 DNS/redirect；任务级 allowed_domains 交集不属 loader，由后续共享执行器/生产接线阶段计算；空交集为运行时策略拒绝，不使用 config_* reason；快速/专业/legacy/v1/v2 均不得绕过交集；所有出站进程启动时 fail-closed，E-15 豁免进程不强制加载。
+
+## 9. Logging 合同
 
 允许记录：冻结 reason、稳定字段路径、policy_id、经合同允许的规范化 hostname、不含敏感内容的固定状态信息。
 
 禁止记录：原始配置全文、完整 URL、path/query/fragment、Authorization/Cookie/token/credential 值、错误输入中的敏感字段内容、policy 完整内容。
 
-fixture logging category 覆盖 6 个 case（l-001..l-006），使用明显非真实敏感哨兵值验证“不出现”。
+fixture logging category 覆盖 6 个 case（l-001..l-006），使用明显非真实敏感哨兵值验证“不出现”；logging 允许 reason 集合同步为 18。
 
 
-## 9. 受控重基线记录（TASK-022E-B-FIX2）
+## 10. 受控重基线记录（TASK-022E-B-FIX2）
 
 - B-FIX 前没有保存 96-case case-level 快照；`old96_missing=[]` 只能证明 ID 未丢失，无法证明原 96 case 的完整输入和 expected 未变化。
 - R2 因此正确判定 FAIL；FIX2 不伪造历史证据。
@@ -133,6 +150,7 @@ fixture logging category 覆盖 6 个 case（l-001..l-006），使用明显非�
 - ALL104=`efcaded2a21eadce6a5c36167ac104c17fdf7e2487b80ea3e0cc63a4b0348f52`。
 - NONLOGGING98=`1cdebf8ce767c7ce0897e973c3ecac4ec45f8299ed6a65811dc0fac1ab90f0cd`。
 - LOGGING6=`8c8f5f1aa7a50c47015014bb111add7b9298339fe5e485ce9ea365a9cea955d8`。
+- 上述 ALL104/NONLOGGING98/LOGGING6 标记为 `legacy_unversioned_aggregate`：来自 R3 历史审计，当时未保存足以独立复现的完整聚合 framing 规范，不再作为新 amendment 的机器验收值；第 10 节逐 case SHA 表仍为可信历史证据。
 - case 数量、顺序、ID、输入、expected 与语义不变；R3 合同语义结论继续有效；原 96-case 历史证据缺口声明不变。
 
 ### S 失败记录（TASK-022E-B-S）
@@ -146,6 +164,7 @@ fixture logging category 覆盖 6 个 case（l-001..l-006），使用明显非�
 - 全部 104 case 规范化聚合 SHA-256：`efcaded2a21eadce6a5c36167ac104c17fdf7e2487b80ea3e0cc63a4b0348f52`。
 - 98 个非 logging case 规范化聚合 SHA-256：`1cdebf8ce767c7ce0897e973c3ecac4ec45f8299ed6a65811dc0fac1ab90f0cd`（与 FIX2 开始前一致）。
 - 6 个 logging case 规范化聚合 SHA-256：`8c8f5f1aa7a50c47015014bb111add7b9298339fe5e485ce9ea365a9cea955d8`。
+- 上述三个聚合值为 `legacy_unversioned_aggregate`，保留 R3 历史记录，不作为新 amendment 的机器验收值；逐 case SHA 表仍为可信历史证据。
 - 规范化算法：按当前 fixture 顺序选择 case；每个对象 UTF-8 JSON；key 排序；无多余空格；Unicode 不转义；哈希完整 case 内容（不只 ID/reason）。
 
 ### 逐 case 规范化 SHA-256
@@ -256,3 +275,18 @@ f-010 ed1419aaf4a7b813535a0b318988762d794cd174f9bda9078155a4732e447f23
 f-011 c3cbabc58c5269e1d3849b5bbf446957ae76b5c5b5741858c750f6bd37921713
 f-012 abcd538556b461dd52bb0572ffa0261bd880387e152eea4bfeb6edba0349b408
 ```
+
+
+## 11. E-B-AMEND-1 决策指纹（TASK-022E-C-A-D / E-B-AMEND-1）
+
+- aggregate algorithm：`OSEC-CASE-AGGREGATE-V1`；字节流为 `MAGIC(ASCII "OSEC-CASE-AGGREGATE-V1"+0x00) || COUNT(4-byte BE uint32) || CASE_1..CASE_N`；每个 case 为 `4-byte BE ID 长度 || ID UTF-8 || 32-byte raw SHA-256`；case 按 ID UTF-8 字节序升序；最终 `SHA-256(MAGIC || COUNT || CASE_1..CASE_N)`。
+- 工作区 raw fixture SHA：`6de5f0e04816e19fcba6106a05af6ad30debffba1b87f309f0597989f0cc12d6`
+- canonical LF fixture SHA（CRLF→LF 规范化）：`8d8b12f5f030dea6face5e2b25795f667657873bd4dd89a178659e0daabdcb45`
+- BASE104_V1（104 个历史 ID）：`bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8`
+- NEW21_V1（125-104=21 个新增 ID）：`dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850`
+- ALL125_V1（全部 125 个 case）：`75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b`
+- 原 104 case 规范化聚合（legacy，沿用）：`efcaded2a21eadce6a5c36167ac104c17fdf7e2487b80ea3e0cc63a4b0348f52`；BASE104 逐 case SHA 与第 10 节 104/104 一致。
+- 旧草案值 `ALL125=2aeca26e90ee6aa79fb91fd6968dacdb23834d3a01350c6d54a4e8ad9356d3e6`、`NEW21=189612b6a29378781ae216fca0e627f760815d28c507080f1fbbac8c6ed9d94a` 标记为 `REJECTED_UNVERSIONED_DRAFT`，不再作为权威值。
+- reason_count=18；fixture_case_count=125；12 category 不变。
+- amendment=IMPLEMENTED/UNCOMMITTED；loader_decisions=FROZEN_PENDING_REVIEW；production_loader=NOT_STARTED；site_migration=NOT_STARTED；production_client_wiring=NOT_STARTED；deployment=BLOCKED；next_task=TASK-022E-C-A-D-R。
+- 原 104 case 逐 case SHA 与第 10 节指纹表完全一致；新增 case 仅追加，未修改原 104 case；聚合元数据不计入逐 case SHA。

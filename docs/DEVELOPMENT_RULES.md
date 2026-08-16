@@ -87,3 +87,12 @@ TASK-020B
 - redirect 使用主 `allowed_domains` 集合，不新增独立 redirect allowlist。
 - 仅禁止出站安全字段被环境变量、CLI 或 site 覆盖；基础设施 env（MYSQL_*、Redis 等）不受影响。
 - 配置级共享 fixture 必须被 Python/Go 生产 loader 真实消费；E-B 只冻结 fixture，生产 loader 留给 E-C。
+
+## 12. 生产 outbound-security loader 输入与优先级（TASK-022E-C-A-D）
+
+- 生产路径固定 `config/outbound_security.json`；禁止 env/CLI/site 字段/运行时参数覆盖；测试经内部 from_path 注入，不暴露为生产覆盖。
+- 新增冻结 reason：`config_unreadable`（源存在但不可读/目录/非普通文件/broken symlink/权限/I/O）与 `config_limit_exceeded`（>1,048,576 bytes 或合法 JSON 容器深度>32）；不得与其他 reason 混用。
+- loader 只返回第一个稳定错误；错误对象仅含 reason/field_path/policy_id/canonical hostname，禁止原始配置/完整 URL/query/凭据。
+- 全局验证顺序与混合错误优先级按 OUTBOUND_SECURITY_CONFIGURATION.md 冻结；policies 文件顺序、site site_id ASCII 升序、site 字段 domain→base_url→api_url→page_url。
+- 每个出站进程启动时 fail-closed，仅读取一次，不热加载；loader 不执行 DNS/redirect，不处理任务级 allowed_domains 交集。
+- fixture 聚合口径：`OSEC-CASE-AGGREGATE-V1`（MAGIC + 4-byte BE COUNT + 按 case ID UTF-8 字节序排序的 ID 长度/ID/raw digest 记录；元数据不计入逐 case SHA）。

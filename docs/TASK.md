@@ -3015,6 +3015,20 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - 未创建 config/outbound_security.json；未修改 site.json/http.json/system.json；未接入生产客户端
 - TASK-022F=NOT_STARTED
 
+### TASK-022E-C-A-D / E-B-AMEND-1
+- amendment=IMPLEMENTED/UNCOMMITTED
+- loader_decisions=FROZEN_PENDING_REVIEW
+- reason_count=18（新增 config_unreadable、config_limit_exceeded）
+- fixture_case_count=125（原 104 case 未修改，新增 21 case）
+- aggregate_algorithm=OSEC-CASE-AGGREGATE-V1
+- BASE104_V1=`bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8`；NEW21_V1=`dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850`；ALL125_V1=`75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b`
+- production_loader=NOT_STARTED
+- site_migration=NOT_STARTED
+- production_client_wiring=NOT_STARTED
+- deployment=BLOCKED
+- next_task=TASK-022E-C-A-D-R
+- E-B 原封板 commit=01f27dfb413603dcf2e2f10902c99d05b4cd3e1b 保持不变；未实现生产 loader，未创建 config/outbound_security.json
+
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛
 

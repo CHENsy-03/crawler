@@ -477,3 +477,10 @@ TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTML
 - 合同结构：顶层 `config_version`（const "1.0"）与 `policies`；policy 为 `policy_id`、`allowed_domains`、`allowed_schemes`、`allowed_ports`；JSON Schema 位于 `config/outbound_security.schema.json`。
 - hostname 仅规范化小写 ASCII IDNA A-label；V1 仅 exact hostname；redirect 使用主 allowlist；禁止 IP literal；不修改 OutboundPolicy 模型。
 - 共享 fixture `tests/fixtures/outbound_security_config_contract.json`（104 cases）与 Python/Go 合同完整性测试已新增；生产 loader 与 site.json 迁移未实施。
+
+## 38. Production Outbound-Security Loader Contract（TASK-022E-C-A-D）
+
+- 生产 loader 输入为 `config/outbound_security.json`；固定路径、启动时单次快照读取、不热加载；错误 reason 增至 18（含 config_unreadable/config_limit_exceeded）。
+- 全局验证顺序、混合错误优先级、policies/site/静态字段确定性顺序、双端独立验证责任均已冻结；loader 不执行 DNS/redirect，不处理任务级 allowed_domains 交集。
+- 生产 loader 尚未实现；production_loader=NOT_STARTED；deployment=BLOCKED。
+- fixture 聚合口径：`OSEC-CASE-AGGREGATE-V1`；BASE104_V1=`bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8`；NEW21_V1=`dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850`；ALL125_V1=`75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b`。

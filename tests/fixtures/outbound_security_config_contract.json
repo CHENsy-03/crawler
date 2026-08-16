@@ -1,4 +1,114 @@
 {
+  "algorithm": "OSEC-CASE-AGGREGATE-V1",
+  "baseline_case_ids": [
+    "v-001",
+    "v-002",
+    "v-003",
+    "v-004",
+    "v-005",
+    "t-001",
+    "t-002",
+    "t-003",
+    "t-004",
+    "t-005",
+    "t-006",
+    "t-007",
+    "ver-001",
+    "ver-002",
+    "ver-003",
+    "ver-004",
+    "ver-005",
+    "ver-006",
+    "ver-007",
+    "pid-001",
+    "pid-002",
+    "pid-003",
+    "pid-004",
+    "pid-005",
+    "pid-006",
+    "pid-007",
+    "h-001",
+    "h-002",
+    "h-003",
+    "h-004",
+    "h-005",
+    "h-006",
+    "h-007",
+    "h-008",
+    "h-009",
+    "h-010",
+    "h-011",
+    "h-012",
+    "h-013",
+    "h-014",
+    "h-015",
+    "h-016",
+    "h-017",
+    "h-018",
+    "s-001",
+    "s-002",
+    "s-003",
+    "s-004",
+    "s-005",
+    "s-006",
+    "s-007",
+    "s-008",
+    "s-009",
+    "s-010",
+    "p-001",
+    "p-002",
+    "p-003",
+    "p-004",
+    "p-005",
+    "p-006",
+    "p-007",
+    "p-008",
+    "p-009",
+    "p-010",
+    "p-011",
+    "p-012",
+    "d-001",
+    "d-002",
+    "d-003",
+    "d-004",
+    "d-005",
+    "d-006",
+    "d-007",
+    "pr-001",
+    "pr-002",
+    "pr-003",
+    "pr-004",
+    "pr-005",
+    "sc-001",
+    "sc-002",
+    "sc-003",
+    "sc-004",
+    "sc-005",
+    "sc-006",
+    "sc-007",
+    "sc-008",
+    "l-001",
+    "l-002",
+    "l-003",
+    "l-004",
+    "l-005",
+    "l-006",
+    "f-001",
+    "f-002",
+    "f-003",
+    "f-004",
+    "f-005",
+    "f-006",
+    "f-007",
+    "f-008",
+    "f-009",
+    "f-010",
+    "f-011",
+    "f-012"
+  ],
+  "expected_base104_v1": "bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8",
+  "expected_new21_v1": "dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850",
+  "expected_all125_v1": "75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b",
   "schema_version": "1.0",
   "frozen_reasons": [
     "config_missing",
@@ -16,7 +126,9 @@
     "config_invalid_port",
     "config_invalid_policy_reference",
     "config_site_host_not_covered",
-    "config_conflict"
+    "config_conflict",
+    "config_unreadable",
+    "config_limit_exceeded"
   ],
   "categories": {
     "valid_config": [
@@ -99,6 +211,18 @@
         "description": "Exact version 1.0",
         "version": "1.0",
         "category": "valid_config"
+      },
+      {
+        "id": "v-006",
+        "action": "ordering",
+        "allowed": true,
+        "reason": null,
+        "description": "Policies validated in file input order",
+        "expected_policy_order": [
+          "site-a",
+          "site-b"
+        ],
+        "category": "valid_config"
       }
     ],
     "top_level": [
@@ -166,6 +290,109 @@
         "category": "top_level",
         "source": "config/outbound_security.json",
         "payload_text": "{\"config_version\": \"1.0\","
+      },
+      {
+        "id": "t-008",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unreadable",
+        "description": "Source exists but permission denied",
+        "source_state": "unreadable",
+        "category": "top_level"
+      },
+      {
+        "id": "t-009",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unreadable",
+        "description": "Source path is a directory",
+        "source_state": "directory",
+        "category": "top_level"
+      },
+      {
+        "id": "t-010",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unreadable",
+        "description": "Source is non-regular or unsupported file",
+        "source_state": "non_regular_source",
+        "category": "top_level"
+      },
+      {
+        "id": "t-011",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_limit_exceeded",
+        "description": "Raw config exceeds 1,048,576 bytes",
+        "source_size": 1048577,
+        "parameterized": true,
+        "category": "top_level"
+      },
+      {
+        "id": "t-012",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_limit_exceeded",
+        "description": "Valid JSON container depth exceeds 32",
+        "depth": 33,
+        "parameterized": true,
+        "category": "top_level"
+      },
+      {
+        "id": "t-013",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Empty file",
+        "payload_text": "",
+        "category": "top_level"
+      },
+      {
+        "id": "t-014",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "UTF-8 BOM",
+        "payload_hex": "efbbbf",
+        "category": "top_level"
+      },
+      {
+        "id": "t-015",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Invalid UTF-8 byte",
+        "payload_hex": "ff",
+        "category": "top_level"
+      },
+      {
+        "id": "t-016",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Trailing second JSON value",
+        "payload_text": "{\"config_version\":\"1.0\"} {\"policies\":[]}",
+        "category": "top_level"
+      },
+      {
+        "id": "t-017",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Malformed JSON with apparent duplicate key wins lexical stage",
+        "payload_text": "{\"config_version\":\"1.0\",\"config_version\":\"1.0\",",
+        "scenario": "malformed_json_apparent_duplicate",
+        "category": "top_level"
+      },
+      {
+        "id": "t-018",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "Unknown field precedes missing required",
+        "payload_text": "{\"unknown_top\":1}",
+        "scenario": "unknown_field_missing_required",
+        "category": "top_level"
       }
     ],
     "version": [
@@ -470,6 +697,36 @@
         "description": "Single-label hostname example",
         "category": "hostname",
         "hostname": "example"
+      },
+      {
+        "id": "h-019",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_forbidden_ip_literal",
+        "description": "IP literal check precedes generic hostname pattern",
+        "hostname": "127.0.0.1",
+        "scenario": "ip_literal_invalid_hostname",
+        "category": "hostname"
+      },
+      {
+        "id": "h-020",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "domain field is hostname only",
+        "field": "domain",
+        "hostname": "czj.beijing.gov.cn",
+        "category": "hostname"
+      },
+      {
+        "id": "h-021",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "domain field must not contain scheme",
+        "field": "domain",
+        "hostname": "https://czj.beijing.gov.cn",
+        "category": "hostname"
       }
     ],
     "scheme": [
@@ -829,6 +1086,48 @@
           ]
         },
         "category": "duplicate"
+      },
+      {
+        "id": "d-008",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate JSON key precedes type check",
+        "payload_text": "{\"config_version\":1,\"config_version\":\"1.0\"}",
+        "scenario": "duplicate_json_key_invalid_type",
+        "category": "duplicate"
+      },
+      {
+        "id": "d-009",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "Semantic duplicate with invalid type reports type first",
+        "policy_id_values": [
+          {
+            "policy_id": "site-a"
+          },
+          {
+            "policy_id": 123
+          }
+        ],
+        "scenario": "semantic_duplicate_invalid_type",
+        "category": "duplicate"
+      },
+      {
+        "id": "d-010",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Semantic duplicate precedes cross-field conflict",
+        "ports": {
+          "https": [
+            443,
+            443
+          ]
+        },
+        "scenario": "duplicate_conflict",
+        "category": "duplicate"
       }
     ],
     "policy_reference": [
@@ -878,6 +1177,18 @@
         "reason": "config_conflict",
         "description": "Environment/CLI security override concept",
         "site_key": "czj_beijing",
+        "category": "policy_reference"
+      },
+      {
+        "id": "pr-006",
+        "action": "reference",
+        "allowed": false,
+        "reason": "config_invalid_policy_reference",
+        "description": "Unknown policy reference precedes site host uncovered",
+        "site_key": "czj_beijing",
+        "policy_id": "missing",
+        "static_url": "https://czj.beijing.gov.cn",
+        "scenario": "unknown_policy_reference_site_host_uncovered",
         "category": "policy_reference"
       }
     ],
@@ -966,6 +1277,35 @@
         "reason": null,
         "description": "Startup cross-validation does not replace runtime per-request policy/DNS/IP checks",
         "site_key": "czj_beijing",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-009",
+        "action": "ordering",
+        "allowed": true,
+        "reason": null,
+        "description": "Static field check order",
+        "expected_field_order": [
+          "domain",
+          "base_url",
+          "api_url",
+          "page_url"
+        ],
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-010",
+        "action": "ordering",
+        "allowed": true,
+        "reason": null,
+        "description": "Site validation order is site_id ASCII ascending",
+        "expected_site_order": [
+          "czj_beijing",
+          "czj_hangzhou",
+          "sc_czt",
+          "sd_czt",
+          "sxcs_shaoxing"
+        ],
         "category": "site_cross_validation"
       }
     ],

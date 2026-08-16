@@ -246,3 +246,14 @@ TASK-022 期间 AI/第三方外部提取继续默认禁用。不允许使用动�
 - 共享 fixture 104 cases（12 category，16 reason 全部可回放，logging=6）。
 - 迁移草案 hostname 清单尚未完成全部站点真实搜索结果/文章 URL/逐跳 redirect hostname 联网验证；后续真实 hostname 审计需另行联网授权并在站点迁移或生产接线封板前完成。
 - TASK-022E-B scope=CONTRACT_SCHEMA_SHARED_FIXTURE_ONLY；fix_completed=IMPLEMENTED；fix2=IMPLEMENTED；controlled_rebaseline=WAITING_REVIEW；historical_old96_snapshot=UNAVAILABLE；production_logging_redaction=NOT_IMPLEMENTED；acceptance=WAITING_RE_REVIEW；production_loader=NOT_STARTED；site_migration=NOT_STARTED；production_client_wiring=NOT_STARTED；deployment=BLOCKED。
+
+## TASK-022E-C-A-D / E-B-AMEND-1 决策补充
+
+- 冻结 reason 由 16 增至 18：新增 `config_unreadable`（源存在但不可读/非普通文件/权限/I/O）与 `config_limit_exceeded`（>1,048,576 bytes 或合法 JSON 容器深度>32）。
+- 生产路径固定 `config/outbound_security.json`，不允许 env/CLI/site/运行时参数覆盖；测试经内部 from_path 注入；symlink 允许但目标必须为可读普通文件；仅启动时读取一次，不热加载。
+- loader 只返回第一个稳定错误；错误对象仅允许 reason/field_path/policy_id/canonical hostname，禁止原始配置/完整 URL/query/凭据。
+- 全局验证顺序与混合错误优先级已冻结（详见 OUTBOUND_SECURITY_CONFIGURATION.md 第 8 节）；policies 按文件顺序、site 按 site_id ASCII 升序、site 静态字段顺序 domain→base_url→api_url→page_url。
+- domain 为 hostname；base_url/api_url/page_url 为绝对 http/https URL，默认端口 80/443，path/query 不参与 hostname 匹配且不得进入安全日志；先验证全部 outbound_policy_id 引用，再执行静态交叉校验。
+- 双端各自独立读取并完整 18-reason 验证；loader 不执行 DNS/redirect，不处理任务级 allowed_domains 交集（交集由后续执行器/接线阶段计算，空交集为运行时拒绝）。
+- fixture_case_count=125（原 104 未修改，新增 21）；reason_count=18；amendment=IMPLEMENTED/UNCOMMITTED；production_loader=NOT_STARTED；deployment=BLOCKED。
+- fixture 聚合口径：`OSEC-CASE-AGGREGATE-V1`；BASE104_V1=`bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8`；NEW21_V1=`dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850`；ALL125_V1=`75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b`；旧草案值 `2aeca26e…/189612b6…` 标记为 `REJECTED_UNVERSIONED_DRAFT`。

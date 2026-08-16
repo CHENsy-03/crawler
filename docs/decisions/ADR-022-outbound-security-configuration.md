@@ -33,3 +33,10 @@
 - 新增 `config/outbound_security.schema.json`、`tests/fixtures/outbound_security_config_contract.json` 及 Python/Go 合同 fixture 测试。
 - 生产 loader、site.json 迁移与生产客户端接线均未实施。
 - 当前版本不可部署；production wiring 仍未开始。
+
+## TASK-022E-C-A-D / E-B-AMEND-1 补充
+
+- 冻结 reason 增至 18：新增 `config_unreadable` 与 `config_limit_exceeded`，边界见 OUTBOUND_SECURITY_CONFIGURATION.md。
+- 冻结生产路径固定、测试 from_path 注入、symlink 允许但目标必须为可读普通文件、启动时单次快照、不热加载、单错误返回、全局验证顺序与混合错误优先级、policies/site/静态字段确定性顺序、domain 与 URL 字段解释、双端独立完整验证、任务级交集不在 loader 处理。
+- fixture 由 104 增至 125（原 104 未修改）；reason_count=18；amendment=IMPLEMENTED/UNCOMMITTED；loader_decisions=FROZEN_PENDING_REVIEW；production_loader=NOT_STARTED；deployment=BLOCKED；next_task=TASK-022E-C-A-D-R。
+- fixture 聚合使用 `OSEC-CASE-AGGREGATE-V1`；BASE104_V1=`bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8`；NEW21_V1=`dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850`；ALL125_V1=`75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b`；旧未版本化草案值标记为 `REJECTED_UNVERSIONED_DRAFT`。
