@@ -3028,6 +3028,26 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - deployment=BLOCKED
 - next_task=TASK-022E-C-A-D-R
 - E-B 原封板 commit=01f27dfb413603dcf2e2f10902c99d05b4cd3e1b 保持不变；未实现生产 loader，未创建 config/outbound_security.json
+### TASK-022E-OSEC-A0
+- S0 commit=e6bdf4c863903fa7e2fdafd004fc94d0fbb766a3
+- legacy_source_commit=SEALED
+- evidence_profile_v2=IN_PROGRESS
+- A0.1_spec=IMPLEMENTED_WAITING_REVIEW
+- A0.2_vectors=NOT_STARTED
+- A0.3a_legacy_record=NOT_STARTED
+- E_A1_candidate_implementation=NOT_STARTED
+- A0.3b_compatibility_gate=NOT_STARTED
+- manifest_v1=NOT_STARTED
+- S1_evidence_seal_commit=NOT_STARTED
+- external_seal_record=NOT_STARTED
+- merkle=DRAFT_0_DEFERRED
+- production_loader=NOT_STARTED
+- production_logging_redaction=NOT_IMPLEMENTED
+- site_migration=NOT_STARTED
+- production_client_wiring=NOT_STARTED
+- deployment=BLOCKED
+- next_task=TASK-022E-OSEC-A0-R
+
 
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛
