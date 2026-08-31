@@ -925,3 +925,180 @@ def test_aggregate_vectors_unknown_metadata_negatives():
     run_bad(lambda fx: recipe_by_name(fx, "recipe_depth_129").__setitem__("output_kind", "unknown_kind"))
     run_bad(lambda fx: recipe_by_name(fx, "recipe_depth_129").__setitem__("expected_stage", "unknown_stage"))
     run_bad(lambda fx: fx.__setitem__("unknown_top_level", True))
+
+
+LEGACY_FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "fixtures", "outbound_security_config_legacy_digests.json")
+EXPECTED_LEGACY_RECORD_SHA256 = "37A6EA15C1E7E7D80089AE0872992E2B405125EDD68C272739C2C09EF5001E81"
+EXPECTED_LEGACY_AGGREGATES = {
+    "all125": "75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b",
+    "base104": "bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8",
+    "amendment21": "dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850",
+}
+LEGACY_COHORT_NAMES = ("all125", "base104", "amendment21")
+LEGACY_VALIDATION_RULES = {
+    "top_level",
+    "provenance",
+    "counts",
+    "digest_format",
+    "digest_sort",
+    "cohort_order",
+    "cohort_counts",
+    "cohort_sets",
+    "aggregate_recompute",
+    "frozen_aggregates",
+}
+LEGACY_KNOWN_ACTIONS = {"structure", "aggregate_recompute", "frozen_aggregates"}
+
+
+def _legacy_aggregate_from_digests(digest_items):
+    records = sorted(
+        ((item["id"].encode("utf-8"), bytes.fromhex(item["sha256"])) for item in digest_items),
+        key=lambda record: record[0],
+    )
+    stream = AGGREGATE_MAGIC + struct.pack(">I", len(records))
+    for case_id, digest in records:
+        stream += struct.pack(">I", len(case_id)) + case_id + digest
+    return hashlib.sha256(stream).hexdigest()
+
+
+def _assert_known_legacy_actions(actions):
+    assert set(actions) <= LEGACY_KNOWN_ACTIONS, "unknown validation action"
+
+
+def _validate_legacy_record(record, executed=None):
+    if executed is None:
+        executed = set()
+
+    def mark(name):
+        executed.add(name)
+
+    assert set(record.keys()) == {
+        "record_version",
+        "profile",
+        "provenance",
+        "case_count",
+        "cohorts",
+        "case_digests",
+    }
+    mark("top_level")
+    assert record["record_version"] == "OSEC-LEGACY-DIGEST-RECORD-V1"
+    assert record["profile"] == "OSEC-EVIDENCE-PROFILE-V2"
+    assert record["case_count"] == 125
+    provenance = record["provenance"]
+    assert set(provenance.keys()) == {
+        "method",
+        "canonical_label",
+        "legacy_source_commit",
+        "legacy_source_tree",
+        "git_object_format",
+        "fixture_path",
+        "fixture_blob_oid",
+        "python_source_path",
+        "python_source_blob_oid",
+        "python_implementation",
+        "python_version",
+        "aggregate_algorithm",
+    }
+    assert provenance["method"] == "recorded-from-legacy"
+    assert provenance["canonical_label"] == "LEGACY-PYTHON-CANONICAL-V1"
+    assert provenance["legacy_source_commit"] == "e6bdf4c863903fa7e2fdafd004fc94d0fbb766a3"
+    assert provenance["legacy_source_tree"] == "242d27fd5f027a763ade7bcc1067ee0fc7ef9a67"
+    assert provenance["git_object_format"] == "sha1"
+    assert provenance["fixture_path"] == "tests/fixtures/outbound_security_config_contract.json"
+    assert provenance["fixture_blob_oid"] == "8b5c052c176b27b2b8530ddd464e00cf7de39b15"
+    assert provenance["python_source_path"] == "tests/test_outbound_security_config_contract.py"
+    assert provenance["python_source_blob_oid"] == "9dd4968a691ede7433c3b7fd1a57221269f9c89b"
+    assert provenance["python_implementation"] == "CPython"
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", provenance["python_version"])
+    assert provenance["aggregate_algorithm"] == "OSEC-CASE-AGGREGATE-V1"
+    mark("provenance")
+
+    cohorts = record["cohorts"]
+    digests = record["case_digests"]
+    assert len(cohorts) == 3 and len(digests) == 125
+    mark("counts")
+    assert [c["name"] for c in cohorts] == list(LEGACY_COHORT_NAMES)
+    assert len({c["name"] for c in cohorts}) == 3
+    for cohort in cohorts:
+        assert set(cohort.keys()) == {"name", "case_count", "case_ids", "aggregate_v1"}
+    for item in digests:
+        assert set(item.keys()) == {"id", "sha256"}
+        assert re.fullmatch(r"[0-9a-f]{64}", item["sha256"])
+        assert len(bytes.fromhex(item["sha256"])) == 32
+    mark("digest_format")
+    digest_ids = [item["id"] for item in digests]
+    assert len(digest_ids) == len(set(digest_ids))
+    assert digest_ids == sorted(digest_ids)
+    mark("digest_sort")
+
+    cohort_by_name = {c["name"]: c for c in cohorts}
+    all_ids = cohort_by_name["all125"]["case_ids"]
+    base_ids = cohort_by_name["base104"]["case_ids"]
+    amendment_ids = cohort_by_name["amendment21"]["case_ids"]
+    assert [c["case_count"] for c in cohorts] == [125, 104, 21]
+    assert all(len(c["case_ids"]) == c["case_count"] for c in cohorts)
+    assert all(c["case_ids"] == sorted(c["case_ids"]) for c in cohorts)
+    mark("cohort_order")
+    mark("cohort_counts")
+    assert set(all_ids) == set(digest_ids)
+    assert not (set(base_ids) & set(amendment_ids))
+    assert set(base_ids) | set(amendment_ids) == set(all_ids)
+    mark("cohort_sets")
+
+    digest_by_id = {item["id"]: item["sha256"] for item in digests}
+    for cohort in cohorts:
+        items = [{"id": case_id, "sha256": digest_by_id[case_id]} for case_id in cohort["case_ids"]]
+        assert _legacy_aggregate_from_digests(items) == cohort["aggregate_v1"]
+    mark("aggregate_recompute")
+    for name, expected in EXPECTED_LEGACY_AGGREGATES.items():
+        assert cohort_by_name[name]["aggregate_v1"] == expected
+    mark("frozen_aggregates")
+    return executed
+
+
+def test_legacy_record_positive():
+    raw = open(LEGACY_FIXTURE_PATH, "rb").read()
+    assert hashlib.sha256(raw).hexdigest().upper() == EXPECTED_LEGACY_RECORD_SHA256
+    assert not raw.startswith(b"\xef\xbb\xbf")
+    raw.decode("utf-8")
+    assert raw.count(b"\r\n") == 0
+    assert raw.count(b"\r") == 0
+    assert raw.count(b"\n") > 0
+    record = _load_json_no_duplicates(LEGACY_FIXTURE_PATH)
+    executed = set()
+    _validate_legacy_record(record, executed)
+    assert executed == LEGACY_VALIDATION_RULES
+    _assert_known_legacy_actions(LEGACY_KNOWN_ACTIONS)
+
+
+def test_legacy_record_negative():
+    base = _load_json_no_duplicates(LEGACY_FIXTURE_PATH)
+
+    def run_bad(mutate):
+        record = copy.deepcopy(base)
+        mutate(record)
+        with pytest.raises(AssertionError):
+            _validate_legacy_record(record)
+
+    run_bad(lambda r: r.__setitem__("unknown_top_level", True))
+    run_bad(lambda r: r["provenance"].__setitem__("unknown_field", True))
+    run_bad(lambda r: r["cohorts"][0].__setitem__("unknown_field", True))
+    run_bad(lambda r: r["case_digests"][0].__setitem__("unknown_field", True))
+    run_bad(lambda r: r.__setitem__("record_version", "OSEC-LEGACY-DIGEST-RECORD-V2"))
+    run_bad(lambda r: r.__setitem__("profile", "OSEC-EVIDENCE-PROFILE-V1"))
+    run_bad(lambda r: r["provenance"].__setitem__("method", "independently_constructed"))
+    run_bad(lambda r: r["provenance"].__setitem__("canonical_label", "UNKNOWN"))
+    run_bad(lambda r: r["provenance"].__setitem__("aggregate_algorithm", "UNKNOWN"))
+    run_bad(lambda r: r["case_digests"].append(dict(r["case_digests"][0])))
+    run_bad(lambda r: r["case_digests"][0].__setitem__("sha256", "zz"))
+    run_bad(lambda r: r["cohorts"].__setitem__(0, r["cohorts"][1]))
+    run_bad(lambda r: r["cohorts"][2]["case_ids"].append(r["cohorts"][1]["case_ids"][0]))
+    run_bad(lambda r: r["cohorts"][0]["case_ids"].pop())
+    run_bad(lambda r: r["cohorts"][0].__setitem__("aggregate_v1", "0" + r["cohorts"][0]["aggregate_v1"][1:]))
+    run_bad(lambda r: r["provenance"].__setitem__("legacy_source_commit", "0" + r["provenance"]["legacy_source_commit"][1:]))
+    run_bad(lambda r: r["provenance"].__setitem__("legacy_source_tree", "0" + r["provenance"]["legacy_source_tree"][1:]))
+    run_bad(lambda r: r["provenance"].__setitem__("fixture_blob_oid", "0" + r["provenance"]["fixture_blob_oid"][1:]))
+    run_bad(lambda r: r["provenance"].__setitem__("python_version", ""))
+    run_bad(lambda r: r["provenance"].__setitem__("python_version", "3.14"))
+    with pytest.raises(AssertionError):
+        _assert_known_legacy_actions({"unknown_validation_action"})

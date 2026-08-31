@@ -1720,3 +1720,452 @@ func TestOutboundSecurityAggregateVectorsUnknownMetadataNegatives(t *testing.T) 
 		t.Fatal("unknown recipe field accepted")
 	}
 }
+
+const expectedLegacyRecordSHA256 = "37A6EA15C1E7E7D80089AE0872992E2B405125EDD68C272739C2C09EF5001E81"
+
+var expectedLegacyAggregates = map[string]string{
+	"all125":      "75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b",
+	"base104":     "bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8",
+	"amendment21": "dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850",
+}
+
+var legacyCohortOrder = []string{"all125", "base104", "amendment21"}
+
+var legacyValidationRules = map[string]bool{
+	"top_level": true, "provenance": true, "counts": true, "digest_format": true,
+	"digest_sort": true, "cohort_order": true, "cohort_counts": true, "cohort_sets": true,
+	"aggregate_recompute": true, "frozen_aggregates": true,
+}
+
+var legacyKnownActions = map[string]bool{
+	"structure": true, "aggregate_recompute": true, "frozen_aggregates": true,
+}
+
+type legacyProvenance struct {
+	Method                string `json:"method"`
+	CanonicalLabel        string `json:"canonical_label"`
+	LegacySourceCommit    string `json:"legacy_source_commit"`
+	LegacySourceTree      string `json:"legacy_source_tree"`
+	GitObjectFormat       string `json:"git_object_format"`
+	FixturePath           string `json:"fixture_path"`
+	FixtureBlobOID        string `json:"fixture_blob_oid"`
+	PythonSourcePath      string `json:"python_source_path"`
+	PythonSourceBlobOID   string `json:"python_source_blob_oid"`
+	PythonImplementation  string `json:"python_implementation"`
+	PythonVersion         string `json:"python_version"`
+	AggregateAlgorithm    string `json:"aggregate_algorithm"`
+}
+
+type legacyCohort struct {
+	Name         string   `json:"name"`
+	CaseCount    int      `json:"case_count"`
+	CaseIDs      []string `json:"case_ids"`
+	AggregateV1  string   `json:"aggregate_v1"`
+}
+
+type legacyCaseDigest struct {
+	ID     string `json:"id"`
+	SHA256 string `json:"sha256"`
+}
+
+type legacyRecord struct {
+	RecordVersion string            `json:"record_version"`
+	Profile       string            `json:"profile"`
+	Provenance    legacyProvenance  `json:"provenance"`
+	CaseCount     int               `json:"case_count"`
+	Cohorts       []legacyCohort    `json:"cohorts"`
+	CaseDigests   []legacyCaseDigest `json:"case_digests"`
+}
+
+func legacyFixturePath(t *testing.T) string {
+	t.Helper()
+	return filepath.Join("..", "..", "..", "tests", "fixtures", "outbound_security_config_legacy_digests.json")
+}
+
+func findDuplicateJSONKeyAnywhere(dec *json.Decoder) (string, error) {
+	tok, err := dec.Token()
+	if err != nil {
+		return "", err
+	}
+	delim, ok := tok.(json.Delim)
+	if !ok {
+		return "", nil
+	}
+	switch delim {
+	case '{':
+		seen := map[string]bool{}
+		for dec.More() {
+			keyTok, err := dec.Token()
+			if err != nil {
+				return "", err
+			}
+			key, ok := keyTok.(string)
+			if !ok {
+				return "", fmt.Errorf("object key is not string")
+			}
+			if seen[key] {
+				return key, nil
+			}
+			seen[key] = true
+			if dup, err := findDuplicateJSONKeyAnywhere(dec); err != nil || dup != "" {
+				return dup, err
+			}
+		}
+		if _, err := dec.Token(); err != nil {
+			return "", err
+		}
+	case '[':
+		for dec.More() {
+			if dup, err := findDuplicateJSONKeyAnywhere(dec); err != nil || dup != "" {
+				return dup, err
+			}
+		}
+		if _, err := dec.Token(); err != nil {
+			return "", err
+		}
+	}
+	return "", nil
+}
+
+func loadLegacyRecord(t *testing.T) legacyRecord {
+	t.Helper()
+	data, err := os.ReadFile(legacyFixturePath(t))
+	if err != nil {
+		t.Fatalf("read legacy record: %v", err)
+	}
+	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+		t.Fatalf("legacy record BOM")
+	}
+	if !utf8.Valid(data) {
+		t.Fatalf("legacy record not UTF-8")
+	}
+	if dup, err := findDuplicateJSONKeyAnywhere(json.NewDecoder(bytes.NewReader(data))); err != nil || dup != "" {
+		t.Fatalf("legacy record duplicate key: dup=%q err=%v", dup, err)
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	var record legacyRecord
+	if err := dec.Decode(&record); err != nil {
+		t.Fatalf("decode legacy record: %v", err)
+	}
+	if _, err := dec.Token(); err != io.EOF {
+		if err == nil {
+			t.Fatalf("legacy record trailing JSON")
+		}
+		t.Fatalf("legacy record trailing decode: %v", err)
+	}
+	return record
+}
+
+func legacyAggregateFromDigests(items []legacyCaseDigest) (string, error) {
+	type record struct {
+		id     []byte
+		digest []byte
+	}
+	records := make([]record, 0, len(items))
+	for _, item := range items {
+		digest, err := hex.DecodeString(item.SHA256)
+		if err != nil || len(digest) != 32 {
+			return "", fmt.Errorf("invalid digest %q", item.ID)
+		}
+		records = append(records, record{id: []byte(item.ID), digest: digest})
+	}
+	sort.Slice(records, func(i, j int) bool {
+		return bytes.Compare(records[i].id, records[j].id) < 0
+	})
+	stream := []byte(aggregateV1Magic)
+	var count [4]byte
+	binary.BigEndian.PutUint32(count[:], uint32(len(records)))
+	stream = append(stream, count[:]...)
+	for _, rec := range records {
+		var length [4]byte
+		binary.BigEndian.PutUint32(length[:], uint32(len(rec.id)))
+		stream = append(stream, length[:]...)
+		stream = append(stream, rec.id...)
+		stream = append(stream, rec.digest...)
+	}
+	sum := sha256.Sum256(stream)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func validateLegacyActions(actions map[string]bool) error {
+	for name := range actions {
+		if !legacyKnownActions[name] {
+			return fmt.Errorf("unknown validation action %q", name)
+		}
+	}
+	return nil
+}
+
+func validateLegacyRecord(record *legacyRecord, executed map[string]bool) error {
+	mark := func(name string) {
+		if executed != nil {
+			executed[name] = true
+		}
+	}
+	if record.RecordVersion != "OSEC-LEGACY-DIGEST-RECORD-V1" {
+		return fmt.Errorf("record version %q", record.RecordVersion)
+	}
+	if record.Profile != "OSEC-EVIDENCE-PROFILE-V2" {
+		return fmt.Errorf("profile %q", record.Profile)
+	}
+	if record.CaseCount != 125 {
+		return fmt.Errorf("case count %d", record.CaseCount)
+	}
+	mark("top_level")
+
+	p := record.Provenance
+	if p.Method != "recorded-from-legacy" ||
+		p.CanonicalLabel != "LEGACY-PYTHON-CANONICAL-V1" ||
+		p.LegacySourceCommit != "e6bdf4c863903fa7e2fdafd004fc94d0fbb766a3" ||
+		p.LegacySourceTree != "242d27fd5f027a763ade7bcc1067ee0fc7ef9a67" ||
+		p.GitObjectFormat != "sha1" ||
+		p.FixturePath != "tests/fixtures/outbound_security_config_contract.json" ||
+		p.FixtureBlobOID != "8b5c052c176b27b2b8530ddd464e00cf7de39b15" ||
+		p.PythonSourcePath != "tests/test_outbound_security_config_contract.py" ||
+		p.PythonSourceBlobOID != "9dd4968a691ede7433c3b7fd1a57221269f9c89b" ||
+		p.PythonImplementation != "CPython" ||
+		!regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(p.PythonVersion) ||
+		p.AggregateAlgorithm != "OSEC-CASE-AGGREGATE-V1" {
+		return fmt.Errorf("provenance")
+	}
+	mark("provenance")
+
+	if len(record.Cohorts) != 3 || len(record.CaseDigests) != 125 {
+		return fmt.Errorf("counts")
+	}
+	mark("counts")
+
+	for i, name := range legacyCohortOrder {
+		if record.Cohorts[i].Name != name {
+			return fmt.Errorf("cohort order")
+		}
+	}
+	mark("cohort_order")
+
+	digestIDs := map[string]bool{}
+	prevID := ""
+	for i, item := range record.CaseDigests {
+		if len(item.SHA256) != 64 {
+			return fmt.Errorf("digest format")
+		}
+		digest, err := hex.DecodeString(item.SHA256)
+		if err != nil || len(digest) != 32 {
+			return fmt.Errorf("digest decode")
+		}
+		if digestIDs[item.ID] {
+			return fmt.Errorf("duplicate digest id")
+		}
+		digestIDs[item.ID] = true
+		if i > 0 && bytes.Compare([]byte(prevID), []byte(item.ID)) >= 0 {
+			return fmt.Errorf("digest sort")
+		}
+		prevID = item.ID
+	}
+	mark("digest_format")
+	mark("digest_sort")
+
+	cohorts := map[string]*legacyCohort{}
+	for i := range record.Cohorts {
+		cohort := &record.Cohorts[i]
+		if cohort.CaseCount != len(cohort.CaseIDs) {
+			return fmt.Errorf("cohort count %s", cohort.Name)
+		}
+		seen := map[string]bool{}
+		prev := ""
+		for j, id := range cohort.CaseIDs {
+			if seen[id] {
+				return fmt.Errorf("cohort duplicate %s", id)
+			}
+			seen[id] = true
+			if j > 0 && bytes.Compare([]byte(prev), []byte(id)) >= 0 {
+				return fmt.Errorf("cohort sort %s", cohort.Name)
+			}
+			prev = id
+		}
+		cohorts[cohort.Name] = cohort
+	}
+	mark("cohort_counts")
+
+	allSet := map[string]bool{}
+	for _, id := range cohorts["all125"].CaseIDs {
+		allSet[id] = true
+	}
+	for id := range digestIDs {
+		if !allSet[id] {
+			return fmt.Errorf("all125 mismatch")
+		}
+	}
+	for id := range allSet {
+		if !digestIDs[id] {
+			return fmt.Errorf("all125 mismatch")
+		}
+	}
+	baseSet := map[string]bool{}
+	amendmentSet := map[string]bool{}
+	for _, id := range cohorts["base104"].CaseIDs {
+		baseSet[id] = true
+	}
+	for _, id := range cohorts["amendment21"].CaseIDs {
+		amendmentSet[id] = true
+	}
+	for id := range baseSet {
+		if amendmentSet[id] {
+			return fmt.Errorf("cohort overlap")
+		}
+	}
+	if len(baseSet)+len(amendmentSet) != len(allSet) {
+		return fmt.Errorf("cohort union")
+	}
+	mark("cohort_sets")
+
+	digestByID := map[string]string{}
+	for _, item := range record.CaseDigests {
+		digestByID[item.ID] = item.SHA256
+	}
+	for _, name := range legacyCohortOrder {
+		cohort := cohorts[name]
+		items := make([]legacyCaseDigest, 0, len(cohort.CaseIDs))
+		for _, id := range cohort.CaseIDs {
+			items = append(items, legacyCaseDigest{ID: id, SHA256: digestByID[id]})
+		}
+		aggregate, err := legacyAggregateFromDigests(items)
+		if err != nil || aggregate != cohort.AggregateV1 {
+			return fmt.Errorf("cohort aggregate %s", name)
+		}
+		if expected := expectedLegacyAggregates[name]; aggregate != expected {
+			return fmt.Errorf("frozen aggregate %s", name)
+		}
+	}
+	mark("aggregate_recompute")
+	mark("frozen_aggregates")
+	return nil
+}
+
+func TestOutboundSecurityLegacyRecordPositive(t *testing.T) {
+	data, err := os.ReadFile(legacyFixturePath(t))
+	if err != nil {
+		t.Fatalf("read legacy record: %v", err)
+	}
+	sum := sha256.Sum256(data)
+	if !strings.EqualFold(hex.EncodeToString(sum[:]), expectedLegacyRecordSHA256) {
+		t.Fatalf("legacy record sha mismatch")
+	}
+	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+		t.Fatalf("legacy record BOM")
+	}
+	if !utf8.Valid(data) {
+		t.Fatalf("legacy record UTF-8")
+	}
+	if bytes.Contains(data, []byte("\r")) {
+		t.Fatalf("legacy record CR")
+	}
+	record := loadLegacyRecord(t)
+	executed := map[string]bool{}
+	if err := validateLegacyRecord(&record, executed); err != nil {
+		t.Fatalf("legacy record validation: %v", err)
+	}
+	if len(executed) != len(legacyValidationRules) {
+		t.Fatalf("executed rules %d != %d", len(executed), len(legacyValidationRules))
+	}
+	for name := range legacyValidationRules {
+		if !executed[name] {
+			t.Fatalf("rule not executed: %s", name)
+		}
+	}
+	if err := validateLegacyActions(legacyKnownActions); err != nil {
+		t.Fatalf("known actions: %v", err)
+	}
+}
+
+func TestOutboundSecurityLegacyRecordNegative(t *testing.T) {
+	runBad := func(name string, mutate func(*legacyRecord)) {
+		record := loadLegacyRecord(t)
+		mutate(&record)
+		if err := validateLegacyRecord(&record, nil); err == nil {
+			t.Fatalf("legacy mutation accepted: %s", name)
+		}
+	}
+
+	runBad("record version", func(r *legacyRecord) { r.RecordVersion = "OSEC-LEGACY-DIGEST-RECORD-V2" })
+	runBad("profile", func(r *legacyRecord) { r.Profile = "OSEC-EVIDENCE-PROFILE-V1" })
+	runBad("method", func(r *legacyRecord) { r.Provenance.Method = "independently_constructed" })
+	runBad("canonical label", func(r *legacyRecord) { r.Provenance.CanonicalLabel = "UNKNOWN" })
+	runBad("aggregate algorithm", func(r *legacyRecord) { r.Provenance.AggregateAlgorithm = "UNKNOWN" })
+	runBad("duplicate case id", func(r *legacyRecord) { r.CaseDigests = append(r.CaseDigests, r.CaseDigests[0]) })
+	runBad("digest format", func(r *legacyRecord) { r.CaseDigests[0].SHA256 = "zz" })
+	runBad("cohort order", func(r *legacyRecord) { r.Cohorts[0], r.Cohorts[1] = r.Cohorts[1], r.Cohorts[0] })
+	runBad("cohort overlap", func(r *legacyRecord) {
+		r.Cohorts[2].CaseIDs = append(r.Cohorts[2].CaseIDs, r.Cohorts[1].CaseIDs[0])
+		r.Cohorts[2].CaseCount++
+	})
+	runBad("cohort union", func(r *legacyRecord) {
+		r.Cohorts[0].CaseIDs = r.Cohorts[0].CaseIDs[1:]
+		r.Cohorts[0].CaseCount--
+	})
+	runBad("aggregate bit", func(r *legacyRecord) {
+		value := r.Cohorts[0].AggregateV1
+		r.Cohorts[0].AggregateV1 = "0" + value[1:]
+		if value[0] == '0' {
+			r.Cohorts[0].AggregateV1 = "1" + value[1:]
+		}
+	})
+	runBad("source commit", func(r *legacyRecord) {
+		value := r.Provenance.LegacySourceCommit
+		r.Provenance.LegacySourceCommit = "0" + value[1:]
+		if value[0] == '0' {
+			r.Provenance.LegacySourceCommit = "1" + value[1:]
+		}
+	})
+	runBad("source tree", func(r *legacyRecord) {
+		value := r.Provenance.LegacySourceTree
+		r.Provenance.LegacySourceTree = "0" + value[1:]
+		if value[0] == '0' {
+			r.Provenance.LegacySourceTree = "1" + value[1:]
+		}
+	})
+	runBad("fixture blob", func(r *legacyRecord) {
+		value := r.Provenance.FixtureBlobOID
+		r.Provenance.FixtureBlobOID = "0" + value[1:]
+		if value[0] == '0' {
+			r.Provenance.FixtureBlobOID = "1" + value[1:]
+		}
+	})
+	runBad("python version empty", func(r *legacyRecord) { r.Provenance.PythonVersion = "" })
+	runBad("python version short", func(r *legacyRecord) { r.Provenance.PythonVersion = "3.14" })
+
+	if err := validateLegacyActions(map[string]bool{"unknown_validation_action": true}); err == nil {
+		t.Fatal("unknown validation action accepted")
+	}
+
+	data, err := os.ReadFile(legacyFixturePath(t))
+	if err != nil {
+		t.Fatalf("read legacy record: %v", err)
+	}
+	raw := string(data)
+	unknownCases := []struct {
+		label       string
+		marker      string
+		replacement string
+	}{
+		{"top", `"record_version"`, `"unknown_top_level":true,"record_version"`},
+		{"provenance", `"method": "recorded-from-legacy"`, `"method": "recorded-from-legacy","unknown_provenance_field":true`},
+		{"cohort", `"name": "all125"`, `"name": "all125","unknown_cohort_field":true`},
+		{"digest", `"id": "d-001"`, `"id": "d-001","unknown_digest_field":true`},
+	}
+	for _, tc := range unknownCases {
+		if strings.Count(raw, tc.marker) != 1 {
+			t.Fatalf("marker count for %s: %d", tc.label, strings.Count(raw, tc.marker))
+		}
+		injected := strings.Replace(raw, tc.marker, tc.replacement, 1)
+		if !json.Valid([]byte(injected)) {
+			t.Fatalf("injected %s JSON invalid", tc.label)
+		}
+		dec := json.NewDecoder(strings.NewReader(injected))
+		dec.DisallowUnknownFields()
+		var record legacyRecord
+		if err := dec.Decode(&record); err == nil {
+			t.Fatalf("unknown %s field accepted", tc.label)
+		}
+	}
+}
