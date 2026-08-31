@@ -582,3 +582,346 @@ def _assert_parameterized_cases(fixture):
         bytes.fromhex(payload_hex)
     for cid in ("t-008", "t-009", "t-010"):
         assert by_id[cid]["source_state"] in {"unreadable", "directory", "non_regular_source"}
+
+
+VECTOR_FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "fixtures", "outbound_security_aggregate_vectors.json")
+VECTOR_VALID_NAMES = {
+    "canonical_case_minimal", "canonical_html_specials", "canonical_u2028", "canonical_u2029",
+    "canonical_literal_backslash_u", "canonical_cjk", "canonical_quote_backslash", "canonical_control_short",
+    "canonical_control_u00xx", "canonical_slash", "canonical_u007f_c1", "canonical_unicode_object_key",
+    "canonical_nested_key_sort", "canonical_null_empty_distinction", "canonical_type_int_bool_string",
+    "canonical_integer_zero", "canonical_negative_zero", "canonical_large_integer", "canonical_surrogate_pair",
+    "canonical_internal_bom", "canonical_whitespace_equivalent", "canonical_crlf_equivalent",
+    "canonical_key_sort_ascii_cjk_nonbmp", "canonical_depth_128", "canonical_case_id_64",
+}
+VECTOR_REJECT_NAMES = {
+    "strict_bom", "strict_invalid_utf8", "strict_empty_input", "strict_whitespace_only", "strict_malformed_json",
+    "strict_trailing_data", "strict_duplicate_literal_key", "strict_duplicate_decoded_key", "strict_lone_high_surrogate",
+    "strict_lone_low_surrogate", "strict_high_high_surrogate", "strict_high_nonlow_surrogate", "strict_low_high_surrogate",
+    "strict_nan", "strict_infinity", "strict_negative_infinity", "strict_leading_zero", "strict_truncated_exponent",
+    "limit_file_size_16mib_plus_1", "limit_depth_129", "limit_integer_4097_digits", "limit_array_10001",
+    "limit_object_1001_members", "limit_string_1mib_plus_1", "limit_case_count_10001",
+    "canonical_noninteger_1_0", "canonical_noninteger_1e5", "canonical_noninteger_negative_zero",
+    "canonical_root_non_object", "canonical_missing_id", "canonical_empty_id", "canonical_uppercase_id",
+    "canonical_underscore_id", "canonical_id_65", "canonical_nonstring_id",
+}
+VECTOR_RECIPE_NAMES = {
+    "recipe_integer_4097_digits", "recipe_array_10001", "recipe_string_1mib_plus_1", "recipe_file_size_16mib_plus_1",
+    "recipe_depth_129", "recipe_object_1001_members", "recipe_case_count_10001",
+}
+VECTOR_TARGETS = {"canonical_json", "canonical_case", "strict_decode", "evidence_limits", "canonical"}
+VECTOR_STAGES = {"strict_decode", "evidence_limits", "canonical"}
+VECTOR_GENERATORS = {"repeat_unit", "nested_container", "object_members", "file_size_pad", "case_dataset"}
+VECTOR_OUTPUT_KINDS = {"raw_bytes", "typed_dataset"}
+VECTOR_ERRORS = {
+    "strict_decode_invalid_json", "strict_decode_invalid_utf8", "strict_decode_bom", "strict_decode_duplicate_key",
+    "strict_decode_lone_surrogate", "strict_decode_trailing_data", "evidence_limit_file_size",
+    "evidence_limit_nesting_depth", "evidence_limit_integer_digits", "evidence_limit_array_length",
+    "evidence_limit_object_members", "evidence_limit_string_length", "evidence_limit_case_count",
+    "canonical_invalid_value_type", "canonical_non_integer_number", "canonical_invalid_unicode",
+    "canonical_root_not_object", "canonical_missing_id", "canonical_invalid_id", "aggregate_empty_set",
+    "aggregate_duplicate_id", "aggregate_invalid_digest_length", "aggregate_unknown_algorithm",
+    "aggregate_count_overflow", "aggregate_length_overflow", "manifest_invalid_structure", "manifest_unknown_field",
+    "manifest_count_mismatch", "manifest_case_digest_mismatch", "manifest_category_mismatch",
+    "manifest_aggregate_mismatch", "manifest_invalid_dataset", "manifest_invalid_category",
+    "manifest_duplicate_category", "manifest_invalid_cohort", "manifest_duplicate_cohort", "manifest_cohort_mismatch",
+    "seal_record_invalid_structure", "seal_record_hash_mismatch", "seal_record_git_binding_failed",
+}
+
+
+def _load_vector_fixture():
+    return _load_json_no_duplicates(VECTOR_FIXTURE_PATH)
+
+
+def _validate_hex_utf8(value, label, allow_empty=False, require_utf8=True):
+    assert isinstance(value, str), label
+    if not allow_empty:
+        assert value, label
+    assert len(value) % 2 == 0, label
+    assert value == value.lower(), label
+    data = bytes.fromhex(value)
+    if require_utf8:
+        data.decode("utf-8")
+    return data
+
+
+def _validate_nested_zero_array(data, expected_depth):
+    assert isinstance(data, bytes), "data must be bytes"
+    assert isinstance(expected_depth, int) and expected_depth >= 1, "expected_depth must be positive"
+    assert data == b"[" * expected_depth + b"0" + b"]" * expected_depth, "nested zero array structure"
+    depth = 0
+    max_depth = 0
+    scalar_seen = False
+    for index, byte_value in enumerate(data):
+        if byte_value == ord("["):
+            assert not scalar_seen, "open bracket after scalar"
+            depth += 1
+            max_depth = max(max_depth, depth)
+        elif byte_value == ord("0"):
+            assert not scalar_seen, "duplicate scalar"
+            scalar_seen = True
+            assert depth == expected_depth, "scalar at wrong depth"
+        elif byte_value == ord("]"):
+            assert scalar_seen, "close bracket before scalar"
+            depth -= 1
+            assert depth >= 0, "depth went negative"
+        else:
+            raise AssertionError("unexpected byte 0x%02x" % byte_value)
+    assert scalar_seen, "missing scalar"
+    assert depth == 0, "unclosed brackets"
+    assert max_depth == expected_depth, "max depth mismatch"
+    assert len(data) == 2 * expected_depth + 1, "length mismatch"
+
+
+def _generate_vector_recipe_output(recipe):
+    gen = recipe["generator"]
+    prefix = bytes.fromhex(recipe["prefix_hex"])
+    unit = bytes.fromhex(recipe["unit_hex"])
+    separator = bytes.fromhex(recipe["separator_hex"]) if recipe["separator_hex"] else b""
+    suffix = bytes.fromhex(recipe["suffix_hex"])
+    count = recipe["count"]
+    if gen == "repeat_unit":
+        return prefix + unit + b"".join(separator + unit for _ in range(count - 1)) + suffix
+    if gen == "nested_container":
+        return prefix * count + unit + suffix * count
+    if gen == "object_members":
+        return prefix + b",".join(b'"k%d":0' % i for i in range(count)) + suffix
+    if gen == "file_size_pad":
+        return prefix + unit * count + suffix
+    if gen == "case_dataset":
+        return prefix + b",".join(b'{"id":"c%d"}' % i for i in range(count)) + suffix
+    raise AssertionError("unknown generator " + gen)
+
+
+def _assert_recipe_depth_129(recipe):
+    data = _generate_vector_recipe_output(recipe)
+    assert hashlib.sha256(data).hexdigest() == recipe["expected_input_sha256"], recipe["name"]
+    _validate_nested_zero_array(data, 129)
+
+
+def _validate_vector_fixture(fixture):
+    assert set(fixture.keys()) == {"format_version", "profile", "provenance", "valid_vectors", "reject_vectors", "resource_recipes"}
+    assert fixture["format_version"] == "1.0"
+    assert fixture["profile"] == "OSEC-EVIDENCE-PROFILE-V2"
+    assert fixture["provenance"] == {"method": "independently_constructed"}
+    valid = fixture["valid_vectors"]
+    reject = fixture["reject_vectors"]
+    recipes = fixture["resource_recipes"]
+    assert len(valid) == 25 and len(reject) == 35 and len(recipes) == 7
+    all_names = [v["name"] for v in valid] + [r["name"] for r in reject] + [r["name"] for r in recipes]
+    assert len(all_names) == len(set(all_names))
+    assert {v["name"] for v in valid} == VECTOR_VALID_NAMES
+    assert {r["name"] for r in reject} == VECTOR_REJECT_NAMES
+    assert {r["name"] for r in recipes} == VECTOR_RECIPE_NAMES
+    by_name = {}
+    for v in valid + reject:
+        by_name[v["name"]] = v
+    for v in valid:
+        assert set(v.keys()) == {"name", "target", "input_json_utf8_hex", "expected_canonical_utf8_hex", "expected_case_sha256"}
+        assert v["target"] in {"canonical_json", "canonical_case"}
+        _validate_hex_utf8(v["input_json_utf8_hex"], v["name"] + " input")
+        exp = _validate_hex_utf8(v["expected_canonical_utf8_hex"], v["name"] + " expected")
+        assert not exp.startswith(b"\xef\xbb\xbf")
+        assert not exp.endswith(b"\n")
+        if v["target"] == "canonical_case":
+            assert isinstance(v["expected_case_sha256"], str)
+            assert len(v["expected_case_sha256"]) == 64
+            assert v["expected_case_sha256"] == v["expected_case_sha256"].lower()
+            assert hashlib.sha256(exp).hexdigest() == v["expected_case_sha256"]
+        else:
+            assert v["expected_case_sha256"] is None
+    assert by_name["canonical_integer_zero"]["expected_canonical_utf8_hex"] == by_name["canonical_negative_zero"]["expected_canonical_utf8_hex"]
+    assert by_name["canonical_whitespace_equivalent"]["expected_canonical_utf8_hex"] == by_name["canonical_crlf_equivalent"]["expected_canonical_utf8_hex"]
+    assert "5c7532303238" in by_name["canonical_literal_backslash_u"]["expected_canonical_utf8_hex"]
+    depth128_input = bytes.fromhex(by_name["canonical_depth_128"]["input_json_utf8_hex"])
+    depth128_expected = bytes.fromhex(by_name["canonical_depth_128"]["expected_canonical_utf8_hex"])
+    _validate_nested_zero_array(depth128_input, 128)
+    _validate_nested_zero_array(depth128_expected, 128)
+    assert depth128_input == depth128_expected
+    recipe_by_name = {r["name"]: r for r in recipes}
+    for rj in reject:
+        assert set(rj.keys()) == {"name", "target", "input_json_utf8_hex", "recipe", "expected_stage", "expected_error"}
+        assert rj["target"] in {"strict_decode", "evidence_limits", "canonical"}
+        assert rj["expected_stage"] == rj["target"]
+        assert rj["expected_error"] in VECTOR_ERRORS
+        if rj["recipe"] is None:
+            assert isinstance(rj["input_json_utf8_hex"], str)
+            _validate_hex_utf8(rj["input_json_utf8_hex"], rj["name"], allow_empty=True, require_utf8=False)
+        else:
+            assert rj["input_json_utf8_hex"] is None
+            assert rj["recipe"] in recipe_by_name
+    for r in recipes:
+        assert set(r.keys()) == {"name", "generator", "prefix_hex", "unit_hex", "separator_hex", "suffix_hex", "count", "output_kind", "expected_input_sha256", "expected_stage", "expected_error"}
+        assert r["generator"] in VECTOR_GENERATORS
+        assert r["output_kind"] in VECTOR_OUTPUT_KINDS
+        assert isinstance(r["count"], int) and r["count"] > 0
+        assert len(r["expected_input_sha256"]) == 64
+        assert r["expected_error"] in VECTOR_ERRORS
+    for r in recipes:
+        refs = [rj for rj in reject if rj["recipe"] == r["name"]]
+        assert len(refs) == 1
+        assert refs[0]["expected_stage"] == r["expected_stage"]
+        assert refs[0]["expected_error"] == r["expected_error"]
+    for rj in reject:
+        if rj["recipe"] is not None:
+            r = recipe_by_name[rj["recipe"]]
+            assert rj["expected_stage"] == r["expected_stage"]
+            assert rj["expected_error"] == r["expected_error"]
+
+
+def test_aggregate_vectors_structure_and_inventory():
+    fixture = _load_vector_fixture()
+    _validate_vector_fixture(fixture)
+    bad_top = dict(fixture)
+    bad_top["unknown_top"] = True
+    with pytest.raises(AssertionError):
+        _validate_vector_fixture(bad_top)
+    bad_valid = dict(fixture)
+    bad_valid["valid_vectors"] = [dict(fixture["valid_vectors"][0])]
+    bad_valid["valid_vectors"][0]["unknown_field"] = True
+    with pytest.raises(AssertionError):
+        _validate_vector_fixture(bad_valid)
+    bad_recipe = dict(fixture)
+    bad_recipe["resource_recipes"] = [dict(fixture["resource_recipes"][0])]
+    bad_recipe["resource_recipes"][0]["generator"] = "unknown_generator"
+    with pytest.raises(AssertionError):
+        _validate_vector_fixture(bad_recipe)
+
+
+def test_aggregate_vectors_resource_recipes():
+    fixture = _load_vector_fixture()
+    executed = set()
+    for recipe in fixture["resource_recipes"]:
+        data = _generate_vector_recipe_output(recipe)
+        assert hashlib.sha256(data).hexdigest() == recipe["expected_input_sha256"], recipe["name"]
+        if recipe["name"] == "recipe_file_size_16mib_plus_1":
+            assert len(data) == 16777217
+        elif recipe["name"] == "recipe_depth_129":
+            _validate_nested_zero_array(data, 129)
+        elif recipe["name"] == "recipe_integer_4097_digits":
+            assert len(data) == 4097
+        elif recipe["name"] == "recipe_array_10001":
+            assert data.count(b",") == 10000
+        elif recipe["name"] == "recipe_object_1001_members":
+            keys = json.loads(data).keys()
+            assert len(keys) == 1001
+        elif recipe["name"] == "recipe_string_1mib_plus_1":
+            assert len(data) == 1048585
+        elif recipe["name"] == "recipe_case_count_10001":
+            assert len(json.loads(data)) == 10001
+        executed.add(recipe["name"])
+    assert executed == VECTOR_RECIPE_NAMES
+
+
+def test_aggregate_vectors_depth_structure_negatives():
+    base = _load_vector_fixture()
+
+    def mutate_valid(fx, data):
+        for vector in fx["valid_vectors"]:
+            if vector["name"] == "canonical_depth_128":
+                vector["input_json_utf8_hex"] = data.hex()
+                vector["expected_canonical_utf8_hex"] = data.hex()
+                return
+        raise AssertionError("canonical_depth_128 missing")
+
+    def mutate_recipe(fx, **kwargs):
+        for recipe in fx["resource_recipes"]:
+            if recipe["name"] == "recipe_depth_129":
+                recipe.update(kwargs)
+                return
+        raise AssertionError("recipe_depth_129 missing")
+
+    def recipe_by_name(fx, name):
+        for recipe in fx["resource_recipes"]:
+            if recipe["name"] == name:
+                return recipe
+        raise AssertionError("recipe missing: " + name)
+
+    valid_cases = [
+        b"[" * 127 + b"0" + b"]" * 127,
+        b"[" * 129 + b"0" + b"]" * 129,
+        b"0" + b"[" * 128 + b"]" * 128,
+        b"[" * 128 + b"]" * 128 + b"0",
+        b"[" * 128 + b"0" + b"]" * 127,
+        b"[" * 128 + b"0" + b"]" * 128 + b"x",
+    ]
+    for data in valid_cases:
+        fx = copy.deepcopy(base)
+        mutate_valid(fx, data)
+        with pytest.raises(AssertionError):
+            _validate_vector_fixture(fx)
+
+    fx = copy.deepcopy(base)
+    mutate_recipe(fx, count=128)
+    with pytest.raises(AssertionError):
+        _assert_recipe_depth_129(recipe_by_name(fx, "recipe_depth_129"))
+
+    fx = copy.deepcopy(base)
+    mutate_recipe(fx, count=130)
+    with pytest.raises(AssertionError):
+        _assert_recipe_depth_129(recipe_by_name(fx, "recipe_depth_129"))
+
+    fx = copy.deepcopy(base)
+    mutate_recipe(fx, count=130)
+    with pytest.raises(AssertionError):
+        _assert_recipe_depth_129(recipe_by_name(fx, "recipe_depth_129"))
+
+    fx = copy.deepcopy(base)
+    digest = recipe_by_name(fx, "recipe_depth_129")["expected_input_sha256"]
+    mutate_recipe(fx, expected_input_sha256=("0" if digest[0] != "0" else "1") + digest[1:])
+    with pytest.raises(AssertionError):
+        _assert_recipe_depth_129(recipe_by_name(fx, "recipe_depth_129"))
+
+    fx = copy.deepcopy(base)
+    mutate_recipe(fx, unit_hex=b"[]".hex())
+    with pytest.raises(AssertionError):
+        _assert_recipe_depth_129(recipe_by_name(fx, "recipe_depth_129"))
+
+    fx = copy.deepcopy(base)
+    wrong_order = b"]" * 129 + b"0" + b"[" * 129
+    mutate_recipe(
+        fx,
+        prefix_hex=b"]".hex(),
+        suffix_hex=b"[".hex(),
+        expected_input_sha256=hashlib.sha256(wrong_order).hexdigest(),
+    )
+    with pytest.raises(AssertionError):
+        _assert_recipe_depth_129(recipe_by_name(fx, "recipe_depth_129"))
+
+
+def test_aggregate_vectors_unknown_metadata_negatives():
+    base = _load_vector_fixture()
+
+    def run_bad(mutate):
+        fx = copy.deepcopy(base)
+        mutate(fx)
+        with pytest.raises(AssertionError):
+            _validate_vector_fixture(fx)
+
+    def valid_by_name(fx, name):
+        for vector in fx["valid_vectors"]:
+            if vector["name"] == name:
+                return vector
+        raise AssertionError("valid vector missing: " + name)
+
+    def reject_by_name(fx, name):
+        for vector in fx["reject_vectors"]:
+            if vector["name"] == name:
+                return vector
+        raise AssertionError("reject vector missing: " + name)
+
+    def recipe_by_name(fx, name):
+        for recipe in fx["resource_recipes"]:
+            if recipe["name"] == name:
+                return recipe
+        raise AssertionError("recipe missing: " + name)
+
+    run_bad(lambda fx: valid_by_name(fx, "canonical_case_minimal").__setitem__("target", "unknown_target"))
+    run_bad(lambda fx: reject_by_name(fx, "strict_bom").__setitem__("target", "unknown_target"))
+    run_bad(lambda fx: reject_by_name(fx, "strict_bom").__setitem__("expected_stage", "unknown_stage"))
+    run_bad(lambda fx: reject_by_name(fx, "strict_bom").__setitem__("unknown_field", True))
+    run_bad(lambda fx: recipe_by_name(fx, "recipe_depth_129").__setitem__("unknown_field", True))
+    run_bad(lambda fx: recipe_by_name(fx, "recipe_depth_129").__setitem__("generator", "unknown_generator"))
+    run_bad(lambda fx: recipe_by_name(fx, "recipe_depth_129").__setitem__("output_kind", "unknown_kind"))
+    run_bad(lambda fx: recipe_by_name(fx, "recipe_depth_129").__setitem__("expected_stage", "unknown_stage"))
+    run_bad(lambda fx: fx.__setitem__("unknown_top_level", True))

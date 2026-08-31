@@ -3032,12 +3032,19 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - S0 commit=e6bdf4c863903fa7e2fdafd004fc94d0fbb766a3
 - legacy_source_commit=SEALED
 - evidence_profile_v2=IN_PROGRESS
-- A0.1_spec=REVIEWED_PASS_WAITING_SEAL
+- A0.1_spec=SEALED
+- A0.1_seal_commit=b7a12d8b29f4d690d8e4961cbb2d89799245880a
 - A0.1_review=PASS
 - A0.1_sealing=STAGED_WAITING_REVIEW
 - A0.1_profile_constant_fix=REVIEWED_PASS
 - A0.1_fix_baseline=28422000098f3fe1bdf1d7c5214027201773360f
-- A0.2_vectors=NOT_STARTED
+- A0.2_vectors=REVIEWED_PASS_WAITING_SEAL
+- A0.2_review=PASS
+- A0.2_depth_boundary_fix=REVIEWED_PASS
+- A0.2_structure_validation_fix=REVIEWED_PASS
+- A0.2_unknown_metadata_negative_fix=REVIEWED_PASS
+- A0.2_sealing=STAGED_WAITING_REVIEW
+- A0.2_runtime_conformance=NOT_IMPLEMENTED
 - A0.3a_legacy_record=NOT_STARTED
 - E_A1_candidate_implementation=NOT_STARTED
 - A0.3b_compatibility_gate=NOT_STARTED
@@ -3050,7 +3057,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - site_migration=NOT_STARTED
 - production_client_wiring=NOT_STARTED
 - deployment=BLOCKED
-- next_task=TASK-022E-OSEC-A0-S-R
+- next_task=TASK-022E-OSEC-A0-VECTORS-S-R
 
 
 

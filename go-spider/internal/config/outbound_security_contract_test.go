@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // This test validates the shared TASK-022E-B configuration contract fixture
@@ -992,5 +993,730 @@ func TestOutboundSecurityContractRawDuplicateBoundaries(t *testing.T) {
 	}
 	if err := validateRawJSON(trailing); err == nil {
 		t.Fatalf("trailing payload must fail full JSON validation")
+	}
+}
+
+type vectorValid struct {
+	Name                    string  `json:"name"`
+	Target                  string  `json:"target"`
+	InputJSONUTF8Hex        string  `json:"input_json_utf8_hex"`
+	ExpectedCanonicalUTF8Hex string `json:"expected_canonical_utf8_hex"`
+	ExpectedCaseSHA256      *string `json:"expected_case_sha256"`
+}
+
+type vectorReject struct {
+	Name            string  `json:"name"`
+	Target          string  `json:"target"`
+	InputJSONUTF8Hex *string `json:"input_json_utf8_hex"`
+	Recipe          *string `json:"recipe"`
+	ExpectedStage   string  `json:"expected_stage"`
+	ExpectedError   string  `json:"expected_error"`
+}
+
+type vectorRecipe struct {
+	Name                string `json:"name"`
+	Generator           string `json:"generator"`
+	PrefixHex           string `json:"prefix_hex"`
+	UnitHex             string `json:"unit_hex"`
+	SeparatorHex        string `json:"separator_hex"`
+	SuffixHex           string `json:"suffix_hex"`
+	Count               int    `json:"count"`
+	OutputKind          string `json:"output_kind"`
+	ExpectedInputSHA256 string `json:"expected_input_sha256"`
+	ExpectedStage       string `json:"expected_stage"`
+	ExpectedError       string `json:"expected_error"`
+}
+
+type vectorProvenance struct {
+	Method string `json:"method"`
+}
+
+type vectorFixture struct {
+	FormatVersion   string          `json:"format_version"`
+	Profile         string          `json:"profile"`
+	Provenance      vectorProvenance `json:"provenance"`
+	ValidVectors    []vectorValid    `json:"valid_vectors"`
+	RejectVectors   []vectorReject   `json:"reject_vectors"`
+	ResourceRecipes []vectorRecipe   `json:"resource_recipes"`
+}
+
+var vectorValidNames = map[string]bool{
+	"canonical_case_minimal": true, "canonical_html_specials": true, "canonical_u2028": true, "canonical_u2029": true,
+	"canonical_literal_backslash_u": true, "canonical_cjk": true, "canonical_quote_backslash": true, "canonical_control_short": true,
+	"canonical_control_u00xx": true, "canonical_slash": true, "canonical_u007f_c1": true, "canonical_unicode_object_key": true,
+	"canonical_nested_key_sort": true, "canonical_null_empty_distinction": true, "canonical_type_int_bool_string": true,
+	"canonical_integer_zero": true, "canonical_negative_zero": true, "canonical_large_integer": true, "canonical_surrogate_pair": true,
+	"canonical_internal_bom": true, "canonical_whitespace_equivalent": true, "canonical_crlf_equivalent": true,
+	"canonical_key_sort_ascii_cjk_nonbmp": true, "canonical_depth_128": true, "canonical_case_id_64": true,
+}
+
+var vectorRejectNames = map[string]bool{
+	"strict_bom": true, "strict_invalid_utf8": true, "strict_empty_input": true, "strict_whitespace_only": true,
+	"strict_malformed_json": true, "strict_trailing_data": true, "strict_duplicate_literal_key": true,
+	"strict_duplicate_decoded_key": true, "strict_lone_high_surrogate": true, "strict_lone_low_surrogate": true,
+	"strict_high_high_surrogate": true, "strict_high_nonlow_surrogate": true, "strict_low_high_surrogate": true,
+	"strict_nan": true, "strict_infinity": true, "strict_negative_infinity": true, "strict_leading_zero": true,
+	"strict_truncated_exponent": true, "limit_file_size_16mib_plus_1": true, "limit_depth_129": true,
+	"limit_integer_4097_digits": true, "limit_array_10001": true, "limit_object_1001_members": true,
+	"limit_string_1mib_plus_1": true, "limit_case_count_10001": true, "canonical_noninteger_1_0": true,
+	"canonical_noninteger_1e5": true, "canonical_noninteger_negative_zero": true, "canonical_root_non_object": true,
+	"canonical_missing_id": true, "canonical_empty_id": true, "canonical_uppercase_id": true,
+	"canonical_underscore_id": true, "canonical_id_65": true, "canonical_nonstring_id": true,
+}
+
+var vectorRecipeNames = map[string]bool{
+	"recipe_integer_4097_digits": true, "recipe_array_10001": true, "recipe_string_1mib_plus_1": true,
+	"recipe_file_size_16mib_plus_1": true, "recipe_depth_129": true, "recipe_object_1001_members": true,
+	"recipe_case_count_10001": true,
+}
+
+var vectorGenerators = map[string]bool{
+	"repeat_unit": true, "nested_container": true, "object_members": true, "file_size_pad": true, "case_dataset": true,
+}
+
+var vectorOutputKinds = map[string]bool{"raw_bytes": true, "typed_dataset": true}
+
+var vectorErrorCodes = map[string]bool{
+	"strict_decode_invalid_json": true, "strict_decode_invalid_utf8": true, "strict_decode_bom": true,
+	"strict_decode_duplicate_key": true, "strict_decode_lone_surrogate": true, "strict_decode_trailing_data": true,
+	"evidence_limit_file_size": true, "evidence_limit_nesting_depth": true, "evidence_limit_integer_digits": true,
+	"evidence_limit_array_length": true, "evidence_limit_object_members": true, "evidence_limit_string_length": true,
+	"evidence_limit_case_count": true, "canonical_invalid_value_type": true, "canonical_non_integer_number": true,
+	"canonical_invalid_unicode": true, "canonical_root_not_object": true, "canonical_missing_id": true,
+	"canonical_invalid_id": true, "aggregate_empty_set": true, "aggregate_duplicate_id": true,
+	"aggregate_invalid_digest_length": true, "aggregate_unknown_algorithm": true, "aggregate_count_overflow": true,
+	"aggregate_length_overflow": true, "manifest_invalid_structure": true, "manifest_unknown_field": true,
+	"manifest_count_mismatch": true, "manifest_case_digest_mismatch": true, "manifest_category_mismatch": true,
+	"manifest_aggregate_mismatch": true, "manifest_invalid_dataset": true, "manifest_invalid_category": true,
+	"manifest_duplicate_category": true, "manifest_invalid_cohort": true, "manifest_duplicate_cohort": true,
+	"manifest_cohort_mismatch": true, "seal_record_invalid_structure": true, "seal_record_hash_mismatch": true,
+	"seal_record_git_binding_failed": true,
+}
+
+func vectorFixturePath(t *testing.T) string {
+	t.Helper()
+	return filepath.Join("..", "..", "..", "tests", "fixtures", "outbound_security_aggregate_vectors.json")
+}
+
+func loadVectorFixture(t *testing.T) vectorFixture {
+	t.Helper()
+	data, err := os.ReadFile(vectorFixturePath(t))
+	if err != nil {
+		t.Fatalf("read vector fixture: %v", err)
+	}
+	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+		t.Fatalf("vector fixture has BOM")
+	}
+	if !utf8.Valid(data) {
+		t.Fatalf("vector fixture not valid UTF-8")
+	}
+	if dup, err := findDuplicateRawJSONKey(string(data)); err != nil || dup != "" {
+		t.Fatalf("vector fixture duplicate key: dup=%q err=%v", dup, err)
+	}
+	if err := validateRawJSON(string(data)); err != nil {
+		t.Fatalf("vector fixture invalid JSON: %v", err)
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	var fixture vectorFixture
+	if err := dec.Decode(&fixture); err != nil {
+		t.Fatalf("decode vector fixture: %v", err)
+	}
+	return fixture
+}
+
+func requireVectorHex(value string, label string, allowEmpty bool, requireUTF8 bool) ([]byte, error) {
+	if !allowEmpty && value == "" {
+		return nil, fmt.Errorf("%s empty", label)
+	}
+	if len(value)%2 != 0 {
+		return nil, fmt.Errorf("%s odd hex length", label)
+	}
+	if value != strings.ToLower(value) {
+		return nil, fmt.Errorf("%s not lowercase", label)
+	}
+	data, err := hex.DecodeString(value)
+	if err != nil {
+		return nil, fmt.Errorf("%s hex: %v", label, err)
+	}
+	if requireUTF8 && !utf8.Valid(data) {
+		return nil, fmt.Errorf("%s not UTF-8", label)
+	}
+	return data, nil
+}
+
+func validateNestedZeroArray(data []byte, expectedDepth int) error {
+	if expectedDepth < 1 {
+		return fmt.Errorf("expected depth %d", expectedDepth)
+	}
+	if len(data) != 2*expectedDepth+1 {
+		return fmt.Errorf("nested zero array length %d != %d", len(data), 2*expectedDepth+1)
+	}
+	depth := 0
+	maxDepth := 0
+	scalarSeen := false
+	for i, b := range data {
+		switch b {
+		case '[':
+			if scalarSeen {
+				return fmt.Errorf("open bracket after scalar at %d", i)
+			}
+			depth++
+			if depth > maxDepth {
+				maxDepth = depth
+			}
+		case '0':
+			if scalarSeen {
+				return fmt.Errorf("duplicate scalar at %d", i)
+			}
+			scalarSeen = true
+			if depth != expectedDepth {
+				return fmt.Errorf("scalar depth %d != %d at %d", depth, expectedDepth, i)
+			}
+		case ']':
+			if !scalarSeen {
+				return fmt.Errorf("close bracket before scalar at %d", i)
+			}
+			depth--
+			if depth < 0 {
+				return fmt.Errorf("depth negative at %d", i)
+			}
+		default:
+			return fmt.Errorf("unexpected byte 0x%02x at %d", b, i)
+		}
+	}
+	if !scalarSeen {
+		return fmt.Errorf("missing scalar")
+	}
+	if depth != 0 {
+		return fmt.Errorf("unclosed brackets depth %d", depth)
+	}
+	if maxDepth != expectedDepth {
+		return fmt.Errorf("max depth %d != %d", maxDepth, expectedDepth)
+	}
+	return nil
+}
+
+func generateVectorRecipeOutput(r vectorRecipe) ([]byte, error) {
+	prefix, err := hex.DecodeString(r.PrefixHex)
+	if err != nil {
+		return nil, err
+	}
+	unit, err := hex.DecodeString(r.UnitHex)
+	if err != nil {
+		return nil, err
+	}
+	sep, err := hex.DecodeString(r.SeparatorHex)
+	if err != nil {
+		return nil, err
+	}
+	suffix, err := hex.DecodeString(r.SuffixHex)
+	if err != nil {
+		return nil, err
+	}
+	switch r.Generator {
+	case "repeat_unit":
+		out := append([]byte{}, prefix...)
+		out = append(out, unit...)
+		for i := 1; i < r.Count; i++ {
+			out = append(out, sep...)
+			out = append(out, unit...)
+		}
+		out = append(out, suffix...)
+		return out, nil
+	case "nested_container":
+		out := []byte{}
+		for i := 0; i < r.Count; i++ {
+			out = append(out, prefix...)
+		}
+		out = append(out, unit...)
+		for i := 0; i < r.Count; i++ {
+			out = append(out, suffix...)
+		}
+		return out, nil
+	case "object_members":
+		out := append([]byte{}, prefix...)
+		for i := 0; i < r.Count; i++ {
+			if i > 0 {
+				out = append(out, sep...)
+			}
+			out = append(out, fmt.Sprintf(`"k%d":0`, i)...)
+		}
+		out = append(out, suffix...)
+		return out, nil
+	case "file_size_pad":
+		out := append([]byte{}, prefix...)
+		for i := 0; i < r.Count; i++ {
+			out = append(out, unit...)
+		}
+		out = append(out, suffix...)
+		return out, nil
+	case "case_dataset":
+		out := append([]byte{}, prefix...)
+		for i := 0; i < r.Count; i++ {
+			if i > 0 {
+				out = append(out, sep...)
+			}
+			out = append(out, fmt.Sprintf(`{"id":"c%d"}`, i)...)
+		}
+		out = append(out, suffix...)
+		return out, nil
+	default:
+		return nil, fmt.Errorf("unknown generator %q", r.Generator)
+	}
+}
+
+func validateRecipeDepth129(r vectorRecipe) error {
+	data, err := generateVectorRecipeOutput(r)
+	if err != nil {
+		return err
+	}
+	sum := sha256.Sum256(data)
+	if hex.EncodeToString(sum[:]) != r.ExpectedInputSHA256 {
+		return fmt.Errorf("recipe %s sha mismatch", r.Name)
+	}
+	return validateNestedZeroArray(data, 129)
+}
+
+func validateVectorFixture(f *vectorFixture) error {
+	if f.FormatVersion != "1.0" {
+		return fmt.Errorf("format_version %q", f.FormatVersion)
+	}
+	if f.Profile != "OSEC-EVIDENCE-PROFILE-V2" {
+		return fmt.Errorf("profile %q", f.Profile)
+	}
+	if f.Provenance.Method != "independently_constructed" {
+		return fmt.Errorf("provenance %q", f.Provenance.Method)
+	}
+	if len(f.ValidVectors) != 25 || len(f.RejectVectors) != 35 || len(f.ResourceRecipes) != 7 {
+		return fmt.Errorf("counts %d/%d/%d", len(f.ValidVectors), len(f.RejectVectors), len(f.ResourceRecipes))
+	}
+	seen := map[string]bool{}
+	for _, v := range f.ValidVectors {
+		if !vectorValidNames[v.Name] || seen[v.Name] {
+			return fmt.Errorf("valid name %q", v.Name)
+		}
+		seen[v.Name] = true
+		if v.Target != "canonical_json" && v.Target != "canonical_case" {
+			return fmt.Errorf("valid target %q", v.Target)
+		}
+		if _, err := requireVectorHex(v.InputJSONUTF8Hex, v.Name+" input", false, true); err != nil {
+			return err
+		}
+		exp, err := requireVectorHex(v.ExpectedCanonicalUTF8Hex, v.Name+" expected", false, true)
+		if err != nil {
+			return err
+		}
+		if bytes.HasPrefix(exp, []byte{0xEF, 0xBB, 0xBF}) || bytes.HasSuffix(exp, []byte("\n")) {
+return fmt.Errorf("%s canonical BOM/newline", v.Name)
+		}
+		sum := sha256.Sum256(exp)
+		if v.Target == "canonical_case" {
+			if v.ExpectedCaseSHA256 == nil || *v.ExpectedCaseSHA256 != hex.EncodeToString(sum[:]) {
+				return fmt.Errorf("%s case digest", v.Name)
+			}
+		} else if v.ExpectedCaseSHA256 != nil {
+			return fmt.Errorf("%s unexpected case digest", v.Name)
+		}
+	}
+	for _, rj := range f.RejectVectors {
+		if !vectorRejectNames[rj.Name] || seen[rj.Name] {
+			return fmt.Errorf("reject name %q", rj.Name)
+		}
+		seen[rj.Name] = true
+		if rj.Target != "strict_decode" && rj.Target != "evidence_limits" && rj.Target != "canonical" {
+			return fmt.Errorf("reject target %q", rj.Target)
+		}
+		if rj.ExpectedStage != rj.Target {
+			return fmt.Errorf("reject stage %q target %q", rj.ExpectedStage, rj.Target)
+		}
+		if !vectorErrorCodes[rj.ExpectedError] {
+			return fmt.Errorf("reject error %q", rj.ExpectedError)
+		}
+		if rj.Recipe == nil {
+			if rj.InputJSONUTF8Hex == nil {
+				return fmt.Errorf("reject %s missing inline", rj.Name)
+			}
+			if _, err := requireVectorHex(*rj.InputJSONUTF8Hex, rj.Name, true, false); err != nil {
+				return err
+			}
+		} else {
+			if rj.InputJSONUTF8Hex != nil {
+				return fmt.Errorf("reject %s has both", rj.Name)
+			}
+		}
+	}
+	recipeNames := map[string]bool{}
+	for _, r := range f.ResourceRecipes {
+		if !vectorRecipeNames[r.Name] || seen[r.Name] {
+			return fmt.Errorf("recipe name %q", r.Name)
+		}
+		seen[r.Name] = true
+		recipeNames[r.Name] = true
+		if !vectorGenerators[r.Generator] {
+			return fmt.Errorf("generator %q", r.Generator)
+		}
+		if !vectorOutputKinds[r.OutputKind] {
+			return fmt.Errorf("output kind %q", r.OutputKind)
+		}
+		if r.Count <= 0 {
+			return fmt.Errorf("recipe %s count", r.Name)
+		}
+		if !vectorErrorCodes[r.ExpectedError] {
+			return fmt.Errorf("recipe error %q", r.ExpectedError)
+		}
+	}
+	for _, rj := range f.RejectVectors {
+		if rj.Recipe == nil {
+			continue
+		}
+		if !recipeNames[*rj.Recipe] {
+			return fmt.Errorf("reject %s recipe missing", rj.Name)
+		}
+	}
+	for _, r := range f.ResourceRecipes {
+		refs := 0
+		for _, rj := range f.RejectVectors {
+			if rj.Recipe != nil && *rj.Recipe == r.Name {
+				refs++
+				if rj.ExpectedStage != r.ExpectedStage || rj.ExpectedError != r.ExpectedError {
+					return fmt.Errorf("recipe %s mismatch", r.Name)
+				}
+			}
+		}
+		if refs != 1 {
+			return fmt.Errorf("recipe %s refs %d", r.Name, refs)
+		}
+	}
+	validByName := map[string]vectorValid{}
+	for _, v := range f.ValidVectors {
+		validByName[v.Name] = v
+	}
+	if validByName["canonical_integer_zero"].ExpectedCanonicalUTF8Hex != validByName["canonical_negative_zero"].ExpectedCanonicalUTF8Hex {
+		return fmt.Errorf("zero canonical mismatch")
+	}
+	if validByName["canonical_whitespace_equivalent"].ExpectedCanonicalUTF8Hex != validByName["canonical_crlf_equivalent"].ExpectedCanonicalUTF8Hex {
+		return fmt.Errorf("whitespace canonical mismatch")
+	}
+	depth128Input, err := hex.DecodeString(validByName["canonical_depth_128"].InputJSONUTF8Hex)
+	if err != nil {
+		return fmt.Errorf("depth 128 input hex: %w", err)
+	}
+	depth128Expected, err := hex.DecodeString(validByName["canonical_depth_128"].ExpectedCanonicalUTF8Hex)
+	if err != nil {
+		return fmt.Errorf("depth 128 expected hex: %w", err)
+	}
+	if err := validateNestedZeroArray(depth128Input, 128); err != nil {
+		return fmt.Errorf("depth 128 input: %w", err)
+	}
+	if err := validateNestedZeroArray(depth128Expected, 128); err != nil {
+		return fmt.Errorf("depth 128 expected: %w", err)
+	}
+	if !bytes.Equal(depth128Input, depth128Expected) {
+		return fmt.Errorf("depth 128 canonical mismatch")
+	}
+	return nil
+}
+
+func TestOutboundSecurityAggregateVectors(t *testing.T) {
+	fixture := loadVectorFixture(t)
+	if err := validateVectorFixture(&fixture); err != nil {
+		t.Fatalf("vector fixture validation: %v", err)
+	}
+	executed := map[string]bool{}
+	for _, r := range fixture.ResourceRecipes {
+		data, err := generateVectorRecipeOutput(r)
+		if err != nil {
+			t.Fatalf("recipe %s generate: %v", r.Name, err)
+		}
+		sum := sha256.Sum256(data)
+		if hex.EncodeToString(sum[:]) != r.ExpectedInputSHA256 {
+			t.Fatalf("recipe %s sha mismatch", r.Name)
+		}
+		switch r.Name {
+		case "recipe_file_size_16mib_plus_1":
+			if len(data) != 16777217 {
+				t.Fatalf("file size bytes %d", len(data))
+			}
+		case "recipe_depth_129":
+			if err := validateNestedZeroArray(data, 129); err != nil {
+				t.Fatalf("depth structure: %v", err)
+			}
+		case "recipe_integer_4097_digits":
+			if len(data) != 4097 {
+				t.Fatalf("integer digits %d", len(data))
+			}
+		case "recipe_array_10001":
+			if bytes.Count(data, []byte(",")) != 10000 {
+				t.Fatalf("array count")
+			}
+		case "recipe_object_1001_members":
+			var obj map[string]interface{}
+			if err := json.Unmarshal(data, &obj); err != nil {
+				t.Fatalf("object members parse: %v", err)
+			}
+			if len(obj) != 1001 {
+				t.Fatalf("object members %d", len(obj))
+			}
+		case "recipe_string_1mib_plus_1":
+			if len(data) != 1048585 {
+				t.Fatalf("string bytes %d", len(data))
+			}
+		case "recipe_case_count_10001":
+			var arr []interface{}
+			if err := json.Unmarshal(data, &arr); err != nil {
+				t.Fatalf("case dataset parse: %v", err)
+			}
+			if len(arr) != 10001 {
+				t.Fatalf("case count %d", len(arr))
+			}
+		}
+		executed[r.Name] = true
+	}
+	if len(executed) != len(vectorRecipeNames) {
+		t.Fatalf("executed recipes %d != %d", len(executed), len(vectorRecipeNames))
+	}
+	for name := range vectorRecipeNames {
+		if !executed[name] {
+			t.Fatalf("recipe not executed: %s", name)
+		}
+	}
+}
+
+func TestOutboundSecurityAggregateVectorsUnknowns(t *testing.T) {
+	// Unknown top-level field must fail strict decoding.
+	data, err := os.ReadFile(vectorFixturePath(t))
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	s := string(data)
+	insert := s[:len(s)-2] + `,"unknown_top":true}` + s[len(s)-1:]
+	dec := json.NewDecoder(strings.NewReader(insert))
+	dec.DisallowUnknownFields()
+	var f vectorFixture
+	if err := dec.Decode(&f); err == nil {
+		t.Fatalf("unknown top-level field accepted")
+	}
+	// Unknown generator must fail validator.
+	fixture := loadVectorFixture(t)
+	fixture.ResourceRecipes[0].Generator = "unknown_generator"
+	if err := validateVectorFixture(&fixture); err == nil {
+		t.Fatalf("unknown generator accepted")
+	}
+	// Unknown output kind must fail validator.
+	fixture = loadVectorFixture(t)
+	fixture.ResourceRecipes[0].OutputKind = "unknown_kind"
+	if err := validateVectorFixture(&fixture); err == nil {
+		t.Fatalf("unknown output kind accepted")
+	}
+	// Unknown valid name must fail validator.
+	fixture = loadVectorFixture(t)
+	fixture.ValidVectors[0].Name = "unknown_valid_name"
+	if err := validateVectorFixture(&fixture); err == nil {
+		t.Fatalf("unknown valid name accepted")
+	}
+	// Unknown reject name must fail validator.
+	fixture = loadVectorFixture(t)
+	fixture.RejectVectors[0].Name = "unknown_reject_name"
+	if err := validateVectorFixture(&fixture); err == nil {
+		t.Fatalf("unknown reject name accepted")
+	}
+}
+
+func TestOutboundSecurityAggregateVectorsDepthNegatives(t *testing.T) {
+	mutateValid := func(fx *vectorFixture, data []byte) {
+		encoded := hex.EncodeToString(data)
+		for i := range fx.ValidVectors {
+			if fx.ValidVectors[i].Name == "canonical_depth_128" {
+				fx.ValidVectors[i].InputJSONUTF8Hex = encoded
+				fx.ValidVectors[i].ExpectedCanonicalUTF8Hex = encoded
+				return
+			}
+		}
+		t.Fatal("canonical_depth_128 missing")
+	}
+	validCases := [][]byte{
+		[]byte(strings.Repeat("[", 127) + "0" + strings.Repeat("]", 127)),
+		[]byte(strings.Repeat("[", 129) + "0" + strings.Repeat("]", 129)),
+		[]byte("0" + strings.Repeat("[", 128) + strings.Repeat("]", 128)),
+		[]byte(strings.Repeat("[", 128) + strings.Repeat("]", 128) + "0"),
+		[]byte(strings.Repeat("[", 128) + "0" + strings.Repeat("]", 127)),
+		append([]byte(strings.Repeat("[", 128)+"0"+strings.Repeat("]", 128)), 'x'),
+	}
+	for i, data := range validCases {
+		fx := loadVectorFixture(t)
+		mutateValid(&fx, data)
+		if err := validateVectorFixture(&fx); err == nil {
+			t.Fatalf("valid depth case %d accepted", i)
+		}
+	}
+
+	mutateRecipe := func(fx *vectorFixture, mutate func(*vectorRecipe)) {
+		for i := range fx.ResourceRecipes {
+			if fx.ResourceRecipes[i].Name == "recipe_depth_129" {
+				mutate(&fx.ResourceRecipes[i])
+				return
+			}
+		}
+		t.Fatal("recipe_depth_129 missing")
+	}
+	vectorRecipeByName := func(fx *vectorFixture, name string) vectorRecipe {
+		for _, r := range fx.ResourceRecipes {
+			if r.Name == name {
+				return r
+			}
+		}
+		t.Fatalf("recipe missing %s", name)
+		return vectorRecipe{}
+	}
+
+	fx := loadVectorFixture(t)
+	mutateRecipe(&fx, func(r *vectorRecipe) { r.Count = 128 })
+	if err := validateRecipeDepth129(vectorRecipeByName(&fx, "recipe_depth_129")); err == nil {
+		t.Fatal("recipe depth 128 accepted")
+	}
+
+	fx = loadVectorFixture(t)
+	mutateRecipe(&fx, func(r *vectorRecipe) { r.Count = 130 })
+	if err := validateRecipeDepth129(vectorRecipeByName(&fx, "recipe_depth_129")); err == nil {
+		t.Fatal("recipe depth 130 accepted")
+	}
+
+	fx = loadVectorFixture(t)
+	mutateRecipe(&fx, func(r *vectorRecipe) { r.Count = 130 })
+	if err := validateRecipeDepth129(vectorRecipeByName(&fx, "recipe_depth_129")); err == nil {
+		t.Fatal("recipe count change without sha accepted")
+	}
+
+	fx = loadVectorFixture(t)
+	mutateRecipe(&fx, func(r *vectorRecipe) {
+		digest := r.ExpectedInputSHA256
+		r.ExpectedInputSHA256 = "0" + digest[1:]
+		if digest[0] == '0' {
+			r.ExpectedInputSHA256 = "1" + digest[1:]
+		}
+	})
+	if err := validateRecipeDepth129(vectorRecipeByName(&fx, "recipe_depth_129")); err == nil {
+		t.Fatal("recipe sha mutation accepted")
+	}
+
+	fx = loadVectorFixture(t)
+	mutateRecipe(&fx, func(r *vectorRecipe) { r.UnitHex = hex.EncodeToString([]byte("[]")) })
+	if err := validateRecipeDepth129(vectorRecipeByName(&fx, "recipe_depth_129")); err == nil {
+		t.Fatal("recipe extra container accepted")
+	}
+
+	fx = loadVectorFixture(t)
+	wrongOrder := []byte(strings.Repeat("]", 129) + "0" + strings.Repeat("[", 129))
+	wrongSum := sha256.Sum256(wrongOrder)
+	mutateRecipe(&fx, func(r *vectorRecipe) {
+		r.PrefixHex = hex.EncodeToString([]byte("]"))
+		r.SuffixHex = hex.EncodeToString([]byte("["))
+		r.ExpectedInputSHA256 = hex.EncodeToString(wrongSum[:])
+	})
+	if err := validateRecipeDepth129(vectorRecipeByName(&fx, "recipe_depth_129")); err == nil {
+		t.Fatal("recipe wrong order with synced sha accepted")
+	}
+}
+
+func TestOutboundSecurityAggregateVectorsUnknownMetadataNegatives(t *testing.T) {
+	assertInvalid := func(name string, mutate func(*vectorFixture)) {
+		fx := loadVectorFixture(t)
+		mutate(&fx)
+		if err := validateVectorFixture(&fx); err == nil {
+			t.Fatalf("unknown metadata mutation accepted: %s", name)
+		}
+	}
+
+	assertInvalid("valid target", func(fx *vectorFixture) {
+		for i := range fx.ValidVectors {
+			if fx.ValidVectors[i].Name == "canonical_case_minimal" {
+				fx.ValidVectors[i].Target = "unknown_target"
+				return
+			}
+		}
+		t.Fatal("canonical_case_minimal missing")
+	})
+	assertInvalid("reject target", func(fx *vectorFixture) {
+		for i := range fx.RejectVectors {
+			if fx.RejectVectors[i].Name == "strict_bom" {
+				fx.RejectVectors[i].Target = "unknown_target"
+				return
+			}
+		}
+		t.Fatal("strict_bom missing")
+	})
+	assertInvalid("reject stage", func(fx *vectorFixture) {
+		for i := range fx.RejectVectors {
+			if fx.RejectVectors[i].Name == "strict_bom" {
+				fx.RejectVectors[i].ExpectedStage = "unknown_stage"
+				return
+			}
+		}
+		t.Fatal("strict_bom missing")
+	})
+	assertInvalid("recipe generator", func(fx *vectorFixture) {
+		for i := range fx.ResourceRecipes {
+			if fx.ResourceRecipes[i].Name == "recipe_depth_129" {
+				fx.ResourceRecipes[i].Generator = "unknown_generator"
+				return
+			}
+		}
+		t.Fatal("recipe_depth_129 missing")
+	})
+	assertInvalid("recipe output kind", func(fx *vectorFixture) {
+		for i := range fx.ResourceRecipes {
+			if fx.ResourceRecipes[i].Name == "recipe_depth_129" {
+				fx.ResourceRecipes[i].OutputKind = "unknown_kind"
+				return
+			}
+		}
+		t.Fatal("recipe_depth_129 missing")
+	})
+	assertInvalid("recipe stage", func(fx *vectorFixture) {
+		for i := range fx.ResourceRecipes {
+			if fx.ResourceRecipes[i].Name == "recipe_depth_129" {
+				fx.ResourceRecipes[i].ExpectedStage = "unknown_stage"
+				return
+			}
+		}
+		t.Fatal("recipe_depth_129 missing")
+	})
+	data, err := os.ReadFile(vectorFixturePath(t))
+	if err != nil {
+		t.Fatalf("read vector fixture: %v", err)
+	}
+	raw := string(data)
+	topWithField := strings.Replace(raw, `"format_version"`, `"unknown_top_level":true,"format_version"`, 1)
+	if topWithField == raw {
+		t.Fatal("top-level marker not found")
+	}
+	dec := json.NewDecoder(strings.NewReader(topWithField))
+	dec.DisallowUnknownFields()
+	var topFixture vectorFixture
+	if err := dec.Decode(&topFixture); err == nil {
+		t.Fatal("unknown top-level field accepted")
+	}
+
+	rejectWithField := strings.Replace(raw, `"name": "strict_bom"`, `"name": "strict_bom","unknown_reject_field":true`, 1)
+	if rejectWithField == raw {
+		t.Fatal("reject marker not found")
+	}
+	dec = json.NewDecoder(strings.NewReader(rejectWithField))
+	dec.DisallowUnknownFields()
+	var rejectFixture vectorFixture
+	if err := dec.Decode(&rejectFixture); err == nil {
+		t.Fatal("unknown reject field accepted")
+	}
+
+	recipeWithField := strings.Replace(raw, `"name": "recipe_integer_4097_digits"`, `"name": "recipe_integer_4097_digits","unknown_recipe_field":true`, 1)
+	if recipeWithField == raw {
+		t.Fatal("recipe marker not found")
+	}
+	dec = json.NewDecoder(strings.NewReader(recipeWithField))
+	dec.DisallowUnknownFields()
+	var recipeFixture vectorFixture
+	if err := dec.Decode(&recipeFixture); err == nil {
+		t.Fatal("unknown recipe field accepted")
 	}
 }
