@@ -3046,12 +3046,16 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - A0.2_unknown_metadata_negative_fix=REVIEWED_PASS
 - A0.2_sealing=STAGED_WAITING_REVIEW
 - A0.2_runtime_conformance=NOT_IMPLEMENTED
-- A0.3a_legacy_record=REVIEWED_PASS_WAITING_SEAL
+- A0.3a_legacy_record=SEALED
+- A0.3a_seal_commit=a0bd91f03aef881713b4d78b3eef895c77ea005f
 - A0.3a_source_commit=e6bdf4c863903fa7e2fdafd004fc94d0fbb766a3
 - A0.3a_record_provenance=recorded-from-legacy
 - A0.3a_review=PASS
 - A0.3a_sealing=STAGED_WAITING_REVIEW
-- E_A1_candidate_implementation=NOT_STARTED
+- E_A1_candidate_implementation=REVIEWED_PASS_WAITING_SEAL
+- E_A1_runtime_conformance=REVIEWED_PASS_WAITING_SEAL
+- E_A1_review=PASS
+- E_A1_sealing=STAGED_WAITING_REVIEW
 - A0.3b_compatibility_gate=NOT_STARTED
 - manifest_v1=NOT_STARTED
 - S1_evidence_seal_commit=NOT_STARTED
@@ -3062,7 +3066,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - site_migration=NOT_STARTED
 - production_client_wiring=NOT_STARTED
 - deployment=BLOCKED
-- next_task=TASK-022E-OSEC-A0-LEGACY-S-R
+- next_task=TASK-022E-OSEC-E-A1-S-R
 
 
 
