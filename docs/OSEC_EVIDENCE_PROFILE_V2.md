@@ -9,11 +9,23 @@
 - S0 仅为旧行为来源锚点：`e6bdf4c863903fa7e2fdafd004fc94d0fbb766a3`。
 - 不得声称新 CanonicalCase 已与历史 125 cases 兼容；该结论必须等待 A0.3b。
 
+身份与命名：
+
+本规范的人类可读名称为 `OSEC Evidence Profile V2`；唯一规范机器常量为 `OSEC-EVIDENCE-PROFILE-V2`。二者表示同一个 Evidence Profile。人类可读名称仅用于标题和说明文字；Manifest、Seal及所有序列化、哈希输入和机器比较场景必须使用规范机器常量。
+
+- 人类可读名称：`OSEC Evidence Profile V2`
+- 唯一规范机器常量：`OSEC-EVIDENCE-PROFILE-V2`
+- Manifest V1 的 profile 字段必须精确等于：`OSEC-EVIDENCE-PROFILE-V2`
+- Seal Record V1 的 profile 字段必须精确等于：`OSEC-EVIDENCE-PROFILE-V2`
+- 验证器必须拒绝空格形式、大小写变体、下划线变体或其他版本作为机器字段值。
+
 ## 1. 版本映射
 
 组件与版本：
 
-- OSEC Evidence Profile V2：Profile 版本，当前 A0.1 NORMATIVE DRAFT
+- 人类可读名称：`OSEC Evidence Profile V2`
+- 唯一规范机器常量：`OSEC-EVIDENCE-PROFILE-V2`
+- `OSEC-EVIDENCE-PROFILE-V2`：Profile 机器常量，当前 A0.1 NORMATIVE DRAFT
 - OSEC-STRICT-JSON-DECODE-V1：组件版本，Draft 待 A0.2 黄金向量
 - OSEC-EVIDENCE-LIMITS-V1：组件版本，Draft 待 A0.2 黄金向量
 - OSEC-CANONICAL-JSON-V1：组件版本，Draft 待 A0.2 黄金向量
@@ -275,6 +287,7 @@ Manifest 字段：
 约束：
 
 - dataset：`^[a-z][a-z0-9_-]{0,63}$`
+- Manifest V1 的 profile 字段必须精确等于：`OSEC-EVIDENCE-PROFILE-V2`
 - category_names UTF-8 升序、非空、唯一
 - case_digests 按 id UTF-8 升序
 - 每项包含 id/category/64 位小写 SHA-256 hex
@@ -383,6 +396,7 @@ SHA256(
 - branch 等可变信息只能放非规范上下文，不进入上述 17 字段。
 - repo_id 不能使用可能含凭据的 remote URL。
 - fixture/manifest 路径必须在 S1 tree 中解析到对应 blob。
+- Seal Record V1 的 profile 字段必须精确等于：`OSEC-EVIDENCE-PROFILE-V2`
 - Verifier 必须验证 commit 存在、tree 匹配、路径 blob 匹配、Manifest hash 与 whole aggregate 匹配。
 - 未来签名直接签规范 Seal 字节；当前不引入签名或密钥管理。
 
