@@ -3052,12 +3052,25 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - A0.3a_record_provenance=recorded-from-legacy
 - A0.3a_review=PASS
 - A0.3a_sealing=STAGED_WAITING_REVIEW
-- E_A1_candidate_implementation=REVIEWED_PASS_WAITING_SEAL
-- E_A1_runtime_conformance=REVIEWED_PASS_WAITING_SEAL
+- E_A1_candidate_implementation=SEALED
+- E_A1_runtime_conformance=SEALED
 - E_A1_review=PASS
-- E_A1_sealing=STAGED_WAITING_REVIEW
-- A0.3b_compatibility_gate=NOT_STARTED
-- manifest_v1=NOT_STARTED
+- E_A1_sealing=SEALED
+- E_A1_seal_commit=fffb01db5e9efdcbb4e526107fcfeaf1b5a4eaae
+- A0.3b_compatibility_gate=V1_MISMATCH_V2_REMEDIATION_IN_PROGRESS
+- A0.3b_v1_result=MISMATCH_SPEC_AMBIGUITY
+- A0.3b_v1_candidate_commit=fffb01db5e9efdcbb4e526107fcfeaf1b5a4eaae
+- A0.3b_v1_mismatch_cases=p-004,ver-003
+- canonical_v2_amendment=REVIEWED_PASS_WAITING_SEAL
+- canonical_v2_amendment_review=PASS
+- canonical_v2_amendment_sealing=STAGED_WAITING_REVIEW
+- canonical_v2_vectors=NOT_STARTED
+- canonical_v2_candidate_implementation=NOT_STARTED
+- A0.3b_v2_compatibility_gate=NOT_STARTED
+- manifest_v1=SUPERSEDED_BEFORE_IMPLEMENTATION
+- manifest_v2=NOT_STARTED
+- seal_record_v1=SUPERSEDED_BEFORE_IMPLEMENTATION
+- seal_record_v2=NOT_STARTED
 - S1_evidence_seal_commit=NOT_STARTED
 - external_seal_record=NOT_STARTED
 - merkle=DRAFT_0_DEFERRED
@@ -3066,7 +3079,7 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - site_migration=NOT_STARTED
 - production_client_wiring=NOT_STARTED
 - deployment=BLOCKED
-- next_task=TASK-022E-OSEC-E-A1-S-R
+- next_task=TASK-022E-OSEC-CANONICAL-V2-A0-S-R
 
 
 
