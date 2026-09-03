@@ -15,6 +15,19 @@
 | Security/Performance | SSRF、限流、性能 | 专用 fixture 和基准环境 |
 | Release | 发布门禁和回滚 | CI gates、backup restore、migration |
 
+### 1.1 正式测试矩阵
+
+| 类别 | 测试范围 | 工具 | 环境 | 数据来源 | 当前状态 | 通过条件 | 是否阻塞发布 |
+|---|---|---|---|---|---|---|---|
+| Python | 单元/集成、解析、评分、去重、Worker、OSEC | pytest | 本地/隔离 | fixture | CURRENT_PARTIAL | 全部关键测试 PASS，无未批准 skip | 是 |
+| Go | 单元/集成、协议、存储、安全、Worker | go test、go vet、go mod verify | 本地/隔离 | fixture/fake resolver | CURRENT_PARTIAL | 全包 PASS、vet PASS、modules verified | 是 |
+| Frontend | 路由、组件、SSE/polling、无障碍 | Vitest、RTL、Playwright | 隔离浏览器 | mock/contract fixture | NOT_STARTED | 关键路径 PASS、WCAG 冒烟 PASS | 是 |
+| Contract | API/消息/OpenAPI 契约 | Go/Python contract tests | 本地/隔离 | 共享 fixture | CURRENT_PARTIAL | 双端一致、无漂移 | 是 |
+| E2E | Redis/MySQL/Worker/API 组合 | 隔离 Compose | 一次性容器 | 隔离测试数据 | CURRENT_PARTIAL | 端到端链路 PASS，无残留资源 | 是 |
+| Canary | 20 个代表性真实站点 | 受控 canary runner | 独立 canary 环境 | 独立授权站点 | NOT_STARTED | 达标并保存每站证据 | 是 |
+| Performance | 首屏/API/创建任务/SSE | 独立基准工具 | 性能环境 | 合成数据 | NOT_VERIFIED | 达到 SLA | 是 |
+| Security | SSRF/附件/认证/OSEC/fail-closed | 安全 fixture/专项测试 | 隔离 | contract fixtures | CURRENT_PARTIAL | 无 P0/P1，loader fail-closed PASS | 是 |
+
 ## 2. Python 测试
 
 - Python unit/integration 默认无网络。
@@ -49,6 +62,9 @@
 - 测试结束必须清理容器、网络和卷残留。
 - 覆盖 consumer group、pending reclaim、outbox dispatcher、dead-letter、幂等入库。
 - MySQL migration 测试包含正向执行和回滚。
+- 状态机测试必须断言 FAILED/PARTIAL_SUCCEEDED 等终态不返回非终态。
+- 重试测试必须断言创建新 CrawlTask 且记录 retry_of_task_id，原任务终态不变。
+- CrawlTask 阶段测试不得包含 EXPORT；导出由独立 ExportJob 生命周期覆盖。
 
 ## 7. Fixture 管理
 
@@ -60,13 +76,19 @@
 ## 8. 20 站 Canary
 
 - 上线前至少覆盖 20 个代表性站点。
-- 覆盖 TRS、JPAAS、静态 HTML、公开 JSON API 和附件站点。
+- 构成：TRS=5、JPAAS=5、静态 HTML=5、公开 JSON API=3、附件站点=2，合计 20。
 - canary 使用独立配置、独立任务范围、显式 policy 和受控频率。
 - 不绕过登录、验证码、WAF 或访问控制。
+- 每站必须保存结果与失败证据。
+- 失败重试不得掩盖首轮失败结果。
+- 任何越权或 SSRF 安全失败立即阻塞发布。
+- 不在文档或配置中填写未经确认的真实站点名称。
 
 ## 9. Security 测试
 
 - SSRF、DNS/IP、redirect、proxy、bounded I/O、HTTP limits。
+- SEALED transport 硬限制：5 秒 timeout、redirects 最多 3 跳、transport global_active=20、per_host_active=5、per_host_idle=2、request body=1MiB、response headers=256KiB、probe/search/detail response body=1/8/20MiB。
+- TARGET_V1 产品调度默认值为 HTTP budget=16、单域默认=2、允许配置上限=4；该层为 TARGET/PARTIAL，不冒充 transport 硬限制。
 - 附件类型/魔数/大小/恶意内容。
 - 认证、Session、Token、CSRF、CSP、错误脱敏。
 - OSEC loader 未接入前，安全测试不能证明 production fail-closed 完成。
@@ -94,11 +116,26 @@
 - P0/P1 安全问题 = 0
 - 至少 2 周观察期
 
+### 12.1 发布阻塞条件
+
+- 任一 P0/P1 安全问题
+- production loader 未接入或 fail-closed 未验证
+- Python/Go/Contract/E2E 关键门失败
+- 20 站 canary 未达门槛或存在越权/SSRF 安全失败
+- migration 正向或回滚失败
+- backup restore 未达到 RPO/RTO
+- 性能 SLA 未验证
+- dirty 生成物或 OpenAPI generated types 漂移
+- 存在无批准的 skip/flaky
+- deployment 仍为 BLOCKED
+
 ## 13. Flaky/Skip 策略
 
-- 新增 skip 必须记录原因并独立 review。
-- 禁止通过删除断言或跳过失败测试来通过 CI。
-- flaky 测试进入隔离队列，连续失败必须修复或移除。
+- skip 必须包含原因、责任人、关联任务和到期日期。
+- 临时 skip 最长 14 天，到期未关闭必须重新 review。
+- flaky 可隔离，但必须保留原始失败证据。
+- 不得通过删除测试、删除断言或永久 skip 获得绿色 CI。
+- 删除测试仅允许在对应功能正式废弃、有替代覆盖并经独立 review 后执行。
 
 ## 14. 数据隔离
 

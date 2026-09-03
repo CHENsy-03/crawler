@@ -16,6 +16,8 @@
 | prometheus | 指标采集 | 内部可选 | 9090 内部 |
 | grafana | 指标展示 | 内部可选 | 3001 内部 |
 
+一次性 migration job 不属于长期运行服务，不计入九服务拓扑。
+
 ## 2. 网络区
 
 - `edge`：nginx 唯一对外暴露层。
@@ -56,20 +58,66 @@
 
 - mysql：`mysqladmin ping` readiness。
 - redis：`redis-cli ping` readiness。
-- go-api：`/system/health` liveness、`/system/readiness` readiness。
+- go-api：`/healthz` liveness、`/readyz` readiness，作为内部容器探针，不进入外部业务 OpenAPI。
 - python-worker：进程存活 liveness，依赖就绪后启动。
 - web/nginx：HTTP 探针。
 - prometheus/grafana：自身探针。
 - go-api 在 MySQL/Redis readiness 前不得标记 ready。
 - Python Worker 在 Redis Streams/MySQL 可用后启动。
 
+### 6.1 启动顺序
+
+1. MySQL、Redis
+2. 一次性 migration job
+3. Go API 与 Outbox dispatcher
+4. Python workers
+5. Web
+6. Nginx
+7. Prometheus/Grafana 按依赖启动
+
+migration job 完成后退出，不保持长期运行。
+
 ## 7. 资源限制与背压
 
-- 每个服务设置 CPU/memory 上限。
+| 服务 | CPU reservation | CPU hard limit | Memory reservation | Memory hard limit |
+|---|---:|---:|---:|---:|
+| nginx | 0.25 | 1.0 | 128MiB | 512MiB |
+| web | 0.25 | 1.0 | 256MiB | 1GiB |
+| go-api | 0.5 | 2.0 | 512MiB | 2GiB |
+| python-worker | 0.5 | 2.0 | 1GiB | 3GiB |
+| python-playwright-worker | 0.5 | 2.0 | 1GiB | 4GiB |
+| redis | 0.25 | 1.0 | 256MiB | 1GiB |
+| mysql | 1.0 | 4.0 | 1GiB | 4GiB |
+| prometheus | 0.25 | 1.0 | 512MiB | 2GiB |
+| grafana | 0.25 | 1.0 | 256MiB | 1GiB |
+
+资源预算适用于单机内网部署，总量不能超过目标主机可用资源。Playwright Worker 必须有独立内存限制。超限触发背压和拒绝策略，不允许宿主机失控。
+
 - worker 按队列 lag 和资源压力拒绝或暂停新任务。
-- 全局 HTTP 并发默认 16；单域默认 2、上限 4。
 - 最多 3 个活动任务；单任务默认 20 关键词、100 页、10000 候选、2 小时。
 - 磁盘、内存、CPU 和队列压力触发背压和拒绝策略。
+
+### 7.1 两层 HTTP 限制
+
+A. SEALED transport 硬上限：
+
+- DNS timeout=5 秒、connect timeout=5 秒、TLS timeout=5 秒
+- response header timeout=10 秒、read idle timeout=15 秒
+- probe total=30 秒、search total=30 秒、detail total=60 秒
+- request body=1MiB、response headers=256KiB
+- probe response body=1MiB、search response body=8MiB、detail response body=20MiB
+- redirects 最多 3 跳
+- transport global_active=20、per_host_active=5、per_host_idle=2
+
+B. TARGET_V1 产品调度默认值：
+
+- global active tasks HTTP budget=16
+- 单域默认=2
+- 产品允许配置的单域上限=4
+
+产品调度值必须小于等于 transport 硬上限，且产品调度层尚未完整接入，不得写成已实现。V1 附件经安全 transport 时当前有效硬上限为 detail profile 的 20MiB，不宣称 50MB。
+
+Python Worker 不直接执行 MySQL 业务权威写入；结果经版本化事件交付，由 Go Result Consumer 执行权威写入。
 
 ## 8. 备份与恢复
 

@@ -36,6 +36,32 @@
 - DuckDB：分析与导出。
 - 文件卷：不可变原始证据与附件。
 
+### 0.2.1 目标 Streams 流程
+
+Web/API → Go Gateway → MySQL 业务事务 + Transactional Outbox → crawler:search → Python Search Worker → crawler:url → Go 调度协调 → crawler:fetch → Python Fetch Worker → crawler:html → Python Parser/Scorer/Dedup → crawler:result → Go Result Consumer → MySQL 权威写入。
+
+同一 Python 进程内允许合并 Worker 实现，但职责和消息语义不得改变。目标流程不包含 Go Worker Pool 作为业务下载主链。
+
+### 0.2.2 两层 HTTP 限制
+
+A. SEALED transport 硬上限：
+
+- DNS/connect/TLS timeout=5 秒
+- response header timeout=10 秒、read idle timeout=15 秒
+- probe/search total=30 秒、detail total=60 秒
+- request body=1MiB、response headers=256KiB
+- probe/search/detail response body=1/8/20MiB
+- redirects 最多 3 跳
+- transport global_active=20、per_host_active=5、per_host_idle=2
+
+B. TARGET_V1 产品调度默认值：
+
+- global active tasks HTTP budget=16
+- 单域默认=2
+- 产品允许配置的单域上限=4
+
+产品调度值必须小于等于 transport 硬上限，且尚未完整接入，不冒充 transport 硬限制。
+
 ## 0.3 当前差距与迁移方向
 
 - Web 从 Vue 残留迁移到 React Web。
@@ -47,9 +73,9 @@
 
 ## 0.4 历史说明
 
-下方第 1—8 章保留为仓库实现历史与详细记录。旧文本中的绝对本地路径、TASK-004 等旧编号和未实施说明均不是当前运行依赖；实现状态以 `docs/TASK.md` 和产品设计文档为准。
+下方第 1 章起保留为仓库实现历史与详细记录，第 1—12 章已标记 HISTORICAL_CURRENT_IMPLEMENTATION，第 13 章起为历史任务记录，不作为当前目标。旧文本中的绝对本地路径、TASK-004 等旧编号和未实施说明均不是当前运行依赖；实现状态以 `docs/TASK.md` 和产品设计文档为准。
 
-## 1. 架构目标
+## 1. HISTORICAL_CURRENT_IMPLEMENTATION：架构目标
 
 本平台目标为通用、稳定、可维护、可扩展的信息采集平台，支持具备搜索入口或可配置发现规则的网站，实现信息的自动发现、搜索、下载、解析、评分和存储。
 
@@ -58,7 +84,7 @@
 - Go 负责平台控制面（API 入口、任务调度、MySQL 持久化）
 - Redis 作为跨运行时通信的唯一中间层
 
-## 2. 总体运行流程
+## 2. HISTORICAL_CURRENT_IMPLEMENTATION：总体运行流程
 
 采集任务的完整生命周期：
 
@@ -76,11 +102,11 @@
   -> Go 更新任务状态
 ```
 
-以上为目标运行流程。TASK-017 已实现 v2 `crawler:search` → Python Search Worker → 正式 `URLMessage` → `crawler:url` → Go Worker Pool 主链；v1 legacy 消息路径仍保留且未修改。
+以上流程属于 HISTORICAL_CURRENT_IMPLEMENTATION，不是目标 V1 流程。TASK-017 已实现 v2 `crawler:search` → Python Search Worker → 正式 `URLMessage` → `crawler:url` → Go Worker Pool 主链；v1 legacy 消息路径仍保留且未修改。Go Worker Pool 业务下载主链属于待收敛兼容实现。
 
 Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标正式入口。
 
-## 3. Go/Python 职责边界
+## 3. HISTORICAL_CURRENT_IMPLEMENTATION：Go/Python 职责边界
 
 ### Go 负责
 1. 正式 CLI 和 API 入口。
@@ -105,7 +131,7 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 - Python 不得管理平台级任务状态或直接写入 MySQL 事务数据。
 - 双方不得直接互相导入对方源码。
 
-## 4. 运行时入口
+## 4. HISTORICAL_CURRENT_IMPLEMENTATION：运行时入口
 
 | 运行时 | 入口文件 | 启动方式 | 用途 |
 |--------|---------|---------|------|
@@ -116,7 +142,7 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 | Python Worker | workers/parser_worker.py | python workers/parser_worker.py | Redis 消费（正式链，crawler:html 单消费者） |
 | Python Worker（历史） | parser/redis_worker.py | 已删除 | 历史入口，已于 TASK-019B-4C 退役 |
 
-## 5. Redis 消息协议
+## 5. HISTORICAL_CURRENT_IMPLEMENTATION：Redis 消息协议
 
 ### 5.1 当前消息协议
 
@@ -141,7 +167,7 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 
 目标消息公共字段：`protocol_version`、`task_id`、`message_id`、`timestamp`。业务字段由具体消息类型定义。目标协议尚未实施，将由 TASK-004 建立消息模型和双端契约测试。
 
-## 6. 数据存储边界
+## 6. HISTORICAL_CURRENT_IMPLEMENTATION：数据存储边界
 
 | 存储 | 写入权 | 用途 |
 |------|--------|------|
@@ -151,7 +177,7 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 
 Python MySQL 写入模块 (storage/mysql_store.py) 暂时保留，后续迁移完成后再下线。
 
-## 7. 项目目录结构
+## 7. HISTORICAL_CURRENT_IMPLEMENTATION：项目目录结构
 
 ```
 workspace/crawler/
@@ -190,7 +216,7 @@ workspace/crawler/
 - output/                     DuckDB + 导出文件
 ```
 
-## 8. 配置边界
+## 8. HISTORICAL_CURRENT_IMPLEMENTATION：配置边界
 
 | 文件 | 用途 | 加载方 |
 |------|------|--------|
@@ -207,7 +233,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 
 现有配置文件的最终归属将在后续配置契约任务中确定。
 
-## 9. 错误处理与监控
+## 9. HISTORICAL_CURRENT_IMPLEMENTATION：错误处理与监控
 
 ### 9.1 当前实现
 
@@ -222,7 +248,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - Python 上报搜索、解析、评分和去重阶段指标。
 - /metrics 端点及 Grafana 指标必须通过实际运行测试后才能标记为已完成。
 
-## 10. 当前架构与目标架构差异
+## 10. HISTORICAL_CURRENT_IMPLEMENTATION：旧版本当前/目标差异
 
 | 模块 | 当前 | 目标 |
 |------|------|------|
@@ -232,7 +258,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 | 搜索执行 | Go + Python 重复 | 归 Python 唯一 |
 | HTTP 客户端 | Go Resty + Python httpx | 各归各自运行时 |
 
-## 11. 迁移顺序
+## 11. HISTORICAL_CURRENT_IMPLEMENTATION：旧迁移顺序
 
 1. 修复基础契约（TASK-002，已完成）
 2. 确定运行时职责边界（TASK-003，已完成）
@@ -244,7 +270,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 8. 收敛重复搜索、HTTP、API 和存储模块
 9. 完善监控、前端展示和端到端验收
 
-## 12. 架构约束
+## 12. HISTORICAL_CURRENT_IMPLEMENTATION：旧架构约束
 
 - Python 与 Go 不互相直接调用。
 - Redis 是唯一的跨运行时通信通道。

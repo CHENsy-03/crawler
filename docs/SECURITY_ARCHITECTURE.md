@@ -18,9 +18,13 @@
 
 ## 2. 信任边界
 
-- 信任区：nginx 内部网络、受控管理容器。
-- 半信任区：Web/Go API 容器，只接收已认证同源请求。
-- 低信任区：外部站点响应、附件、JavaScript 渲染内容。
+- 外部不可信网络：公网/外部站点。
+- edge/DMZ：nginx，唯一对外暴露和 TLS 终止边界，不得直接视为信任区。
+- app：web、go-api、python worker 的受控内部网络。
+- data：mysql、redis、raw_evidence 等数据面，只允许 app 受控访问。
+- observability：prometheus/grafana 指标面。
+- Web/Go API 不是“只接收已认证请求”的绝对边界：bootstrap、`/healthz`、`/readyz` 是认证规则例外；健康探针只用于容器编排和受控运维。
+- 低信任内容：外部站点响应、附件、JavaScript 渲染内容。
 - 采集 Worker 必须把外部响应视为不可信数据。
 - MySQL/Redis 只允许 app 网络访问。
 
@@ -30,12 +34,15 @@
 - Session 空闲 30 分钟过期、绝对 8 小时过期。
 - Session token 只存 hash；Cookie 使用 HttpOnly、Secure 和合适 SameSite。
 - 密码和恢复密钥不得写入日志。
+- 登录必须启用防暴力控制：速率限制、失败审计和受控冷却。
+- bootstrap、health/readiness 是认证规则例外，但必须按例外最小化设计。
 
 ## 4. API Token
 
 - API Token 只存 hash，创建响应只返回一次明文。
 - 支持轮换、吊销和过期。
 - Token 调用外部 API 不依赖 Cookie CSRF。
+- API Token scope 模型需要在 Go OpenAPI 中显式定义；scope 未定义前不得授予宽泛 Token。
 
 ## 5. CSRF、CSP 与 TLS
 
@@ -48,9 +55,15 @@
 
 - SSRF 防护覆盖协议、DNS 解析、IP 网段和 redirect 链。
 - URL 规范化保守执行；禁止 IP literal 生产出站。
-- 每次 redirect 重新校验，最多 5 次；附件相关重定向同样受限。
-- 默认连接超时 10 秒、读取 30 秒、正文 20MB、附件 50MB。
-- 全局 HTTP 并发默认 16；单域默认 2、上限 4。
+- SEALED transport 硬上限：
+  - DNS/connect/TLS timeout=5 秒
+  - response header timeout=10 秒、read idle timeout=15 秒
+  - probe/search total=30 秒、detail total=60 秒
+  - request body=1MiB、response headers=256KiB
+  - probe response body=1MiB、search response body=8MiB、detail response body=20MiB
+  - redirects 最多 3 跳
+  - transport global_active=20、per_host_active=5、per_host_idle=2
+- TARGET_V1 产品调度默认值：global active tasks HTTP budget=16、单域默认=2、允许配置上限=4；该层尚未完整接入。
 - 瞬时错误最多重试 3 次，指数退避并带 jitter。
 
 ## 7. 附件与文件安全
@@ -82,3 +95,12 @@
 - secrets 不出现在镜像、Compose、日志或错误中。
 - 原始证据不被审核或规范化流程覆盖修改。
 - 发布物包含 SBOM。
+- production loader 与生产接线未完成时，SSRF 基础库通过不能解除部署阻塞。
+
+## 11. 发布安全门禁
+
+- production loader 已接入并完成 fail-closed 验证。
+- 无 P0/P1 安全问题和未批准越权/SSRF 失败。
+- CSRF、CSP、TLS、secrets 和审计日志满足验收。
+- 20 站 canary 与安全测试未发现绕过访问控制。
+- 任一发布安全门禁失败时 deployment 继续 BLOCKED。

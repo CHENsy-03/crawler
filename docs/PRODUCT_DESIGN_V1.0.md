@@ -104,6 +104,7 @@
 - 立即执行任务，不做复杂定时调度。
 - Go 唯一外部网关；Python 采集核心；Redis Streams + outbox；MySQL 权威。
 - 原始证据不可变文件卷；DuckDB 分析与导出。
+- Playwright 隔离 Worker：TARGET_V1 的受控 JavaScript 降级能力，不是默认抓取路径；仅静态 HTTP 路径无法完成且策略明确允许时使用，当前 NOT_STARTED。
 
 ### 4.2 V1.1 范围
 
@@ -115,8 +116,7 @@
 
 - 多租户和复杂 RBAC：无 V1 需求，延期原因是为控制单机内部产品边界。
 - 复杂定时调度：V1 仅立即任务，延期原因是产品闭环不需要。
-- 浏览器 JS 渲染：只作为受控降级能力进入 V1，不作为默认抓取路径。
-- Playwright 隔离 Worker：在 V1 中作为受控降级能力，不作为主链默认。
+- 超出 V1 边界的企业级扩展。
 
 ### 4.4 七大 Web 模块
 
@@ -185,12 +185,19 @@
 ```text
 Web/API -> Go Gateway -> MySQL task -> Outbox -> Redis Streams
 -> Python Search Worker -> crawler:url
--> Python/受控 Fetch Worker -> crawler:html
+-> Go 调度协调 -> crawler:fetch
+-> Python Fetch Worker -> crawler:html
 -> Python Parser/Scorer/Dedup -> crawler:result
--> Go Result Consumer -> MySQL -> 文件卷/DuckDB/Export
+-> Go Result Consumer -> MySQL 权威写入
 ```
 
-当前实现与目标数据流存在差异：Go Worker 仍承担下载主链，Redis 仍为 list，outbox 未实现。
+导出由独立 ExportJob 生命周期管理，不属于 CrawlTask 执行阶段。当前实现与目标数据流存在差异：Go Worker 仍承担下载主链，Redis 仍为 list，outbox 未实现。
+
+### 5.5 目标 Streams 流程
+
+Web/API → Go Gateway → MySQL 业务事务 + Transactional Outbox → crawler:search → Python Search Worker → crawler:url → Go 调度协调 → crawler:fetch → Python Fetch Worker → crawler:html → Python Parser/Scorer/Dedup → crawler:result → Go Result Consumer → MySQL 权威写入。
+
+同一 Python 进程内允许合并 Worker 实现，但职责和消息语义不得改变。
 ## 6. Web 信息架构与详细交互
 
 七大模块的完整页面、组件、状态和权限矩阵见 `docs/FRONTEND_ARCHITECTURE.md`。以下为产品层要求。
@@ -198,7 +205,7 @@ Web/API -> Go Gateway -> MySQL task -> Outbox -> Redis Streams
 | 模块 | 用户目标 | 关键页面 | 核心操作 | API | 当前状态 |
 |---|---|---|---|---|---|
 | 初始化与登录 | 初始化管理员、登录/登出 | bootstrap、login | 初始化、登录、登出 | `/bootstrap`、`/auth/*` | NOT_STARTED |
-| Dashboard | 掌握任务、队列、存储和安全状态 | 总览 | 跳转详情、刷新 | `/system/health`、`/tasks` | NOT_STARTED |
+| Dashboard | 掌握任务、队列、存储和安全状态 | 总览 | 跳转详情、刷新 | 内部 `/healthz`/`/readyz`、业务 `/api/v1` | NOT_STARTED |
 | 创建任务 | 创建任务并确认范围 | 任务表单、范围建议 | 创建、建议、确认 | `/tasks`、`scope-suggestion`、`confirm` | NOT_STARTED |
 | 任务列表/详情/进度 | 查看生命周期和阶段 | 任务列表、详情 | 取消、重试、SSE | `/tasks/*`、`/events` | NOT_STARTED |
 | 结果列表/详情/审核/导出 | 审核结果、导出 | 结果列表、正文详情 | 审核、异步导出 | `/results/*`、`/export-jobs` | NOT_STARTED |
@@ -236,7 +243,7 @@ Web/API -> Go Gateway -> MySQL task -> Outbox -> Redis Streams
 
 执行阶段独立于生命周期状态：
 
-`DISCOVERY → FETCH → PARSE → SCORE → FILTER → DEDUP → PERSIST → EXPORT`
+`DISCOVERY → FETCH → PARSE → SCORE → FILTER → DEDUP → PERSIST`
 
 同一生命周期状态可包含多个执行阶段；阶段写入 TaskStage。
 
@@ -264,6 +271,14 @@ Web/API -> Go Gateway -> MySQL task -> Outbox -> Redis Streams
 - 取消和超时使用显式状态转换。
 - 局部失败进入 PARTIAL_SUCCEEDED 或按策略重试。
 - 用户可见状态由 TaskEvent 和任务状态机产生，禁止页面自行推断。
+
+### 7.6 重试与导出边界
+
+- FAILED、PARTIAL_SUCCEEDED 等终态不得返回非终态。
+- 重试保留原任务终态不变，创建新 CrawlTask；新任务记录 retry_of_task_id，从 DRAFT 或 PENDING_CONFIRMATION 进入流程。
+- Idempotency-Key 保证同一重试请求只创建一个新任务。
+- 导出由独立 ExportJob 生命周期管理：PENDING → RUNNING → SUCCEEDED/FAILED/EXPIRED。
+- CrawlTask 不包含 EXPORT 执行阶段，也不暗示每个抓取任务自动导出。
 
 ## 8. 站点发现、插件与关键词扩展
 
@@ -300,8 +315,10 @@ Web/API -> Go Gateway -> MySQL task -> Outbox -> Redis Streams
 - Python 是业务抓取权威。
 - Go 只负责调度协调，不成为业务抓取实现权威。
 - 受控 JavaScript 渲染仅在需要时进入隔离 Playwright Python Worker。
-- 默认 HTTP 限制：连接 10 秒、读取 30 秒、最多 5 次重定向、正文 20MB、附件 50MB。
+- SEALED transport 硬上限：DNS/connect/TLS timeout=5 秒、response header timeout=10 秒、read idle timeout=15 秒、probe/search total=30 秒、detail total=60 秒、request body=1MiB、response headers=256KiB、probe/search/detail response body=1/8/20MiB、redirects 最多 3 跳、transport global_active=20/per_host_active=5/per_host_idle=2。
+- TARGET_V1 产品调度默认值：global active tasks HTTP budget=16、单域默认=2、允许配置上限=4；产品调度层尚未完整接入，不冒充 transport 硬限制。
 - SSRF 防护覆盖协议、DNS、IP、redirect；遵守 robots、站点条款和访问频率。
+- V1 附件经安全 transport 进入时当前有效硬上限为 detail profile 的 20MiB，不宣称 50MB；未来如需 50MB 必须另立安全决策。
 
 ### 9.2 附件与解析
 
@@ -329,7 +346,15 @@ Web/API -> Go Gateway -> MySQL task -> Outbox -> Redis Streams
 
 完整实体、字段、索引和保留期见 `docs/DATA_MODEL.md`。核心实体：
 
-Admin、Session、APIToken、CrawlTask、TaskAttempt、TaskStage、TaskEvent、SearchCandidate、FetchArtifact、Article、ArticleVersion、ReviewDecision、ExportJob、Site、Plugin、OutboxEvent、AuditLog、DeadLetter、Checkpoint。
+Admin、Session、APIToken、CrawlTask、TaskAttempt、TaskStage、TaskEvent、SearchCandidate、FetchArtifact、Article、ArticleVersion、TaskArticle、ReviewDecision、ExportJob、Site、Plugin、OutboxEvent、AuditLog、DeadLetter、Checkpoint，共 20 个实体。
+
+正文身份模型：
+
+- Article 表示稳定文章身份，不以 content_hash 区分身份，唯一键使用稳定 identity_url_hash 或 article_key。
+- ArticleVersion 表示不可变正文版本，唯一约束至少含 (article_id, content_hash)，version_no 在同一 article_id 内唯一。
+- TaskArticle 关联 CrawlTask、SearchCandidate、Article、ArticleVersion，保存本任务 query、score、matched_evidence、result_status，幂等键为 (task_id, hit_id)。
+- ReviewDecision 显式引用 task_article_id 和 article_version_id，append-only，不覆盖原始证据或正文版本。
+- TaskEvent 的 MySQL 记录是业务权威，Redis Streams 只是实时传递和消费载体。
 
 ### 11.1 数据权威
 
@@ -360,8 +385,11 @@ Admin、Session、APIToken、CrawlTask、TaskAttempt、TaskStage、TaskEvent、S
 
 - 外部 API 统一 `/api/v1`。
 - Go OpenAPI 是外部 API 权威来源。
-- 覆盖 bootstrap、登录/登出、Session、API Token、任务、任务确认/取消/重试、任务事件 SSE、结果、审核、导出、站点、插件、系统健康、日志和只读安全状态。
+- 覆盖 bootstrap、登录/登出、Session、API Token、任务、任务确认/取消/重试、任务事件 SSE、结果、审核、导出、站点、插件、日志和只读安全状态。
+- 内部容器探针为 `/healthz` 和 `/readyz`，不属于外部业务 OpenAPI，不通过 Nginx 向普通用户暴露。
 - API 必须定义向后兼容和废弃策略。
+
+重试语义：FAILED、PARTIAL_SUCCEEDED 等终态不得返回非终态；重试创建新 CrawlTask 并记录 retry_of_task_id，新任务从 DRAFT 或 PENDING_CONFIRMATION 进入流程。
 
 ### 12.2 SSE
 
@@ -492,9 +520,11 @@ Admin、Session、APIToken、CrawlTask、TaskAttempt、TaskStage、TaskEvent、S
 
 ### 18.1 当前完成度
 
-- 保守产品化完成度：26.21%
-- NOT_VERIFIABLE 理论上限：26.71%
+- 保守产品化完成度：25.38%
+- NOT_VERIFIABLE 理论上限：25.88%
 - 当前 P0=0
+
+权重：PRODUCT_UX=15%、PYTHON_CRAWLER=20%、GO_CONTROL_API=15%、DATA_QUEUE=15%、WEB_FRONTEND=15%、SECURITY=8%、TEST_QUALITY=7%、OPS_RELEASE=5%。
 
 ### 18.2 缺陷与技术债务
 
@@ -555,43 +585,82 @@ Python 采集缺口、数据/队列、生产安全 loader、测试/fixture、备
 
 ### 19.2 57 项说明书覆盖映射
 
-| 原说明书要求 1-57 | 本文章节/专题 |
-|---|---|
-| 1-2 文档控制与版本 | §1 |
-| 3-4 产品背景/目标非目标 | §2 |
-| 5-6 用户角色/场景/范围 | §3 |
-| 7-9 产品范围/功能架构/系统架构/职责 | §4、§5 |
-| 10-12 Web 信息架构/七大模块/页面交互 | §6、FRONTEND_ARCHITECTURE |
-| 13-15 任务生命周期/采集流程/站点发现 | §7、§8 |
-| 16-17 插件/关键词扩展 | §8 |
-| 18-20 抓取/JS/附件/解析 | §9 |
-| 21-22 评分过滤/去重版本 | §10 |
-| 23-27 数据模型/MySQL/Redis/原始存储 | §11、DATA_MODEL |
-| 28-30 API/OpenAPI/SSE | §12、API_CONTRACT |
-| 31-35 认证/Token/安全/SSRF/审计/配置 | §13、SECURITY_ARCHITECTURE |
-| 36-40 错误/重试/outbox/checkpoint/并发 | §14、§15 |
-| 41-43 可观测/保留/备份 | §15 |
-| 44-46 Compose/环境/性能/兼容无障碍 | §16、DEPLOYMENT_ARCHITECTURE |
-| 47-49 测试/CI/验收/质量指标 | §17、TEST_STRATEGY |
-| 50-52 风险/合规/版本路线 | §18 |
-| 53-57 项目计划/术语/追踪/差距 | §18、§19 |
+| 编号 | 要求名称 | 主章节 | 专题文档 | 当前状态或说明 |
+|---|---|---|---|---|
+| 1 | 文档控制 | §1 | 无 | CURRENT_IMPLEMENTED |
+| 2 | 文档版本与状态 | §1 | 无 | IMPLEMENTED_WAITING_REVIEW |
+| 3 | 产品背景 | §2 | README | CURRENT_IMPLEMENTED |
+| 4 | 产品目标与非目标 | §2 | README | CURRENT_IMPLEMENTED |
+| 5 | 用户与角色 | §3 | FRONTEND_ARCHITECTURE | CURRENT_IMPLEMENTED |
+| 6 | 场景与范围 | §3 | API_CONTRACT | CURRENT_IMPLEMENTED |
+| 7 | 产品版本范围 | §4 | 无 | V1/V1.1/DEFERRED 已定义 |
+| 8 | 功能架构 | §4 | FRONTEND_ARCHITECTURE | CURRENT_IMPLEMENTED |
+| 9 | 系统架构与职责 | §5 | SYSTEM_ARCHITECTURE | CURRENT_CONFLICT 已列出 |
+| 10 | Web信息架构 | §6 | FRONTEND_ARCHITECTURE | TARGET_V1 |
+| 11 | 七大Web模块 | §6 | FRONTEND_ARCHITECTURE | TARGET_V1 |
+| 12 | 页面与交互状态 | §6 | FRONTEND_ARCHITECTURE | TARGET_V1 |
+| 13 | 任务生命周期 | §7 | DATA_MODEL | TARGET_V1 |
+| 14 | 端到端采集流程 | §7、§5 | SYSTEM_ARCHITECTURE | CURRENT_CONFLICT/TARGET_V1 |
+| 15 | 站点发现 | §8 | DATA_MODEL | CURRENT_PARTIAL |
+| 16 | 插件体系 | §8 | DATA_MODEL | CURRENT_PARTIAL |
+| 17 | 关键词扩展 | §8 | DATA_MODEL | CURRENT_PARTIAL |
+| 18 | 业务抓取 | §9 | SYSTEM_ARCHITECTURE | TARGET_V1：Python 权威 |
+| 19 | JavaScript降级 | §9 | DEPLOYMENT_ARCHITECTURE | TARGET_V1：Playwright 受控 |
+| 20 | 附件与解析 | §9 | SECURITY_ARCHITECTURE | CURRENT_PARTIAL |
+| 21 | 评分与过滤 | §10 | DATA_MODEL | CURRENT_IMPLEMENTED/PARTIAL |
+| 22 | 去重与版本 | §10 | DATA_MODEL | CURRENT_PARTIAL |
+| 23 | 核心数据模型 | §11 | DATA_MODEL | 20 实体已定义 |
+| 24 | MySQL权威 | §11 | DATA_MODEL | TARGET_V1/CURRENT_CONFLICT |
+| 25 | Redis Streams | §11 | DATA_MODEL | TARGET_V1/CURRENT_CONFLICT |
+| 26 | DuckDB | §11 | DATA_MODEL | TARGET_V1/CURRENT_PARTIAL |
+| 27 | 原始证据存储 | §11 | DATA_MODEL、SECURITY_ARCHITECTURE | TARGET_V1 |
+| 28 | API契约 | §12 | API_CONTRACT | TARGET_V1 |
+| 29 | OpenAPI权威 | §12 | API_CONTRACT | TARGET_V1 |
+| 30 | SSE | §12 | API_CONTRACT、FRONTEND_ARCHITECTURE | TARGET_V1 |
+| 31 | 管理员认证 | §13 | SECURITY_ARCHITECTURE | TARGET_V1 |
+| 32 | Session与API Token | §13 | SECURITY_ARCHITECTURE | TARGET_V1 |
+| 33 | Web安全 | §13 | SECURITY_ARCHITECTURE、FRONTEND_ARCHITECTURE | TARGET_V1 |
+| 34 | SSRF与出站安全 | §13 | SECURITY_ARCHITECTURE | Evidence SEALED，runtime NOT_STARTED |
+| 35 | 审计与配置 | §15 | SECURITY_ARCHITECTURE | TARGET_V1 |
+| 36 | 错误模型 | §14 | API_CONTRACT | TARGET_V1 |
+| 37 | 重试与幂等 | §14 | API_CONTRACT、DATA_MODEL | TARGET_V1 |
+| 38 | Transactional Outbox | §14 | DATA_MODEL | TARGET_V1 |
+| 39 | Checkpoint与恢复 | §14 | DATA_MODEL | TARGET_V1 |
+| 40 | 并发与资源限制 | §15 | DEPLOYMENT_ARCHITECTURE、SECURITY_ARCHITECTURE | TARGET_V1/PARTIAL |
+| 41 | 可观测性 | §15 | DEPLOYMENT_ARCHITECTURE | TARGET_V1 |
+| 42 | 数据保留 | §15 | DATA_MODEL | TARGET_V1 |
+| 43 | 备份与恢复 | §15 | DEPLOYMENT_ARCHITECTURE | TARGET_V1 |
+| 44 | Docker Compose | §16 | DEPLOYMENT_ARCHITECTURE | CURRENT_PARTIAL/TARGET_V1 |
+| 45 | 环境与性能 | §16 | TEST_STRATEGY | NOT_VERIFIED |
+| 46 | 浏览器与无障碍 | §16 | FRONTEND_ARCHITECTURE | TARGET_V1 |
+| 47 | 测试层级 | §17 | TEST_STRATEGY | CURRENT_PARTIAL |
+| 48 | CI与发布 | §17 | TEST_STRATEGY | TARGET_V1 |
+| 49 | 验收与质量指标 | §17 | TEST_STRATEGY | TARGET_V1 |
+| 50 | 风险 | §18 | 主文档 §18 | P0=0，P1/P2/P3 已列 |
+| 51 | 合规 | §18 | SECURITY_ARCHITECTURE | CURRENT_IMPLEMENTED |
+| 52 | 版本路线图 | §18 | README | CURRENT_IMPLEMENTED |
+| 53 | 项目计划与工期 | §18 | 主文档 §18 | CURRENT_IMPLEMENTED |
+| 54 | 术语 | §19 | 主文档 §19 | CURRENT_IMPLEMENTED |
+| 55 | 需求追踪 | §19 | 主文档 §19 | 103 项机器校验 |
+| 56 | 当前与目标差距 | §19 | SYSTEM_ARCHITECTURE | CURRENT_IMPLEMENTED |
+| 57 | 下一任务与发布边界 | §19 | TASK、README | next_task 与 BLOCKED 已记录 |
 
 ### 19.3 八模块完成度
 
 | 模块 | PD 数 | 完成度 | 加权 |
 |---|---:|---:|---:|
 | PRODUCT_UX | 4 | 0.00% | 0.00% |
-| PYTHON_CRAWLER | 21 | 69.05% | 13.81% |
+| PYTHON_CRAWLER | 21 | 66.67% | 13.33% |
 | GO_CONTROL_API | 19 | 23.68% | 3.55% |
 | DATA_QUEUE | 13 | 23.08% | 3.46% |
 | WEB_FRONTEND | 21 | 2.38% | 0.36% |
-| SECURITY | 11 | 36.36% | 2.91% |
+| SECURITY | 11 | 31.82% | 2.55% |
 | TEST_QUALITY | 4 | 12.50% | 0.88% |
 | OPS_RELEASE | 10 | 25.00% | 1.25% |
 
 ### 19.4 PD 统计
 
-IMPLEMENTED=18、PARTIAL=23、NOT_STARTED=54、CONFLICT=7、OBSOLETE=0、NOT_VERIFIABLE=1；合计 103。
+IMPLEMENTED=16、PARTIAL=25、NOT_STARTED=54、CONFLICT=7、OBSOLETE=0、NOT_VERIFIABLE=1；合计 103。
 
 ### 19.5 当前实现与目标状态矩阵
 
@@ -685,13 +754,13 @@ IMPLEMENTED=18、PARTIAL=23、NOT_STARTED=54、CONFLICT=7、OBSOLETE=0、NOT_VER
 | 072 | 熔断/冷却/恢复 | IMPLEMENTED | PYTHON_CRAWLER | V1 | §9 | httpx circuit breaker、jitter 等存在 |
 | 073 | 条件请求/内容hash | PARTIAL | PYTHON_CRAWLER | V1 | §9 | content_hash 协议存在，条件请求未完整接入 |
 | 074 | SSRF防护 | IMPLEMENTED | SECURITY | V1 | §9 | crawler/security、go internal/security |
-| 075 | 默认HTTP限制 | IMPLEMENTED | SECURITY | V1 | §9 | transport_budget、bounded_io、contract tests |
+| 075 | 默认HTTP限制 | PARTIAL | SECURITY | V1 | §9 | SEALED transport 预算/合同存在，未接生产请求链 |
 | 076 | robots/条款/授权 | NOT_STARTED | SECURITY | V1 | §9 | 无产品化 robots/条款策略 |
 | 077 | 插件注册/版本/禁用/审计 | PARTIAL | PYTHON_CRAWLER | V1 | §8 | adapter registry 存在，管理/审计不完整 |
 | 078 | sealed security配置优先级 | PARTIAL | SECURITY | V1 | §15 | ADR-022/schema 冻结，runtime loader 未开始 |
 | 079 | 可审计feature flag | NOT_STARTED | GO_CONTROL_API | V1 | §15 | 无 feature flag 服务 |
 | 080 | 队列/资源背压 | PARTIAL | DATA_QUEUE | V1 | §15 | concurrency/bounded runtime 存在，任务级背压缺 |
-| 081 | HTTP并发16/2/4 | IMPLEMENTED | PYTHON_CRAWLER | V1 | §9 | concurrency_limiter/config 合同存在 |
+| 081 | HTTP并发16/2/4 | PARTIAL | PYTHON_CRAWLER | V1 | §9 | 底层限制器存在，16/2/4 产品调度层未完整接入 |
 | 082 | 任务默认限制 | PARTIAL | GO_CONTROL_API | V1 | §7 | 部分 config 限制，产品任务限制缺 |
 | 083 | 重试3次/指数/jitter | IMPLEMENTED | PYTHON_CRAWLER | V1 | §14 | retry/jitter 合同存在 |
 | 084 | UTC存储/本地展示 | PARTIAL | DATA_QUEUE | V1 | §12 | 协议 UTC 存在，展示层未实现 |

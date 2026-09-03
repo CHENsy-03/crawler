@@ -10,7 +10,7 @@
 - 分页：`page`、`page_size`，默认 `page=1`、`page_size=20`，上限 100
 - 排序：`sort=field`、`order=asc|desc`
 - 筛选：稳定字段白名单，禁止把任意用户输入拼入 SQL
-- Idempotency Key：写请求头 `Idempotency-Key`，服务端按业务键去重
+- Idempotency Key：按端点矩阵要求用于创建/确认/重试/取消/审核/导出/Token/配置等业务 mutation；login 使用防暴力限流，logout 天然幂等，GET/HEAD 不要求 Idempotency-Key
 - Request ID：请求头 `X-Request-Id` 或服务端生成，错误响应回传
 - 错误模型：统一 envelope，见第 2 节
 - 认证：浏览器会话 Cookie 或 `Authorization: Bearer <api_token>`，二选一，禁止混用
@@ -85,7 +85,7 @@
 
 ## 5. 端点矩阵
 
-所有路径前缀为 `/api/v1`。`CURRENT` 表示当前实现状态；除明确 CURRENT_IMPLEMENTED 外均未完成。
+除内部探针 `/healthz`、`/readyz` 外，其余端点路径均加 `/api/v1` 前缀。`CURRENT` 表示当前实现状态；除明确 CURRENT_IMPLEMENTED 外均未完成。
 
 | 端点 | Method | Auth | Request/Response 要点 | 关键状态码 | Idempotency | Pagination | Errors | CURRENT |
 |---|---|---|---|---|---|---|---|---|
@@ -102,7 +102,7 @@
 | `/tasks/{taskId}/confirm` | POST | Session/Token | 确认范围并进入 QUEUED | 200 | Idempotency-Key | N/A | state_conflict, over_limit | NOT_STARTED |
 | `/tasks/{taskId}` | GET | Session/Token | 返回任务状态、阶段、进度和 checkpoint | 200 | 幂等 | N/A | not_found | NOT_STARTED |
 | `/tasks/{taskId}/cancel` | POST | Session/Token | 请求取消，进入 CANCELLING | 202 | Idempotency-Key | N/A | state_conflict, already_terminal | NOT_STARTED |
-| `/tasks/{taskId}/retry` | POST | Session/Token | 对 FAILED/PARTIAL_SUCCEEDED 创建受控重试 | 202 | Idempotency-Key | N/A | not_retryable | NOT_STARTED |
+| `/tasks/{taskId}/retry` | POST | Session/Token | 保留原任务终态，创建新 CrawlTask；响应返回 new_task_id 和 source_task_id | 201 | Idempotency-Key | N/A | not_retryable, state_conflict | NOT_STARTED |
 | `/tasks/{taskId}/events` | GET SSE | Session/Token | task event 流；Last-Event-ID 恢复 | 200 | N/A | event_id 游标 | unauthorized | NOT_STARTED |
 | `/results` | GET | Session/Token | 结果列表含任务、站点、审核状态 | 200 | 幂等 | 是 | validation_error | NOT_STARTED |
 | `/results/{articleId}` | GET | Session/Token | 返回规范化正文、证据、审核状态 | 200 | 幂等 | N/A | not_found | NOT_STARTED |
@@ -116,12 +116,14 @@
 | `/sites/{siteCode}` | DELETE | Session | 禁用站点而非删除证据 | 204 | 幂等 | N/A | in_use | NOT_STARTED |
 | `/plugins` | GET | Session/Token | 插件注册列表 | 200 | 幂等 | 是 | validation_error | NOT_STARTED |
 | `/plugins/{pluginId}` | PUT | Session | 启停/禁用插件版本 | 200 | Idempotency-Key | N/A | not_found, version_conflict | NOT_STARTED |
-| `/system/health` | GET | 无 | liveness | 200 | 幂等 | N/A | N/A | NOT_STARTED |
-| `/system/readiness` | GET | 无 | readiness，依赖未就绪返回 503 | 200/503 | 幂等 | N/A | dependency_not_ready | NOT_STARTED |
+| `/healthz` | GET | 无 | 内部容器探针 liveness，不属于外部业务 OpenAPI | 200 | 不适用 | N/A | N/A | NOT_STARTED |
+| `/readyz` | GET | 无 | 内部容器探针 readiness，依赖未就绪返回 503 | 200/503 | 不适用 | N/A | dependency_not_ready | NOT_STARTED |
 | `/system/logs` | GET | Session | 日志检索，敏感字段脱敏 | 200 | 幂等 | 是 | validation_error | NOT_STARTED |
 | `/system/security/status` | GET | Session | 只读安全状态 | 200 | 幂等 | 是 | unauthorized | NOT_STARTED |
 
 当前存在 `api/server.py` FastAPI `/parse` 调试接口和 Go 基础 API，但均不是冻结的 `/api/v1` 外部契约。
+
+内部探针 `/healthz`、`/readyz` 不属于外部业务 OpenAPI，不通过 Nginx 向普通用户暴露，只用于容器编排和受控运维。
 
 ## 6. SSE 契约
 
@@ -190,9 +192,12 @@
 
 - 列表查询使用白名单 filter：`status`、`site_code`、`created_from`、`created_to`、`review_status`、`format`。
 - 排序字段白名单：`created_at`、`updated_at`、`score`、`status`。
-- 写操作必须支持 Idempotency-Key；重复请求返回原结果或 409。
+- 创建任务、确认任务、重试任务、取消任务、审核、创建导出、创建 Token 和配置变更等业务 mutation 按端点矩阵要求支持 Idempotency-Key；重复请求返回原结果或 409。
+- login 不使用 Idempotency-Key，使用防暴力限流；logout 天然幂等，不要求 Idempotency-Key；GET/HEAD 不要求 Idempotency-Key。
 - 任务状态冲突返回 409，禁止静默覆盖终态。
 - 导出下载完成后文件在保留期内可重复下载，不重复计算导出任务。
+
+重试不会把 FAILED、PARTIAL_SUCCEEDED 等终态改回 QUEUED/RUNNING；重试通过创建新 CrawlTask 实现，新任务记录 retry_of_task_id，从 DRAFT 或 PENDING_CONFIRMATION 进入流程。
 
 ## 9. API 版本与废弃策略
 

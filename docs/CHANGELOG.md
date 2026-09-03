@@ -27,6 +27,20 @@
 - MySQL 是业务权威数据，DuckDB 只用于分析与导出
 - OSEC evidence 已 SEALED，但 production loader 仍未开始
 
+### Fixed
+
+- 独立复审发现跨文档冲突并完成第二版候选修复
+- 修正 OSEC transport 硬限制与产品调度默认值分层
+- PD-075、PD-081 从 IMPLEMENTED 修正为 PARTIAL
+- 保守完成度更新为 25.38%，理论上限更新为 25.88%
+- DATA_MODEL 从 19 个实体补充为 20 个实体，新增 TaskArticle
+- 修正任务终态重试、CrawlTask 阶段和 ExportJob 独立生命周期
+- Playwright 隔离 Worker 归入 TARGET_V1 受控 JS 降级能力
+- 57 项说明书覆盖映射改为逐条 57 行
+- 修正部署启动顺序、资源限制、测试矩阵和 canary 构成
+- README Go 命令改为先进入 go-spider 模块
+- 产品设计 review 状态为 CHANGES_REQUESTED，未标记为 PASS
+
 ### Not Changed
 
 - 无业务代码变化

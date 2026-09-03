@@ -54,6 +54,7 @@ web/
 | `/bootstrap` | 首次管理员初始化 | 无会话且系统未初始化 | NOT_STARTED |
 | `/login` | 登录 | 无会话 | NOT_STARTED |
 | `/` | Dashboard | 已登录管理员 | NOT_STARTED |
+| `/tasks` | 任务列表：服务端分页、状态/站点/时间筛选、排序、进入详情、进入创建任务 | 已登录管理员 | NOT_STARTED |
 | `/tasks/new` | 创建任务 | 已登录管理员 | NOT_STARTED |
 | `/tasks/:taskId` | 任务详情/进度 | 已登录管理员 | NOT_STARTED |
 | `/results` | 结果列表 | 已登录管理员 | NOT_STARTED |

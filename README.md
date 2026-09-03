@@ -9,15 +9,15 @@
 - OSEC Evidence/Manifest/S1/Seal Record 已 SEALED
 - production_loader=NOT_STARTED
 - deployment=BLOCKED
-- 保守产品化完成度=26.21%
-- NOT_VERIFIABLE 理论上限=26.71%
+- 保守产品化完成度=25.38%
+- NOT_VERIFIABLE 理论上限=25.88%
 
 当前不得视为可正式发布版本。
 
 ## 当前真实可用入口
 
 - Python CLI：`python main.py --site <site> --keywords <keyword>`
-- Go CLI/基础 API：`go run ./go-spider`
+- Go CLI/基础 API：先进入 `go-spider` Go 模块，再运行 `go run .`
 - Python Parser Worker：`python workers/parser_worker.py`
 - Python Search Worker：`python workers/search_worker.py`
 - 底层采集能力：TRS/JPAAS/HTML/JSON API 搜索适配、正文提取、评分、去重、出站安全基础库
@@ -59,7 +59,7 @@
 - [docs/PRODUCT_DESIGN_V1.0.md](docs/PRODUCT_DESIGN_V1.0.md)：完整产品设计权威入口
 - [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md)：Web 前端目标架构
 - [docs/API_CONTRACT.md](docs/API_CONTRACT.md)：API、OpenAPI 与 SSE 文档契约
-- [docs/DATA_MODEL.md](docs/DATA_MODEL.md)：MySQL、Redis Streams、DuckDB 与文件存储
+- [docs/DATA_MODEL.md](docs/DATA_MODEL.md)：20 类核心实体、MySQL、Redis Streams、DuckDB 与文件存储
 - [docs/DEPLOYMENT_ARCHITECTURE.md](docs/DEPLOYMENT_ARCHITECTURE.md)：目标单机部署拓扑
 - [docs/SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md)：安全架构与 OSEC 边界
 - [docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md)：测试策略与发布门禁
@@ -88,12 +88,36 @@ workers/            Python Worker
 
 所有命令应使用仓库相对路径，不要依赖本机绝对路径。
 
+PowerShell：
+
+```powershell
+Set-Location .\go-spider
+go run .
+go test ./...
+go vet ./...
+go mod verify
+Set-Location ..
+```
+
+Bash：
+
+```bash
+cd go-spider
+go run .
+go test ./...
+go vet ./...
+go mod verify
+cd ..
+```
+
+Python 与文档检查：
+
 ```text
 python -m pytest tests -q
-go test ./go-spider/...
-go vet ./go-spider/...
 git diff --check
 ```
+
+仓库根目录没有 `go.mod`，不要从根目录执行 `go run ./go-spider`、`go test ./go-spider/...` 或 `go vet ./go-spider/...`。
 
 仓库规范默认禁止访问真实外部网站、Redis、MySQL 的网络测试；相关 E2E 使用隔离 Compose 环境和 fixture。
 

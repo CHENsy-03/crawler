@@ -3097,8 +3097,10 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - production_client_wiring=NOT_STARTED
 - deployment=BLOCKED
 - product_design_v1_0=IMPLEMENTED_WAITING_REVIEW
-- product_design_v1_0_review=NOT_STARTED
-- next_task=TASK-025-CRAWLER-PRODUCT-DESIGN-R
+- product_design_v1_0_review=CHANGES_REQUESTED
+- product_design_v1_0_fix=IMPLEMENTED_WAITING_REVIEW
+- product_design_v1_0_r2_review=NOT_STARTED
+- next_task=TASK-025-CRAWLER-PRODUCT-DESIGN-R2
 
 
 
