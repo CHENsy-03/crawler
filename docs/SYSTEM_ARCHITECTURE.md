@@ -1,5 +1,54 @@
 # 通用爬虫系统架构
 
+## 0. 本文定位与文档导航
+
+本文保留仓库既有的实现架构和历史记录，并补充产品级的当前架构与目标 V1 架构区分。若下文与 [docs/PRODUCT_DESIGN_V1.0.md](PRODUCT_DESIGN_V1.0.md) 冲突，以产品设计说明书为权威。
+
+- [docs/PRODUCT_DESIGN_V1.0.md](PRODUCT_DESIGN_V1.0.md)：完整产品设计权威
+- [docs/FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md)：Web 目标架构
+- [docs/API_CONTRACT.md](API_CONTRACT.md)：API/SSE 契约
+- [docs/DATA_MODEL.md](DATA_MODEL.md)：数据与队列设计
+- [docs/DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)：部署设计
+- [docs/SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md)：安全设计
+- [docs/TEST_STRATEGY.md](TEST_STRATEGY.md)：测试策略
+
+## 0.1 当前架构
+
+当前实现是历史/兼容层与部分 v2 能力并存的形态：
+
+- Python 搜索适配、正文提取、评分、去重和 Worker 基础已实现。
+- Go API/CLI、Redis queue、Worker Pool、MySQL v2 持久化合同和安全基础库已实现。
+- `frontend/index.html` 为 Vue 3 残留，CURRENT_CONFLICT。
+- `api/server.py` FastAPI 是调试/受控接口，不作为生产外部网关。
+- Redis 当前使用 list，与目标 Streams 冲突。
+- Go Worker Pool 当前承担业务下载主链，属于待收敛兼容实现。
+- Python 历史 MySQL 写入模块与权威写入边界冲突。
+- Compose 不是完整产品拓扑。
+
+## 0.2 目标 V1 架构
+
+- Nginx：同源入口和 TLS 终止。
+- React Web：管理面板。
+- Go Gateway：唯一外部业务网关，负责认证、API、状态、SSE、调度协调和 MySQL 权威写入协调。
+- Python Worker：发现、业务抓取、解析、评分、过滤、去重和附件处理。
+- Redis Streams + Consumer Groups + Transactional Outbox：任务与事件传递。
+- MySQL：业务权威数据。
+- DuckDB：分析与导出。
+- 文件卷：不可变原始证据与附件。
+
+## 0.3 当前差距与迁移方向
+
+- Web 从 Vue 残留迁移到 React Web。
+- 外部 API 从双入口收敛到 Go 唯一网关。
+- 队列从 Redis list 迁移到 Redis Streams/outbox/dead-letter。
+- MySQL 权威写入收敛到 Go 控制面。
+- Compose 从监控栈/测试栈迁移到完整产品拓扑。
+- production loader 仍为 NOT_STARTED，deployment 仍为 BLOCKED。
+
+## 0.4 历史说明
+
+下方第 1—8 章保留为仓库实现历史与详细记录。旧文本中的绝对本地路径、TASK-004 等旧编号和未实施说明均不是当前运行依赖；实现状态以 `docs/TASK.md` 和产品设计文档为准。
+
 ## 1. 架构目标
 
 本平台目标为通用、稳定、可维护、可扩展的信息采集平台，支持具备搜索入口或可配置发现规则的网站，实现信息的自动发现、搜索、下载、解析、评分和存储。

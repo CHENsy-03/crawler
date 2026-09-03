@@ -3096,7 +3096,9 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - site_migration=NOT_STARTED
 - production_client_wiring=NOT_STARTED
 - deployment=BLOCKED
-- next_task=TASK-023-CRAWLER-WORKSPACE-CONSOLIDATION-D
+- product_design_v1_0=IMPLEMENTED_WAITING_REVIEW
+- product_design_v1_0_review=NOT_STARTED
+- next_task=TASK-025-CRAWLER-PRODUCT-DESIGN-R
 
 
 
