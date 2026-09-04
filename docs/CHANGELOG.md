@@ -24,9 +24,39 @@
 - 文档固化不表示产品代码完成
 - 未新增产品功能，发布状态仍为 RELEASE_BLOCKED
 
+### Fixed
+
+- 修复 README 的第二权威入口：`docs/PRODUCT_DESIGN_V1.0.md` 改为历史产品设计输入
+- 将旧产品设计 Markdown 标记为 `HISTORICAL_REFERENCE` / `SUPERSEDED_AS_PRODUCT_AUTHORITY`
+- 将旧 Data Model 标记为 `LEGACY_PARTIAL_REFERENCE`
+- 明确 20 类实体为历史快照，当前目标为 V1.1 修订后的 22 类实体
+- 澄清 TASK 中旧 `product_design_v1_0` 字段专指历史 Markdown 产品设计状态
+- AGENTS 固化当前 scope root 与 repository，并标记旧路径为历史记录
+- 未修改冻结 DOCX、产品代码或数据库模型
+- 发布仍为 RELEASE_BLOCKED，等待独立只读 R2
+
+### Fixed (B2)
+
+- 修复 `docs/SYSTEM_ARCHITECTURE.md` 中遗留的第二产品权威入口
+- 将其产品基线指向统一为 V1.0 完整主基线 DOCX + V1.1 强制附属补丁 DOCX
+- 旧 `docs/PRODUCT_DESIGN_V1.0.md` 仅作为历史追溯材料，不再作为冲突裁决权威
+- 未修改具体系统架构设计
+- 未修改冻结 DOCX 或产品代码
+- 发布仍为 RELEASE_BLOCKED，等待独立只读 R3
+
+### Fixed (B3)
+
+- 修复 `docs/E2E_TEST.md` 中旧工作目录操作指令，改为从当前 Git 仓库根目录执行
+- 修复 `docs/REDIS_PROTOCOL.md` 中 canonical fixture 旧路径，改为 `tests/fixtures/redis_protocol_v2.json`
+- 两处均改为当前仓库根目录相对语义
+- 未运行 E2E 或协议测试
+- 未修改测试、fixture、Redis 协议或产品代码
+- 冻结 DOCX 未变化
+- 发布仍为 RELEASE_BLOCKED，等待独立只读 R4
+
 ### Added
 
-- Product Design V1.0 权威文档：`docs/PRODUCT_DESIGN_V1.0.md`
+- Product Design V1.0 历史文档记录：`docs/PRODUCT_DESIGN_V1.0.md`，后续已由 DOCX V1.0 主基线与 V1.1 附属补丁取代
 - 六份专题设计文档：`docs/FRONTEND_ARCHITECTURE.md`、`docs/API_CONTRACT.md`、`docs/DATA_MODEL.md`、`docs/DEPLOYMENT_ARCHITECTURE.md`、`docs/SECURITY_ARCHITECTURE.md`、`docs/TEST_STRATEGY.md`
 - ADR-023：React、TypeScript 与 Vite 作为 Web 前端基线
 - ADR-024：Go 作为唯一外部业务网关

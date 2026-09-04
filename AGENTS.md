@@ -12,11 +12,19 @@
 
 未完成以上步骤不得开始 BUILD。V1.0/V1.1 已固化文件不得直接修改；后续调整必须通过 V1.2 或更高版本补丁。
 
+### 0.1 当前项目 Scope 与仓库
+
+- 当前唯一 scope root：`E:\AI_Projects\crawler`
+- 当前唯一 repository：`E:\AI_Projects\crawler\repository`
+- 本文件后续旧文本中的 `workspace/crawler`、`E:\AI_Projects\Codex\workspace\crawler` 等路径属于历史任务记录，不是现行操作指令。
+- Codex 不得访问当前 scope root 之外的旧项目路径。
+- 所有开发任务必须联合全文阅读 V1.0/V1.1，并校验双哈希。
+
 ## 1. 文件目的
 
 
 
-本文件定义 AI 编程助手、Codex 及人工开发者在 `workspace/crawler` 通用采集平台中的工作规则。
+本文件定义 AI 编程助手、Codex 及人工开发者在 `E:\AI_Projects\crawler` 通用采集平台中的工作规则。旧文本中的 `workspace/crawler` 路径仅为历史记录。
 
 
 
@@ -44,7 +52,7 @@ E:\\AI\_Projects\\Codex\\workspace\\crawler
 
 
 
-本文件只约束 `workspace/crawler` 项目及其子目录，不负责规定其他项目的开发方式。
+本文件只约束 `E:\AI_Projects\crawler\repository` 项目及其子目录，不负责规定其他项目的开发方式。旧文本中的 `workspace/crawler` 仅指历史记录。
 
 
 
@@ -60,13 +68,13 @@ E:\\AI\_Projects\\Codex\\workspace\\crawler
 
 
 
-本文件适用于以下内容：
+本文件适用于 `E:\AI_Projects\crawler\repository` 中的以下内容；下方旧 `workspace/crawler/` 树仅为历史结构记录：
 
 
 
 ```text
 
-workspace/crawler/
+E:\AI_Projects\crawler\repository\
 
 ├── main.py
 
@@ -134,7 +142,7 @@ workspace/crawler/
 
 2\. 总仓库 `E:\\AI\_Projects\\Codex\\AGENTS.md`；
 
-3\. 当前项目 `workspace/crawler/AGENTS.md`；
+3\. 当前项目 `E:\AI_Projects\crawler\repository\AGENTS.md`；
 
 4\. 当前目录下更具体的子级 `AGENTS.md`；
 
@@ -510,7 +518,7 @@ AI 只能修改当前 `docs/TASK.md` 明确允许修改的文件和目录。
 
 * 跨项目复制或迁移代码；
 
-* 修改 `workspace/crawler` 之外的项目。
+* 修改 `E:\AI_Projects\crawler` 之外的项目。
 
 
 
@@ -2272,7 +2280,7 @@ gofmt -w .
 
 * 移动论文资料；
 
-* 修改 `workspace/crawler` 之外的项目。
+* 修改 `E:\AI_Projects\crawler` 之外的项目。
 
 
 
@@ -2782,7 +2790,7 @@ TASK-001期间不得顺手修改：
 
 
 
-## 42. 当前目录特别说明
+## 42. HISTORICAL：旧目录结构特别说明
 
 
 
@@ -2792,9 +2800,9 @@ TASK-001期间不得顺手修改：
 
 ```text
 
-E:\\AI\_Projects\\Codex\\workspace\\crawler\\go-spider
+HISTORICAL：E:\\AI\_Projects\\Codex\\workspace\\crawler\\go-spider
 
-E:\\AI\_Projects\\Codex\\workspace\\go-spider
+HISTORICAL：E:\\AI\_Projects\\Codex\\workspace\\go-spider
 
 ```
 
@@ -2806,7 +2814,7 @@ E:\\AI\_Projects\\Codex\\workspace\\go-spider
 
 ```text
 
-workspace/crawler/go-spider
+E:\AI_Projects\crawler\repository\go-spider
 
 ```
 
@@ -2822,7 +2830,7 @@ workspace/crawler/go-spider
 
 ```text
 
-workspace/go-spider
+HISTORICAL：workspace/go-spider
 
 ```
 

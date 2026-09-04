@@ -274,7 +274,8 @@ v1 模型当前仅作为目标协议定义，尚未接入运行队列。
 - U+2028、U+2029 统一输出为小写形式 `\u2028`、`\u2029`。
 - 哈希算法：SHA-256，十六进制小写。
 - Go 与 Python 对同一 canonical 输入必须得到相同 plan_id。
-- 共用 fixture：`workspace/crawler/tests/fixtures/redis_protocol_v2.json`，其中包含 Unicode canonical 与硬编码预期 ID。
+- 共用 fixture：`tests/fixtures/redis_protocol_v2.json`，该路径相对于当前 Git 仓库根目录，其中包含 Unicode canonical 与硬编码预期 ID。
+- Go 与 Python 协议测试共同引用这一份 canonical fixture；不得复制或移动 fixture。
 
 ### 13.9 API 冲突矩阵
 

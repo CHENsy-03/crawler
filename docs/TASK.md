@@ -1,4 +1,7 @@
 # TASK.md
+
+> 本文件主体为历史任务记录；只有最新产品基线状态块和当前 Fix Build 记录反映当前任务。历史段落中的旧路径、旧任务编号和旧状态仅用于追溯，不作为当前操作指令。
+
 本文件只描述当前正在执行的任务。
 当前只能启用一个任务，不得同时混入其他重构、修复或功能开发。
 执行本任务前必须先阅读项目根目录的 AGENTS.md。
@@ -3100,6 +3103,8 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - product_design_v1_0_review=CHANGES_REQUESTED
 - product_design_v1_0_fix=IMPLEMENTED_WAITING_REVIEW
 - product_design_v1_0_r2_review=NOT_STARTED
+- product_design_v1_0_scope=HISTORICAL_MARKDOWN_DOCS_PRODUCT_DESIGN_V1.0
+- product_design_v1_0_scope_note=该字段专指旧 docs/PRODUCT_DESIGN_V1.0.md，属于历史 Markdown 设计状态，不代表冻结 DOCX V1.0 主基线状态，不再具有当前产品基线权威
 - next_task=TASK-025-CRAWLER-PRODUCT-DESIGN-R2
 
 ### V1.0/V1.1 产品基线固化（2026-09-04）
@@ -3115,6 +3120,41 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - baseline_review=NOT_STARTED
 - release_status=RELEASE_BLOCKED
 - next_baseline_review=V1.0_V1.1_BASELINE_READONLY_REVIEW
+
+### TASK-CRAWLER-V1.0-V1.1-AUTHORITY-FIX-B1（Fix Build 记录）
+- active_task=TASK-CRAWLER-V1.0-V1.1-AUTHORITY-FIX-B1
+- baseline_read_attestation=CONFIRMED
+- authority_fix=IMPLEMENTED_WAITING_R2
+- release=BLOCKED
+- deployment=BLOCKED
+- production_loader=NOT_STARTED
+- main_merge=NOT_CONFIRMED
+- next_task=TASK-CRAWLER-V1.0-V1.1-AUTHORITY-REVIEW-R2
+- old_paths_scope_note=TASK.md 中历史任务段落的 workspace/crawler 与 E:\AI_Projects\Codex\workspace\crawler 等路径仅供历史追溯，不是当前操作指令
+
+### TASK-CRAWLER-V1.0-V1.1-AUTHORITY-FIX-B2（Fix Build 记录）
+- active_task=TASK-CRAWLER-V1.0-V1.1-AUTHORITY-FIX-B2
+- authority_review_r2=CHANGES_REQUESTED
+- authority_review_r2_blocker=SYSTEM_ARCHITECTURE_LEGACY_AUTHORITY_REFERENCE
+- authority_fix_b2=IMPLEMENTED_WAITING_R3
+- baseline_read_attestation=CONFIRMED
+- release=BLOCKED
+- deployment=BLOCKED
+- production_loader=NOT_STARTED
+- main_merge=NOT_CONFIRMED
+- next_task=TASK-CRAWLER-V1.0-V1.1-AUTHORITY-REVIEW-R3
+
+### TASK-CRAWLER-V1.0-V1.1-OPERATIONAL-PATH-FIX-B3（Fix Build 记录）
+- active_task=TASK-CRAWLER-V1.0-V1.1-OPERATIONAL-PATH-FIX-B3
+- authority_review_r3=CHANGES_REQUESTED
+- authority_review_r3_blockers=E2E_TEST_OLD_WORKDIR,REDIS_PROTOCOL_OLD_FIXTURE_PATH
+- operational_path_fix_b3=IMPLEMENTED_WAITING_R4
+- baseline_read_attestation=CONFIRMED
+- release=BLOCKED
+- deployment=BLOCKED
+- production_loader=NOT_STARTED
+- main_merge=NOT_CONFIRMED
+- next_task=TASK-CRAWLER-V1.0-V1.1-AUTHORITY-REVIEW-R4
 
 
 

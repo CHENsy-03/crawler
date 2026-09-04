@@ -18,12 +18,16 @@ API 创建任务 → crawler:search → Python Search Worker → crawler:url
 
 ## 3. 启动环境
 
-`ash
-cd workspace/crawler
+本节所有命令均从当前 Git 仓库根目录执行；仓库根目录定义为包含当前 `.git`、`README.md`、`tests/` 的目录。
+
+可先使用 `git rev-parse --show-toplevel` 核验当前位置；如不在仓库根目录，应切换到该命令输出的目录。
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
 docker-compose up -d redis mysql
 # 等待 MySQL 就绪后:
 python -m pytest tests/integration/
-`
+```
 
 ## 4. 测试场景
 

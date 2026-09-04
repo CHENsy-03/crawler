@@ -2,9 +2,12 @@
 
 ## 0. 本文定位与文档导航
 
-本文保留仓库既有的实现架构和历史记录，并补充产品级的当前架构与目标 V1 架构区分。若下文与 [docs/PRODUCT_DESIGN_V1.0.md](PRODUCT_DESIGN_V1.0.md) 冲突，以产品设计说明书为权威。
+本文保留仓库既有的实现架构和历史记录，并补充产品级的当前架构与目标 V1 架构区分。本文是现行架构设计文档；若与当前产品基线冲突，以 V1.0 完整主基线 DOCX 与 V1.1 强制附属补丁 DOCX 的联合基线为准。
 
-- [docs/PRODUCT_DESIGN_V1.0.md](PRODUCT_DESIGN_V1.0.md)：完整产品设计权威
+- [docs/PRODUCT_BASELINE_V1.1.md](PRODUCT_BASELINE_V1.1.md)：当前唯一产品基线导航入口
+- [docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx](baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx)：V1.0 完整主基线
+- [docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx](baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx)：V1.1 强制附属补丁
+- [docs/PRODUCT_DESIGN_V1.0.md](PRODUCT_DESIGN_V1.0.md)：HISTORICAL_REFERENCE，仅用于历史追溯，不具有当前产品基线权威
 - [docs/FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md)：Web 目标架构
 - [docs/API_CONTRACT.md](API_CONTRACT.md)：API/SSE 契约
 - [docs/DATA_MODEL.md](DATA_MODEL.md)：数据与队列设计
@@ -73,7 +76,7 @@ B. TARGET_V1 产品调度默认值：
 
 ## 0.4 历史说明
 
-下方第 1 章起保留为仓库实现历史与详细记录，第 1—12 章已标记 HISTORICAL_CURRENT_IMPLEMENTATION，第 13 章起为历史任务记录，不作为当前目标。旧文本中的绝对本地路径、TASK-004 等旧编号和未实施说明均不是当前运行依赖；实现状态以 `docs/TASK.md` 和产品设计文档为准。
+下方第 1 章起保留为仓库实现历史与详细记录，第 1—12 章已标记 HISTORICAL_CURRENT_IMPLEMENTATION，第 13 章起为历史任务记录，不作为当前目标。旧文本中的绝对本地路径、TASK-004 等旧编号和未实施说明均不是当前运行依赖；实现状态以 `docs/TASK.md` 和 V1.0/V1.1 联合基线为准，旧 `docs/PRODUCT_DESIGN_V1.0.md` 仅作历史追溯。
 
 ## 1. HISTORICAL_CURRENT_IMPLEMENTATION：架构目标
 
