@@ -65,6 +65,48 @@
 - 发布仍为 RELEASE_BLOCKED
 - DEV-001 等待独立只读 Review
 
+### DEV-002 Added
+
+- 建立 JSON schema：`protocol/status_error_event_dictionary.schema.json`
+- 建立 canonical fixture：`tests/fixtures/status_error_event_dictionary_v1.json`
+- 建立 Python/Go 字符串枚举与 contract tests
+- 建立状态/错误/事件字典文档：`docs/STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md`
+- 更新 API_CONTRACT、REDIS_PROTOCOL、PRODUCT_BASELINE、README、TASK、CHANGELOG
+- 未实现 API、数据库 migration、Redis Streams、状态机或前端功能
+- 发布仍为 RELEASE_BLOCKED
+- DEV-002 等待独立只读 Review
+
+### DEV-002 Fixed (B2)
+
+- 新增 Audit event：`global_block_legal_request_activated`
+- 增强重复检测，防止 status/error/event/alias/decision 重复项被 set/map 折叠
+- 真实执行 JSON Schema validation，含正向与负向用例
+- 增强 status/error/event metadata 验证
+- 未实现 API、数据库、Redis Streams 或业务功能
+- 发布仍为 RELEASE_BLOCKED
+- DEV-002 等待独立只读 R2
+
+### DEV-002 Fixed (B3)
+
+- 修正 Audit event `global_block_legal_request_activated` 的同步数据流语义
+- transport 修正为 in_process；consumer 修正为 go_api；persistence_target=mysql_audit_log
+- normative_source 修正为 V1.1 10.3；payload_contract_owner 修正为 DEV-004
+- schema 移除 audit_log transport，并增加 Audit 精确约束与五类 family 机械保证
+- Python/Go 增加同键异内容的五类重复负向测试
+- 未实现 AuditLog、GlobalBlockEntry、migration、Redis Streams 或 Outbox
+- 发布仍为 RELEASE_BLOCKED
+- DEV-002 等待独立只读 R3
+
+### DEV-002 Fixed (B4)
+
+- 禁止非 AUDIT_EVENT 携带 persistence_target
+- Go contract test 增加 persistence_target 正向和负向验证
+- transport canonical 拼写收敛为 `SSE`，小写 `sse` 为非法输入
+- Python/Go contract negative tests 增强
+- 未实现 API、数据库、Redis Streams、AuditLog 或业务功能
+- 发布仍为 RELEASE_BLOCKED
+- DEV-002 等待独立只读 R4
+
 ### Added
 
 - Product Design V1.0 历史文档记录：`docs/PRODUCT_DESIGN_V1.0.md`，后续已由 DOCX V1.0 主基线与 V1.1 附属补丁取代

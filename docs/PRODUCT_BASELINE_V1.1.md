@@ -64,3 +64,11 @@ V1.1 至少覆盖并冻结以下主题：
 - [docs/baselines/V1.0_V1.1_READ_ATTESTATION.md](baselines/V1.0_V1.1_READ_ATTESTATION.md)：阅读与批准证明
 
 上述三项是 DEV-001 治理资产，不取代两份 DOCX；它们只用于帮助一致解释联合基线。
+
+## 7. DEV-002 契约地基资产
+
+- [docs/STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md](STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md)：状态/错误/事件字典说明
+- [protocol/status_error_event_dictionary.schema.json](../protocol/status_error_event_dictionary.schema.json)
+- [tests/fixtures/status_error_event_dictionary_v1.json](../tests/fixtures/status_error_event_dictionary_v1.json)
+
+DEV-002 只冻结契约地基，不表示 API、数据库、Redis Streams 或状态机已实现。

@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Crawler V1.0/V1.1 status, error and event dictionary contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "baseline_bundle", "statuses", "errors", "events", "legacy_aliases", "compatibility_decisions"],
+  "properties": {
+    "contract_version": {"type": "string", "const": "1.0"},
+    "baseline_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["v1_0", "v1_1"],
+      "properties": {
+        "v1_0": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file", "bytes", "sha256"],
+          "properties": {
+            "file": {"type": "string"},
+            "bytes": {"type": "integer"},
+            "sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"}
+          }
+        },
+        "v1_1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file", "bytes", "sha256"],
+          "properties": {
+            "file": {"type": "string"},
+            "bytes": {"type": "integer"},
+            "sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"}
+          }
+        }
+      }
+    },
+    "statuses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["domain", "canonical_symbol", "wire_value", "type", "terminal", "normative_source", "semantics", "compatibility_class"],
+        "properties": {
+          "domain": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "canonical_symbol": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+          "wire_value": {"type": "string", "minLength": 1},
+          "type": {"enum": ["USER_VISIBLE", "RUNTIME", "INTERNAL", "TERMINAL", "OPERATIONAL"]},
+          "terminal": {"type": "boolean"},
+          "normative_source": {"type": "string", "minLength": 1},
+          "semantics": {"type": "string", "minLength": 1},
+          "compatibility_class": {"enum": ["CANONICAL", "COMPATIBILITY_ALIAS", "HISTORICAL", "CONFLICT"]}
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["canonical_code", "namespace", "retryability", "http_status", "client_exposable", "normative_source", "meaning", "compatibility_class"],
+        "properties": {
+          "canonical_code": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "namespace": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "retryability": {"enum": ["NEVER", "ALWAYS", "CONDITIONAL"]},
+          "http_status": {"type": ["integer", "null"], "minimum": 100, "maximum": 599},
+          "client_exposable": {"type": "boolean"},
+          "normative_source": {"type": "string", "minLength": 1},
+          "meaning": {"type": "string", "minLength": 1},
+          "compatibility_class": {"enum": ["CANONICAL", "COMPATIBILITY_ALIAS", "HISTORICAL", "CONFLICT"]}
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "minItems": 5,
+      "allOf": [
+        {"contains": {"type": "object", "required": ["family"], "properties": {"family": {"const": "TASK_EVENT"}}}},
+        {"contains": {"type": "object", "required": ["family"], "properties": {"family": {"const": "STREAM_MESSAGE"}}}},
+        {"contains": {"type": "object", "required": ["family"], "properties": {"family": {"const": "AUDIT_EVENT"}}}},
+        {"contains": {"type": "object", "required": ["family"], "properties": {"family": {"const": "CONTROL_EVENT"}}}},
+        {"contains": {"type": "object", "required": ["family"], "properties": {"family": {"const": "OPERATIONAL_EVENT"}}}},
+        {"contains": {
+          "type": "object",
+          "required": ["family", "producer", "consumer", "transport", "persistence_target", "normative_source", "payload_contract_owner"],
+          "properties": {
+            "family": {"const": "AUDIT_EVENT"},
+            "producer": {"const": "go_api"},
+            "consumer": {"const": "go_api"},
+            "transport": {"const": "in_process"},
+            "persistence_target": {"const": "mysql_audit_log"},
+            "normative_source": {"const": "V1.1 10.3"},
+            "payload_contract_owner": {"const": "DEV-004"}
+          }
+        }}
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event_type", "family", "transport", "version", "producer", "consumer", "normative_source", "payload_contract_owner", "compatibility_class"],
+        "if": {"properties": {"family": {"const": "AUDIT_EVENT"}}, "required": ["family"]},
+        "then": {
+          "required": ["persistence_target"],
+          "properties": {"persistence_target": {"const": "mysql_audit_log"}}
+        },
+        "else": {"not": {"required": ["persistence_target"]}},
+        "properties": {
+          "event_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "family": {"enum": ["TASK_EVENT", "STREAM_MESSAGE", "AUDIT_EVENT", "CONTROL_EVENT", "OPERATIONAL_EVENT"]},
+          "transport": {"enum": ["SSE", "redis_stream", "internal_control", "in_process"]},
+          "version": {"type": "string", "minLength": 1},
+          "producer": {"type": "string", "minLength": 1},
+          "consumer": {"type": "string", "minLength": 1},
+          "persistence_target": {"type": "string", "minLength": 1},
+          "normative_source": {"type": "string", "minLength": 1},
+          "payload_contract_owner": {"type": "string", "minLength": 1},
+          "compatibility_class": {"enum": ["CANONICAL", "COMPATIBILITY_ALIAS", "HISTORICAL", "CONFLICT"]}
+        }
+      }
+    },
+    "legacy_aliases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["legacy", "target", "classification", "source"],
+        "properties": {
+          "legacy": {"type": "string", "minLength": 1},
+          "target": {"type": "string", "minLength": 1},
+          "classification": {"enum": ["CANONICAL", "COMPATIBILITY_ALIAS", "HISTORICAL", "CONFLICT"]},
+          "source": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "compatibility_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "source", "current_value", "target_value", "decision", "scope", "work_package"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Z0-9_]+$", "minLength": 1},
+          "source": {"type": "string", "minLength": 1},
+          "current_value": {"type": "string", "minLength": 1},
+          "target_value": {"type": "string", "minLength": 1},
+          "decision": {"type": "string", "minLength": 1},
+          "scope": {"type": "string", "minLength": 1},
+          "work_package": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

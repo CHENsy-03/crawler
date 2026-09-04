@@ -2,6 +2,13 @@
 
 本文定义外部 API 的文档级契约，不创建 OpenAPI YAML。后续 Go OpenAPI 是本契约的可执行权威。
 
+公开 API 错误码和 SSE 事件子集以 canonical 字典为权威：
+
+- [docs/STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md](STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md)
+- [tests/fixtures/status_error_event_dictionary_v1.json](../tests/fixtures/status_error_event_dictionary_v1.json)
+
+本文件不修改端点；完整 SSE/OpenAPI schema 属于 DEV-003。
+
 ## 1. 通用约定
 
 - 通用 URL 前缀：`/api/v1`

@@ -1,5 +1,12 @@
 # Redis 跨运行时消息协议
 
+消息类型、错误和状态值以 canonical 字典为权威：
+
+- [docs/STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md](STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md)
+- [tests/fixtures/status_error_event_dictionary_v1.json](../tests/fixtures/status_error_event_dictionary_v1.json)
+
+旧 v1/v2 值的兼容身份记录于 legacy_aliases。DEV-002 不修改协议 payload、消息字段或 Redis Stream 运行链。
+
 ## 1. 协议目标
 
 定义 Go 与 Python 之间通过 Redis 队列交换的版本化 JSON 消息契约。所有消息共用一组公共信封字段，业务字段由 type 区分。
