@@ -10,6 +10,9 @@
 - [V1.0 主基线](docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx)
 - [V1.1 补丁](docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx)
 - [SHA-256 校验文件](docs/baselines/V1.0_V1.1_SHA256SUMS.txt)
+- [术语表](docs/TERMINOLOGY_V1.0_V1.1.md)
+- [V1.1 差异矩阵](docs/baselines/V1.0_V1.1_DELTA_MATRIX.md)
+- [阅读与批准证明](docs/baselines/V1.0_V1.1_READ_ATTESTATION.md)
 
 V1.0/V1.1 固化不表示产品代码已完成，当前发布状态仍为 RELEASE_BLOCKED。
 

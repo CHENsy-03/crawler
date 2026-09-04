@@ -3156,6 +3156,20 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - main_merge=NOT_CONFIRMED
 - next_task=TASK-CRAWLER-V1.0-V1.1-AUTHORITY-REVIEW-R4
 
+### TASK-CRAWLER-V1.0-V1.1-DEV-001-BUILD-B1（当前状态）
+- active_task=TASK-CRAWLER-V1.0-V1.1-DEV-001-BUILD-B1
+- dev_001=IMPLEMENTED_WAITING_REVIEW
+- dev_001_scope=JOINT_BASELINE_TERMINOLOGY_DELTA_ATTESTATION
+- baseline_pair=FROZEN_AND_IN_FORCE
+- baseline_read_attestation=CONFIRMED
+- main_integration=VERIFIED
+- main_integration_commit=7351d8bebd4447024c06407800bc0c2fed28a95f
+- release=BLOCKED
+- deployment=BLOCKED
+- production_loader=NOT_STARTED
+- dev_002=NOT_STARTED
+- next_task=TASK-CRAWLER-V1.0-V1.1-DEV-001-REVIEW-R1
+
 
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛
