@@ -54,6 +54,17 @@
 - 冻结 DOCX 未变化
 - 发布仍为 RELEASE_BLOCKED，等待独立只读 R4
 
+### DEV-001 Added
+
+- 建立 V1.0/V1.1 联合基线术语表：`docs/TERMINOLOGY_V1.0_V1.1.md`
+- 建立 V1.0/V1.1 差异矩阵：`docs/baselines/V1.0_V1.1_DELTA_MATRIX.md`
+- 建立可复核阅读与批准证明：`docs/baselines/V1.0_V1.1_READ_ATTESTATION.md`
+- `PRODUCT_BASELINE_V1.1.md`、`README.md`、`docs/TASK.md` 增加 DEV-001 导航与状态
+- 未修改冻结 DOCX
+- 未实现产品功能
+- 发布仍为 RELEASE_BLOCKED
+- DEV-001 等待独立只读 Review
+
 ### Added
 
 - Product Design V1.0 历史文档记录：`docs/PRODUCT_DESIGN_V1.0.md`，后续已由 DOCX V1.0 主基线与 V1.1 附属补丁取代

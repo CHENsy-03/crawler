@@ -55,4 +55,12 @@ V1.1 至少覆盖并冻结以下主题：
 - 当前发布状态保持 RELEASE_BLOCKED。
 - 源码审计锚点：97bcf79972f8db293fe8f2bb1e45bb9dfe2129e0。
 - 源码审计锚点不是本次基线固化提交；两者必须区分。
-- 下一阶段仍需要独立只读基线复核，不得自动进入 DEV-001、DEV-002 或其他 BUILD。
+- 后续 BUILD 仍须独立只读复核；当前发布状态仍为 RELEASE_BLOCKED。
+
+## 6. DEV-001 联合解释治理资产
+
+- [docs/TERMINOLOGY_V1.0_V1.1.md](TERMINOLOGY_V1.0_V1.1.md)：V1.0/V1.1 规范术语表
+- [docs/baselines/V1.0_V1.1_DELTA_MATRIX.md](baselines/V1.0_V1.1_DELTA_MATRIX.md)：V1.1 差异矩阵
+- [docs/baselines/V1.0_V1.1_READ_ATTESTATION.md](baselines/V1.0_V1.1_READ_ATTESTATION.md)：阅读与批准证明
+
+上述三项是 DEV-001 治理资产，不取代两份 DOCX；它们只用于帮助一致解释联合基线。
