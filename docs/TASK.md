@@ -3102,6 +3102,20 @@ TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B
 - product_design_v1_0_r2_review=NOT_STARTED
 - next_task=TASK-025-CRAWLER-PRODUCT-DESIGN-R2
 
+### V1.0/V1.1 产品基线固化（2026-09-04）
+- baseline_v1_0=SEALED
+- baseline_v1_0_path=docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx
+- baseline_v1_0_sha256=C6033220006A5CF6E880490FD20CEB1138456615FDCD3FDDB7FB5402957E76FA
+- baseline_v1_0_bytes=499259
+- baseline_v1_1=SEALED
+- baseline_v1_1_path=docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx
+- baseline_v1_1_sha256=2E34CCFCB4DBA06228CBC80A9FDB2A012DF80486897270CF42AD94FA9E580B9C
+- baseline_v1_1_bytes=85431
+- baseline_authority=docs/PRODUCT_BASELINE_V1.1.md
+- baseline_review=NOT_STARTED
+- release_status=RELEASE_BLOCKED
+- next_baseline_review=V1.0_V1.1_BASELINE_READONLY_REVIEW
+
 
 
 ## TASK-021：任务可靠性、状态、幂等与持久化收敛

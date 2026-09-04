@@ -6,6 +6,26 @@
 
 ### Added
 
+- 固化 V1.0 完整主基线：`docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx`
+- 固化 V1.1 独立补丁：`docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx`
+- 建立 SHA-256 校验文件：`docs/baselines/V1.0_V1.1_SHA256SUMS.txt`
+- 建立基线权威入口：`docs/PRODUCT_BASELINE_V1.1.md`
+
+### Changed
+
+- `AGENTS.md` 增加 BUILD 前 V1.0/V1.1 联合阅读和哈希校验门禁
+- `README.md` 将当前产品基线入口置于文档入口首位
+- `docs/TASK.md` 记录基线状态和只读复核任务
+
+### Clarified
+
+- V1.0 是完整主基线，固化后保持字节不变
+- V1.1 是独立补丁，冲突时以 V1.1 明确修订为准，未涉及内容继承 V1.0
+- 文档固化不表示产品代码完成
+- 未新增产品功能，发布状态仍为 RELEASE_BLOCKED
+
+### Added
+
 - Product Design V1.0 权威文档：`docs/PRODUCT_DESIGN_V1.0.md`
 - 六份专题设计文档：`docs/FRONTEND_ARCHITECTURE.md`、`docs/API_CONTRACT.md`、`docs/DATA_MODEL.md`、`docs/DEPLOYMENT_ARCHITECTURE.md`、`docs/SECURITY_ARCHITECTURE.md`、`docs/TEST_STRATEGY.md`
 - ADR-023：React、TypeScript 与 Vite 作为 Web 前端基线

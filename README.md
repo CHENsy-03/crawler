@@ -2,6 +2,17 @@
 
 面向内部单机部署的政务/公开网站信息采集平台，以 Web 管理面板为主入口，以 CLI 与 API 作为工程和运维接口。
 
+## 产品基线（当前权威）
+
+当前有效产品基线由 V1.0 完整主基线与 V1.1 独立补丁共同构成，权威入口为：
+
+- [docs/PRODUCT_BASELINE_V1.1.md](docs/PRODUCT_BASELINE_V1.1.md)
+- [V1.0 主基线](docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx)
+- [V1.1 补丁](docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx)
+- [SHA-256 校验文件](docs/baselines/V1.0_V1.1_SHA256SUMS.txt)
+
+V1.0/V1.1 固化不表示产品代码已完成，当前发布状态仍为 RELEASE_BLOCKED。
+
 ## 当前开发阶段
 
 当前处于产品设计基线刚建立、完整产品尚未实现的阶段。以下状态为当前事实：
@@ -56,6 +67,7 @@
 
 ## 文档导航
 
+- [docs/PRODUCT_BASELINE_V1.1.md](docs/PRODUCT_BASELINE_V1.1.md)：V1.0/V1.1 当前产品基线权威入口
 - [docs/PRODUCT_DESIGN_V1.0.md](docs/PRODUCT_DESIGN_V1.0.md)：完整产品设计权威入口
 - [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md)：Web 前端目标架构
 - [docs/API_CONTRACT.md](docs/API_CONTRACT.md)：API、OpenAPI 与 SSE 文档契约
