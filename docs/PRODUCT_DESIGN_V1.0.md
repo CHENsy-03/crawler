@@ -1,5 +1,21 @@
 # 通用型爬虫产品设计说明书 V1.0
 
+> 分类：HISTORICAL_REFERENCE
+>
+> 权威状态：SUPERSEDED_AS_PRODUCT_AUTHORITY
+>
+> 本文件保留用于历史追溯，不是当前产品基线。
+>
+> 当前唯一有效依据是 V1.0 DOCX 主基线与 V1.1 DOCX 附属补丁，两份 DOCX 必须联合阅读。
+>
+> 本文件与联合基线冲突时不得用于指导实现。
+>
+> 当前基线入口：[docs/PRODUCT_BASELINE_V1.1.md](PRODUCT_BASELINE_V1.1.md)
+>
+> V1.0：[docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx](baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx)
+>
+> V1.1：[docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx](baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx)
+
 ## 1. 文档控制与阅读说明
 
 | 项目 | 内容 |
@@ -13,7 +29,7 @@
 
 ### 1.1 权威范围
 
-本文是完整产品设计的权威入口，定义当前实现、目标 V1、目标 V1.1 和延期内容。专题文档承载可独立维护的技术契约，主文档不复制其全文。
+本文曾是完整产品设计的权威入口。作为 HISTORICAL_REFERENCE，本文保留原设计正文和历史状态；当前实现、目标 V1、目标 V1.1 和延期内容以 V1.0 DOCX 主基线与 V1.1 DOCX 附属补丁为准。
 
 ### 1.2 非权威历史输入
 

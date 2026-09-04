@@ -68,10 +68,10 @@ V1.0/V1.1 固化不表示产品代码已完成，当前发布状态仍为 RELEAS
 ## 文档导航
 
 - [docs/PRODUCT_BASELINE_V1.1.md](docs/PRODUCT_BASELINE_V1.1.md)：V1.0/V1.1 当前产品基线权威入口
-- [docs/PRODUCT_DESIGN_V1.0.md](docs/PRODUCT_DESIGN_V1.0.md)：完整产品设计权威入口
+- [docs/PRODUCT_DESIGN_V1.0.md](docs/PRODUCT_DESIGN_V1.0.md)：历史产品设计输入，已被 V1.0 主基线与 V1.1 附属补丁取代，不具有当前产品基线权威
 - [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md)：Web 前端目标架构
 - [docs/API_CONTRACT.md](docs/API_CONTRACT.md)：API、OpenAPI 与 SSE 文档契约
-- [docs/DATA_MODEL.md](docs/DATA_MODEL.md)：20 类核心实体、MySQL、Redis Streams、DuckDB 与文件存储
+- [docs/DATA_MODEL.md](docs/DATA_MODEL.md)：历史/局部数据模型参考；其中 20 类实体是历史快照，当前 22 类实体目标以 V1.0+V1.1 联合基线为准
 - [docs/DEPLOYMENT_ARCHITECTURE.md](docs/DEPLOYMENT_ARCHITECTURE.md)：目标单机部署拓扑
 - [docs/SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md)：安全架构与 OSEC 边界
 - [docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md)：测试策略与发布门禁
