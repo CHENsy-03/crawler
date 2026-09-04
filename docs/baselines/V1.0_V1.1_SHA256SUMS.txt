@@ -1,0 +1,18 @@
+# Product baseline V1.0 + V1.1 checksums
+Algorithm: SHA-256
+
+docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx
+Version: V1.0
+Length: 499259
+SHA-256: C6033220006A5CF6E880490FD20CEB1138456615FDCD3FDDB7FB5402957E76FA
+
+docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线补丁_V1.1.docx
+Version: V1.1
+Length: 85431
+SHA-256: 2E34CCFCB4DBA06228CBC80A9FDB2A012DF80486897270CF42AD94FA9E580B9C
+
+Relationship: V1.0 is the complete main baseline and remains immutable.
+Relationship: V1.1 is an independent patch and overrides V1.0 only where V1.1 explicitly revises a clause.
+Relationship: Content not revised by V1.1 continues to follow V1.0.
+Relationship: Both documents together form the current effective product design baseline.
+Source-Audit-Anchor: 97bcf79972f8db293fe8f2bb1e45bb9dfe2129e0

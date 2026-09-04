@@ -96,7 +96,7 @@ class FakeFetcher:
 
 
 def test_valid_jpaas_plan_executes():
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(_fixture_body())]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(_fixture_body())]), policy=POLICY)
     assert result.success
     assert len(result.items) == 2
 
@@ -113,14 +113,14 @@ def test_invalid_combinations_return_plan_invalid():
     ]:
         bad = replace(plan, plan_id="", **kwargs)
         bad = replace(bad, plan_id=compute_plan_id(bad))
-        result = adapter.execute(bad, ("k",), fetcher=FakeFetcher(), policy=POLICY)
+        result = adapter.execute(bad, "k", fetcher=FakeFetcher(), policy=POLICY)
         assert result.failure_code == "plan_invalid", kwargs
 
 
 def test_jpaas_get_request_construction():
     pagination = SearchPagination(enabled=True, location="query", value_path=("p",), start=1, step=1, page_size_path=("pg",), page_size=10, max_pages=2)
     fetcher = FakeFetcher([_response(_fixture_body()), _response('{"code":"200","data":{"appSearchResultBeanList":[]}}')])
-    JPAASSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    JPAASSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     request = fetcher.calls[0]
     assert "q=k" in request.url
     assert "webId=3217" in request.url
@@ -133,63 +133,65 @@ def test_jpaas_get_request_construction():
 
 def test_content_type_accepts_plus_json_and_charset():
     for ctype in ["application/json", "application/ld+json", "application/json; charset=utf-8"]:
-        result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(_fixture_body(), content_type=ctype)]), policy=POLICY)
+        result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(_fixture_body(), content_type=ctype)]), policy=POLICY)
         assert result.success, ctype
 
 
 def test_wrong_content_type_is_response_rejected():
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response("{}", content_type="text/html")]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response("{}", content_type="text/html")]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_invalid_json_is_response_rejected():
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response("{not-json")]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response("{not-json")]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_duplicate_json_key_is_response_rejected():
     body = '{"code":"200","code":"200","data":{"appSearchResultBeanList":[]}}'
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_non_success_code_is_response_rejected():
     body = '{"code":"500","data":{"appSearchResultBeanList":[]}}'
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_missing_result_container_is_selector_mismatch():
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response('{"code":"200","data":{}}')]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response('{"code":"200","data":{}}')]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
 
 
 def test_first_page_empty_is_no_results():
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response('{"code":"200","data":{"appSearchResultBeanList":[]}}')]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response('{"code":"200","data":{"appSearchResultBeanList":[]}}')]), policy=POLICY)
     assert result.status == "ok"
     assert result.failure_code == "no_results"
     assert result.items == ()
 
 
 def test_nested_and_direct_document_mapping():
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(_fixture_body())]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(_fixture_body())]), policy=POLICY)
     assert result.items[0].title == "标题一"
     assert result.items[0].url == "https://example.gov.cn/a.html"
     assert result.items[0].snippet == "正文一"
     assert result.items[1].title == "标题二"
     assert result.items[1].url == "https://example.gov.cn/b.html"
+    assert result.items[0].published_at == "2026-08-01"
+    assert result.items[1].published_at == "2026-08-02"
 
 
 def test_dangerous_result_url_is_response_rejected():
     body = '{"code":"200","data":{"appSearchResultBeanList":[{"title":"Bad","url":"javascript:alert(1)"}]}}'
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
     assert result.items == ()
 
 
 def test_cross_scope_result_url_is_response_rejected():
     body = '{"code":"200","data":{"appSearchResultBeanList":[{"title":"Bad","url":"https://other.example/a"}]}}'
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
@@ -198,7 +200,7 @@ def test_multipage_aggregates_and_dedupes():
     page2 = json.dumps({"code":"200","data":{"appSearchResultBeanList":[{"title":"三","url":"/c"}]}}, ensure_ascii=False)
     duplicate = _fixture_body()
     fetcher = FakeFetcher([_response(_fixture_body()), _response(page2), _response(duplicate)])
-    result = JPAASSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 3
     assert len(result.items) == 3
@@ -208,7 +210,7 @@ def test_duplicate_page_stops():
     pagination = SearchPagination(enabled=True, location="query", value_path=("p",), start=1, step=1, page_size_path=("pg",), page_size=10, max_pages=3)
     page1 = _fixture_body()
     fetcher = FakeFetcher([_response(page1), _response(page1)])
-    result = JPAASSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 2
     assert len(result.items) == 2
@@ -217,7 +219,7 @@ def test_duplicate_page_stops():
 def test_later_page_failure_is_fail_closed():
     pagination = SearchPagination(enabled=True, location="query", value_path=("p",), start=1, step=1, page_size_path=("pg",), page_size=10, max_pages=2)
     fetcher = FakeFetcher([_response(_fixture_body())], error=RuntimeError("boom"))
-    result = JPAASSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.status == "failed"
     assert result.failure_code == "transport_failure"
     assert result.items == ()
@@ -226,7 +228,7 @@ def test_later_page_failure_is_fail_closed():
 def test_executor_delegates_to_jpaas_adapter():
     plan = _plan()
     fetcher = FakeFetcher([_response(_fixture_body())])
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.success
 
 
@@ -244,7 +246,7 @@ def test_no_network_dns_or_redis_access():
 
     fetcher = FakeFetcher([_response(_fixture_body())])
     with patch("socket.getaddrinfo", side_effect=fail), patch("urllib.request.urlopen", side_effect=fail):
-        result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=fetcher, policy=POLICY)
+        result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 1
 
@@ -253,20 +255,20 @@ def test_path_prefix_boundary_is_enforced():
     plan = replace(_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
     plan = replace(plan, plan_id=compute_plan_id(plan))
     body = "{\"code\":\"200\",\"data\":{\"appSearchResultBeanList\":[{\"title\":\"Bad\",\"url\":\"/news-old/a\"}]}}"
-    result = JPAASSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(plan, "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
     assert result.items == ()
 
 
 def test_malformed_map_search_result_container_is_selector_mismatch():
     body = "{\"code\":\"200\",\"data\":{\"appSearchResultBeanList\":[{\"mapSearchResult\":\"bad\"}]}}"
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
     assert result.items == ()
 
 
 def test_malformed_map_search_result_items_is_selector_mismatch():
     body = "{\"code\":\"200\",\"data\":{\"appSearchResultBeanList\":[{\"mapSearchResult\":{\"items\":5}}]}}"
-    result = JPAASSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = JPAASSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
     assert result.items == ()

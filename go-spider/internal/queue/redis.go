@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"crawler-platform/internal/protocol"
@@ -222,6 +223,74 @@ func (rq *RedisQueue) PopResultMessage() (*protocol.ResultMessage, error) {
 	}
 	return &msg, nil
 }
+
+type ResultDispatchKind int
+
+const (
+	ResultDispatchLegacy ResultDispatchKind = iota + 1
+	ResultDispatchV1
+	ResultDispatchV2
+)
+
+// ResultDispatch is the result of a single BRPOP on crawler:result.
+// Zero value is invalid; callers must switch on Kind explicitly.
+type ResultDispatch struct {
+	Kind    ResultDispatchKind
+	Message *protocol.ResultMessage
+	V2      *protocol.ArticleResultV2
+}
+
+// PopResultDispatch performs one BRPOP and explicitly dispatches the raw
+// crawler:result message by protocol_version. It never issues a second BRPOP.
+func (rq *RedisQueue) PopResultDispatch() (*ResultDispatch, error) {
+	raw, err := rq.popRaw(rq.resQueue)
+	if err != nil {
+		return nil, err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return nil, fmt.Errorf("decode result message fields: %w", err)
+	}
+	if fields == nil {
+		return nil, fmt.Errorf("result message must be a JSON object")
+	}
+	pvRaw, exists := fields["protocol_version"]
+	if !exists {
+		var msg protocol.ResultMessage
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			return nil, fmt.Errorf("decode legacy result message: %w", err)
+		}
+		return &ResultDispatch{Kind: ResultDispatchLegacy, Message: &msg}, nil
+	}
+	var versionValue any
+	if err := json.Unmarshal(pvRaw, &versionValue); err != nil {
+		return nil, fmt.Errorf("decode result protocol_version: %w", err)
+	}
+	version, ok := versionValue.(string)
+	if !ok {
+		return nil, fmt.Errorf("result protocol_version must be a string")
+	}
+	switch version {
+	case protocol.Version:
+		var msg protocol.ResultMessage
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			return nil, fmt.Errorf("decode v1 result message: %w", err)
+		}
+		return &ResultDispatch{Kind: ResultDispatchV1, Message: &msg}, nil
+	case protocol.VersionV2:
+		decoded, err := protocol.DecodeV2ArticleMessage(raw)
+		if err != nil {
+			return nil, fmt.Errorf("decode v2 article_result: %w", err)
+		}
+		msg, ok := decoded.(*protocol.ArticleResultV2)
+		if !ok {
+			return nil, fmt.Errorf("v2 message type %T is not article_result", decoded)
+		}
+		return &ResultDispatch{Kind: ResultDispatchV2, V2: msg}, nil
+	default:
+		return nil, fmt.Errorf("unsupported result protocol_version %q", version)
+	}
+}
 func (rq *RedisQueue) PopSearchDone() (*protocol.SearchDoneMessage, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -257,4 +326,86 @@ func (rq *RedisQueue) PopErrorMessage(timeout time.Duration) (*protocol.ErrorMes
 		return nil, err
 	}
 	return &msg, nil
+}
+
+type URLDispatchResult struct {
+	Legacy *HTMLPayload
+	V2     *protocol.URLMessageV2
+}
+
+func (rq *RedisQueue) popRaw(queue string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	result, err := rq.client.BRPop(ctx, 3*time.Second, queue).Result()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(result[1]), nil
+}
+
+func (rq *RedisQueue) PopURLDispatch() (*URLDispatchResult, error) {
+	raw, err := rq.popRaw(rq.urlQueue)
+	if err != nil {
+		return nil, err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return nil, fmt.Errorf("decode url message fields: %w", err)
+	}
+	if fields == nil {
+		return nil, fmt.Errorf("url message must be a JSON object")
+	}
+	rawVersion, exists := fields["protocol_version"]
+	if !exists {
+		var legacy HTMLPayload
+		if err := json.Unmarshal(raw, &legacy); err != nil {
+			return nil, err
+		}
+		return &URLDispatchResult{Legacy: &legacy}, nil
+	}
+	var versionValue any
+	if err := json.Unmarshal(rawVersion, &versionValue); err != nil {
+		return nil, fmt.Errorf("decode url protocol_version: %w", err)
+	}
+	version, ok := versionValue.(string)
+	if !ok || version == "" {
+		return nil, fmt.Errorf("url protocol_version must be a non-empty string")
+	}
+	switch version {
+	case protocol.Version:
+		var legacy HTMLPayload
+		if err := json.Unmarshal(raw, &legacy); err != nil {
+			return nil, err
+		}
+		return &URLDispatchResult{Legacy: &legacy}, nil
+	case protocol.VersionV2:
+		decoded, err := protocol.DecodeV2ArticleMessage(raw)
+		if err != nil {
+			return nil, err
+		}
+		msg, ok := decoded.(*protocol.URLMessageV2)
+		if !ok {
+			return nil, fmt.Errorf("v2 message type %T is not url", decoded)
+		}
+		return &URLDispatchResult{V2: msg}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol_version %q", version)
+	}
+}
+
+func (rq *RedisQueue) pushRaw(queue string, data []byte) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return rq.client.LPush(ctx, queue, data).Err()
+}
+
+func (rq *RedisQueue) PushHTMLMessageV2(msg *protocol.HTMLMessageV2) error {
+	if err := msg.Validate(); err != nil {
+		return err
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return rq.pushRaw(rq.htmlQueue, data)
 }

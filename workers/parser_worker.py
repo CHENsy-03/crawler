@@ -10,6 +10,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import redis as _redis
 
+from urllib.parse import urlsplit
+
+from protocol.messages import HTMLMessageV2, ProtocolError, decode_v2_article_message
+from crawler.detail.article_result_builder import build_article_result_v2, build_summary
+from crawler.detail.extraction_v2 import DetailExtractionResult, extract_detail_v2
+from crawler.detail.relevance_v2 import load_v2_score_config, score_detail
+from crawler.detail.site_config import find_site_by_hostname, load_parser_global
 from parser.html_parser import extract_title, extract_date, extract_content
 from extractor.scorer import score_article
 
@@ -127,6 +134,96 @@ def _process_message(raw: dict) -> dict | None:
     return result_msg
 
 
+def _process_v2_message(raw: dict, r):
+    try:
+        decoded = decode_v2_article_message(json.dumps(raw))
+    except ProtocolError as exc:
+        log.error("[v2] invalid HTMLMessageV2: %s", exc)
+        return None
+    if not isinstance(decoded, HTMLMessageV2):
+        log.error("[v2] message type is not HTMLMessageV2")
+        return None
+
+    hostname = urlsplit(decoded.final_url).hostname or ""
+    site_key, site_cfg = find_site_by_hostname(hostname)
+    parser_global = load_parser_global()
+    try:
+        detail = extract_detail_v2(
+            decoded.html,
+            site_cfg=site_cfg,
+            final_url=decoded.final_url,
+            global_config=parser_global,
+        )
+    except Exception as exc:
+        log.error("[task=%s] detail extraction failed: hit=%s err=%s", decoded.task_id, decoded.hit_id, exc)
+        detail = DetailExtractionResult(
+            title=decoded.title,
+            title_source="empty",
+            publish_date="",
+            canonical_url="",
+            content="",
+            extraction_method="none",
+        )
+
+    summary, summary_from_snippet = build_summary(decoded.snippet, detail.content)
+    score_cfg = load_v2_score_config(hostname)
+    title_is_detail = detail.title_source in {"site_selector", "cms_rule", "h1", "og_title", "html_title"}
+    relevance = score_detail(
+        original_query=decoded.original_query,
+        query_term=decoded.query_term,
+        title=detail.title or decoded.title,
+        summary=summary,
+        content=detail.content,
+        url=detail.canonical_url or decoded.final_url,
+        score_config=score_cfg,
+        summary_from_snippet=summary_from_snippet,
+        title_is_detail=title_is_detail,
+    )
+    try:
+        result = build_article_result_v2(
+            decoded,
+            detail,
+            relevance,
+            summary=summary,
+            summary_from_snippet=summary_from_snippet,
+        )
+    except ProtocolError as exc:
+        log.error("[task=%s] article_result validation failed: hit=%s err=%s", decoded.task_id, decoded.hit_id, exc)
+        return None
+    try:
+        payload = result.to_json()
+        r.lpush("crawler:result", payload)
+    except Exception as exc:
+        log.error("[task=%s] publish failed: hit=%s err=%s", decoded.task_id, decoded.hit_id, exc)
+        return None
+    log.info("[task=%s] V2 RESULT: hit=%s status=%s score=%d", decoded.task_id, decoded.hit_id, result.status, result.score)
+    return result.to_dict()
+
+
+def _dispatch_html_message(raw: dict, r):
+    if not isinstance(raw, dict):
+        log.error("[html] message must be a JSON object")
+        return None
+    if "protocol_version" not in raw:
+        result_msg = _process_message(raw)
+        if result_msg is not None:
+            r.lpush("crawler:result", json.dumps(result_msg, ensure_ascii=False))
+        return result_msg
+    protocol_version = raw["protocol_version"]
+    if not isinstance(protocol_version, str):
+        log.error("[html] unsupported protocol_version: %r", protocol_version)
+        return None
+    if protocol_version == "1.0":
+        result_msg = _process_message(raw)
+        if result_msg is not None:
+            r.lpush("crawler:result", json.dumps(result_msg, ensure_ascii=False))
+        return result_msg
+    if protocol_version == "2.0":
+        return _process_v2_message(raw, r)
+    log.error("[html] unsupported protocol_version: %r", protocol_version)
+    return None
+
+
 def run_worker(redis_addr: str = "localhost:6379"):
     host = redis_addr.split(":")[0]
     port = int(redis_addr.split(":")[1]) if ":" in redis_addr else 6379
@@ -153,9 +250,7 @@ def run_worker(redis_addr: str = "localhost:6379"):
             _, data = result
             raw = json.loads(data)
 
-            result_msg = _process_message(raw)
-            if result_msg is not None:
-                r.lpush("crawler:result", json.dumps(result_msg, ensure_ascii=False))
+            _dispatch_html_message(raw, r)
 
         except Exception as e:
             log.error("Parser worker loop error: %s", e)

@@ -1,0 +1,1111 @@
+{
+  "budget_cases": [
+    {
+      "id": "budget-001",
+      "action": "profile_value",
+      "profile": "probe",
+      "field": "total_timeout_ms",
+      "expected": 30000
+    },
+    {
+      "id": "budget-002",
+      "action": "profile_value",
+      "profile": "search",
+      "field": "total_timeout_ms",
+      "expected": 30000
+    },
+    {
+      "id": "budget-003",
+      "action": "profile_value",
+      "profile": "detail",
+      "field": "total_timeout_ms",
+      "expected": 60000
+    },
+    {
+      "id": "budget-004",
+      "action": "profile_value",
+      "profile": "probe",
+      "field": "response_body_bytes",
+      "expected": 1048576
+    },
+    {
+      "id": "budget-005",
+      "action": "profile_value",
+      "profile": "search",
+      "field": "response_body_bytes",
+      "expected": 8388608
+    },
+    {
+      "id": "budget-006",
+      "action": "profile_value",
+      "profile": "detail",
+      "field": "response_body_bytes",
+      "expected": 20971520
+    },
+    {
+      "id": "budget-007",
+      "action": "unknown_profile",
+      "profile": "unknown",
+      "expected_reason": "unknown_profile"
+    },
+    {
+      "id": "budget-008",
+      "action": "limit",
+      "kind": "request_body",
+      "value": 1048576,
+      "allowed": true
+    },
+    {
+      "id": "budget-009",
+      "action": "limit",
+      "kind": "request_body",
+      "value": 1048577,
+      "allowed": false,
+      "expected_reason": "request_body_limit"
+    },
+    {
+      "id": "budget-010",
+      "action": "limit",
+      "kind": "response_headers",
+      "value": 262144,
+      "allowed": true
+    },
+    {
+      "id": "budget-011",
+      "action": "limit",
+      "kind": "response_headers",
+      "value": 262145,
+      "allowed": false,
+      "expected_reason": "response_headers_limit"
+    },
+    {
+      "id": "budget-012",
+      "action": "limit",
+      "kind": "response_body",
+      "profile": "probe",
+      "value": 1048576,
+      "allowed": true
+    },
+    {
+      "id": "budget-013",
+      "action": "limit",
+      "kind": "response_body",
+      "profile": "probe",
+      "value": 1048577,
+      "allowed": false,
+      "expected_reason": "response_body_limit"
+    },
+    {
+      "id": "budget-014",
+      "action": "remaining",
+      "profile": "probe",
+      "elapsed_ms": 10000,
+      "expected_remaining": 20000
+    },
+    {
+      "id": "budget-015",
+      "action": "remaining",
+      "profile": "detail",
+      "elapsed_ms": 60000,
+      "expected_remaining": 0
+    },
+    {
+      "id": "budget-016",
+      "action": "remaining",
+      "profile": "search",
+      "elapsed_ms": 30001,
+      "expected_reason": "total_timeout_exceeded"
+    },
+    {
+      "id": "budget-017",
+      "action": "negative",
+      "kind": "request_body",
+      "value": -1,
+      "expected_reason": "negative_budget"
+    },
+    {
+      "id": "budget-018",
+      "action": "bool",
+      "kind": "request_body",
+      "value": true,
+      "expected_reason": "invalid_budget_value"
+    },
+    {
+      "id": "budget-019",
+      "action": "stage_zero",
+      "profile": "probe",
+      "stage_timeout_ms": 0,
+      "elapsed_ms": 0,
+      "expected_reason": "non_positive_budget"
+    },
+    {
+      "id": "budget-020",
+      "action": "capped_stage",
+      "profile": "probe",
+      "stage_timeout_ms": 10000,
+      "elapsed_ms": 25000,
+      "expected": 5000
+    },
+    {
+      "id": "budget-021",
+      "action": "common",
+      "expected": {
+        "dns_timeout_ms": 5000,
+        "connect_timeout_ms": 5000,
+        "tls_timeout_ms": 5000,
+        "response_header_timeout_ms": 10000,
+        "read_idle_timeout_ms": 15000,
+        "request_body_bytes": 1048576,
+        "response_headers_bytes": 262144,
+        "max_redirects": 3,
+        "global_active": 20,
+        "per_host_active": 5,
+        "per_host_idle": 2
+      }
+    },
+    {
+      "id": "budget-022",
+      "action": "remaining_capped_zero",
+      "profile": "probe",
+      "stage_timeout_ms": 5000,
+      "elapsed_ms": 30000,
+      "expected_reason": "total_timeout_exceeded"
+    },
+    {
+      "id": "budget-023",
+      "action": "remaining_one",
+      "profile": "probe",
+      "stage_timeout_ms": 5000,
+      "elapsed_ms": 29999,
+      "expected": 1
+    },
+    {
+      "id": "budget-024",
+      "action": "stage_equals_remaining",
+      "profile": "probe",
+      "stage_timeout_ms": 20000,
+      "elapsed_ms": 10000,
+      "expected": 20000
+    },
+    {
+      "id": "budget-025",
+      "action": "bool_remaining",
+      "profile": "probe",
+      "elapsed_ms": true,
+      "expected_reason": "invalid_budget_value"
+    },
+    {
+      "id": "budget-026",
+      "action": "negative_remaining",
+      "profile": "probe",
+      "elapsed_ms": -1,
+      "expected_reason": "negative_budget"
+    }
+  ],
+  "redirect_cases": [
+    {
+      "id": "redirect-001",
+      "action": "absolute",
+      "current": "https://example.com/start",
+      "location": "https://example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_url": "https://example.com/next",
+      "expected_reason": "",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-002",
+      "action": "relative",
+      "current": "https://example.com/start",
+      "location": "/next?x=1",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_url": "https://example.com/next?x=1",
+      "expected_reason": "",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-003",
+      "action": "upgrade",
+      "current": "http://example.com/start",
+      "location": "https://example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": true,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_url": "https://example.com/next",
+      "expected_reason": "",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-004",
+      "action": "downgrade",
+      "current": "https://example.com/start",
+      "location": "http://example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": true,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "https_downgrade",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-005",
+      "action": "host_denied",
+      "current": "https://example.com/start",
+      "location": "https://other.example/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_host_not_allowed",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-006",
+      "action": "subdomain_denied",
+      "current": "https://example.com/start",
+      "location": "https://sub.example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_host_not_allowed",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-007",
+      "action": "port_denied",
+      "current": "https://example.com/start",
+      "location": "https://example.com:8443/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "port_not_allowed",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-008",
+      "action": "loopback_dns",
+      "current": "https://example.com/start",
+      "location": "https://example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "127.0.0.1"
+        ]
+      },
+      "expected_reason": "ip_not_allowed",
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-009",
+      "action": "private_dns",
+      "current": "https://example.com/start",
+      "location": "https://example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "10.0.0.1"
+        ]
+      },
+      "expected_reason": "ip_not_allowed",
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-010",
+      "action": "mixed_dns",
+      "current": "https://example.com/start",
+      "location": "https://example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34",
+          "10.0.0.1"
+        ]
+      },
+      "expected_reason": "ip_not_allowed",
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-011",
+      "action": "userinfo",
+      "current": "https://example.com/start",
+      "location": "https://user@example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "userinfo_not_allowed",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-012",
+      "action": "malformed",
+      "current": "https://example.com/start",
+      "location": "http://[::1",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_invalid",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-013",
+      "action": "missing",
+      "current": "https://example.com/start",
+      "location": "",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_missing",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-014",
+      "action": "hop_three",
+      "current": "https://example.com/start",
+      "location": "https://example.com/three",
+      "hop": 3,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_url": "https://example.com/three",
+      "expected_reason": "",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-015",
+      "action": "hop_four",
+      "current": "https://example.com/start",
+      "location": "https://example.com/four",
+      "hop": 4,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_limit_exceeded",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-016",
+      "action": "fragment",
+      "current": "https://example.com/start",
+      "location": "https://example.com/path#frag",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_url": "https://example.com/path",
+      "expected_reason": "",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-017",
+      "action": "multi_hop",
+      "current": "https://example.com/a",
+      "locations": [
+        "/b",
+        "https://example.com/c"
+      ],
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_final_url": "https://example.com/c",
+      "expected_reason": "",
+      "expected_resolver_calls": 2
+    },
+    {
+      "id": "redirect-018",
+      "action": "scheme_relative_allowed",
+      "current": "https://example.com/start",
+      "location": "//example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_url": "https://example.com/next",
+      "expected_reason": "",
+      "expected_addresses": [
+        "93.184.216.34"
+      ],
+      "expected_resolver_calls": 1
+    },
+    {
+      "id": "redirect-019",
+      "action": "scheme_relative_blocked_host",
+      "current": "https://example.com/start",
+      "location": "//other.example/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_host_not_allowed",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-020",
+      "action": "scheme_relative_blocked_port",
+      "current": "https://example.com/start",
+      "location": "//example.com:8443/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "port_not_allowed",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-021",
+      "action": "location_none",
+      "current": "https://example.com/start",
+      "location": null,
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_missing",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-022",
+      "action": "whitespace",
+      "current": "https://example.com/start",
+      "location": " ",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_missing",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-023",
+      "action": "whitespace_multiline",
+      "current": "https://example.com/start",
+      "location": "\t\r\n",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_missing",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-024",
+      "action": "leading_space",
+      "current": "https://example.com/start",
+      "location": " https://example.com/next",
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_invalid",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-025",
+      "action": "location_int",
+      "current": "https://example.com/start",
+      "location": 123,
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_invalid",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-026",
+      "action": "location_bool",
+      "current": "https://example.com/start",
+      "location": true,
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_invalid",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-027",
+      "action": "location_list",
+      "current": "https://example.com/start",
+      "location": [],
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_invalid",
+      "expected_resolver_calls": 0
+    },
+    {
+      "id": "redirect-028",
+      "action": "location_dict",
+      "current": "https://example.com/start",
+      "location": {},
+      "hop": 1,
+      "policy": {
+        "allowed_hosts": [
+          "example.com"
+        ],
+        "allowed_http": false,
+        "allowed_ports_by_scheme": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "max_dns_addresses": 16,
+        "allow_controlled_subdomains": false
+      },
+      "addresses": {
+        "example.com": [
+          "93.184.216.34"
+        ]
+      },
+      "expected_reason": "redirect_location_invalid",
+      "expected_resolver_calls": 0
+    }
+  ],
+  "proxy_cases": [
+    {
+      "id": "proxy-001",
+      "proxy": null,
+      "allowed": true
+    },
+    {
+      "id": "proxy-002",
+      "proxy": "",
+      "allowed": true
+    },
+    {
+      "id": "proxy-003",
+      "proxy": "http://proxy.example:8080",
+      "allowed": false,
+      "expected_reason": "proxy_not_allowed"
+    },
+    {
+      "id": "proxy-004",
+      "proxy": "https://proxy.example:8443",
+      "allowed": false,
+      "expected_reason": "proxy_not_allowed"
+    },
+    {
+      "id": "proxy-005",
+      "proxy": "socks5://proxy.example:1080",
+      "allowed": false,
+      "expected_reason": "proxy_not_allowed"
+    },
+    {
+      "id": "proxy-006",
+      "proxy": "pac+http://proxy.example/wpad.dat",
+      "allowed": false,
+      "expected_reason": "proxy_not_allowed"
+    }
+  ]
+}

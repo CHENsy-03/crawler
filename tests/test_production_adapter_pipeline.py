@@ -4,7 +4,7 @@ import json
 from dataclasses import replace
 from unittest.mock import patch
 
-from protocol.messages import SearchRequestedMessage, URLMessage
+from protocol.messages import SearchRequestedMessage, URLMessageV2
 
 import crawler.search.search_orchestrator as orch
 from crawler.search.adapter_composition import build_default_adapter_registry
@@ -224,7 +224,11 @@ def test_html_get_production_chain():
     assert result.status == "published"
     assert cache.write_calls
     assert len(publisher.messages) == 1
-    assert isinstance(publisher.messages[0], URLMessage)
+    assert isinstance(publisher.messages[0], URLMessageV2)
+    msg = publisher.messages[0].to_dict()
+    assert msg["original_query"] == "k"
+    assert msg["query_term"] == "k"
+    assert msg["hit_id"]
 
 
 def test_html_post_production_chain():

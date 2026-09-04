@@ -105,3 +105,75 @@ db.AutoMigrate(&Article{}, &Task{}, &CrawlLog{}, &Statistic{})
 
 MySQL 会自动建表；DuckDB 通过 Python `CREATE TABLE IF NOT EXISTS` 建表。
 两边 schema 通过本文档保持同步。
+
+
+---
+
+## 7. TASK-019B-5 命名与并存说明
+
+- 本文件第 1 节的 `articles` 是历史 DuckDB/共享文档表名；MySQL legacy 实际表名为 `article`。
+- TASK-019B-5 新增 MySQL v2 独立表：`articles` 与 `task_articles`。
+- 旧 `article/task/crawl_log` 表保留不变，继续服务 legacy/v1。
+- 新 `articles/task_articles` 只服务未来 ArticleResultV2 持久化合同，本轮未接入生产消费者。
+
+## 8. v2 articles
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | BIGINT UNSIGNED AUTO_INCREMENT | 主键 |
+| article_key | CHAR(64) ASCII BINARY | URL 身份 + 正文版本 |
+| identity_url | VARCHAR(2048) | canonical_url 非空时取 canonical_url，否则 final_url |
+| identity_url_hash | CHAR(64) ASCII BINARY | identity_url 的 SHA-256 |
+| canonical_url | VARCHAR(2048) | 允许空字符串 |
+| final_url | VARCHAR(2048) | 最终 URL |
+| title | VARCHAR(500) | 标题 |
+| publish_date | DATE NULL | 空值存 NULL |
+| source | VARCHAR(500) | 来源 |
+| summary | TEXT | 摘要 |
+| content | LONGTEXT | 完整正文，不截断 |
+| content_hash | CHAR(64) ASCII BINARY | 正文 SHA-256 |
+| extraction_method | VARCHAR(32) | 提取方法 |
+| first_seen_at / last_seen_at | DATETIME(6) | 首次/最近出现 |
+
+索引：`UNIQUE(article_key)`、`identity_url_hash`、`content_hash`、`publish_date`。
+
+## 9. v2 task_articles
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | BIGINT UNSIGNED AUTO_INCREMENT | 主键 |
+| protocol_version | VARCHAR(8) | 固定 2.0 |
+| task_id / hit_id | VARCHAR(128) | 唯一组合 `(task_id, hit_id)` |
+| plan_id | VARCHAR(128) | 计划 ID |
+| article_id | BIGINT UNSIGNED NULL | 空正文时为 NULL |
+| result_hash | CHAR(64) ASCII BINARY | 业务结果幂等指纹 |
+| result_message_id | VARCHAR(128) | 原始消息 ID |
+| result_timestamp | DATETIME(6) | 消息 RFC3339 时间 |
+| original_query / query_term | VARCHAR(500) | 查询来源 |
+| requested_url / final_url / canonical_url | VARCHAR(2048) | URL 来源 |
+| title | VARCHAR(500) | 标题 |
+| publish_date | DATE NULL | 发布日期 |
+| source | VARCHAR(500) | 来源 |
+| summary | TEXT | 摘要 |
+| content_hash | CHAR(64) ASCII BINARY | 正文哈希，可空字符串 |
+| score | INT UNSIGNED | 评分 |
+| matched_evidence | JSON NOT NULL | 空集合为 [] |
+| status | VARCHAR(32) | 全部状态均保留 |
+| extraction_method | VARCHAR(32) | 提取方法 |
+| created_at | DATETIME(6) | 创建时间 |
+
+索引：`UNIQUE(task_id, hit_id)`、`(task_id, status)`、`article_id`、`plan_id`、`content_hash`。`article_id` 外键 `ON DELETE RESTRICT ON UPDATE RESTRICT`；不对 `task_id` 建立物理外键。
+
+## 10. 未来生产接入
+
+- `migrations/mysql/0001_articles_task_articles_v2.sql` 与本文件末尾 v2 表定义等价。
+- 本轮未执行真实 MySQL 迁移，也未把 ArticleResultV2 接入生产消费者。
+- 接线前必须先验证迁移，并在 TASK-019B-6 接通 Go `crawler:result` 显式版本分流与事务持久化。
+
+
+## 11. TASK-019B-6R：Go GORM 表名合同
+
+- Go 旧模型显式映射：`Article → article`、`Task → task`、`CrawlLog → crawl_log`。
+- Go v2 模型保持：`ArticleV2 → articles`、`TaskArticleV2 → task_articles`。
+- 五个表名互不冲突；config/schema.sql、Python MySQL 模块和 Go GORM 表名一致。
+- 不启用全局 SingularTable；AutoMigrate 只管理三个 legacy 模型。

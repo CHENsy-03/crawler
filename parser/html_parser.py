@@ -1,3 +1,4 @@
+import logging
 import re
 from lxml.html import fromstring
 from parser.multi_strategy import clean_text, normalize_date
@@ -7,6 +8,7 @@ from parser.ai_parser import parse_with_ai  # 2.4 AI Parser interface
 
 _MODE_MAP = {'trs':'trs','jpaas':'jpaas','sichuan':'sichuan','shandong':'shandong','default':'government'}
 
+log = logging.getLogger(__name__)
 _CS_GLOBAL = ['.TRS_Editor','.article-content','.content','#mainText','#UCAP-CONTENT']
 _XP_GLOBAL = ['//div[@class="TRS_Editor"]','//div[@class="article-content"]','//div[@id="mainText"]','//article']
 
@@ -21,6 +23,14 @@ def _load_cms_rules(mode):
     except Exception:
         log.warning('_load_cms_rules failed for mode=%s', mode)
         return None
+
+
+def get_site_rules(site_cfg=None):
+    return _get_rules(site_cfg)
+
+
+def get_global_content_selectors():
+    return list(_CS_GLOBAL)
 
 
 def _get_rules(site_cfg=None):

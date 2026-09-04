@@ -75,7 +75,7 @@ class GenericJSONSearchAdapter:
     def execute(
         self,
         plan: SearchPlan,
-        keywords: tuple[str, ...],
+        query_term: str,
         *,
         fetcher: SearchProbeFetcher,
         policy: SearchProbePolicy,
@@ -101,14 +101,14 @@ class GenericJSONSearchAdapter:
                 return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
         if not (plan.selectors.title and plan.selectors.url):
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "generic_json_adapter")
-        if not keywords:
+        if not isinstance(query_term, str) or not query_term:
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_NOT_EXECUTABLE, False, "generic_json_adapter")
         try:
             validate_search_plan(plan)
         except ProtocolError:
             return SearchPlanExecutionResult(plan.plan_id, "failed", (), "", FAILURE_PLAN_INVALID, False, "generic_json_adapter")
 
-        keyword = keywords[0]
+        keyword = query_term
         accumulated: list[SearchResultItem] = []
         for page_index in range(pagination.max_pages):
             try:

@@ -100,7 +100,7 @@ def test_adapter_implements_protocol():
 
 
 def test_valid_trs_plan_executes():
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(_fixture_body())]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(_fixture_body())]), policy=POLICY)
     assert result.success
     assert len(result.items) == 2
 
@@ -117,14 +117,14 @@ def test_invalid_combinations_return_plan_invalid():
     ]:
         bad = replace(plan, plan_id="", **kwargs)
         bad = replace(bad, plan_id=compute_plan_id(bad))
-        result = adapter.execute(bad, ("k",), fetcher=FakeFetcher(), policy=POLICY)
+        result = adapter.execute(bad, "k", fetcher=FakeFetcher(), policy=POLICY)
         assert result.failure_code == "plan_invalid", kwargs
 
 
 def test_trs_request_uses_form_urlencoded():
     pagination = SearchPagination(enabled=True, location="form", value_path=("page",), start=1, step=1, page_size_path=("pageSize",), page_size=2, max_pages=2)
     fetcher = FakeFetcher([_response(_fixture_body()), _response('{"resultDocs":[{"titleO":"B","url":"/b.html","summary":"s"}]}')])
-    TRSSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    TRSSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     body = fetcher.calls[0].body.decode("utf-8")
     assert "qt=k" in body
     assert "siteCode=abc" in body
@@ -137,45 +137,45 @@ def test_trs_request_uses_form_urlencoded():
 
 def test_json_content_type_accepts_plus_json_and_charset():
     for ctype in ["application/json", "application/ld+json", "application/json; charset=utf-8"]:
-        result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(_fixture_body(), content_type=ctype)]), policy=POLICY)
+        result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(_fixture_body(), content_type=ctype)]), policy=POLICY)
         assert result.success, ctype
 
 
 def test_wrong_content_type_is_response_rejected():
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response("{}", content_type="text/html")]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response("{}", content_type="text/html")]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_invalid_json_is_response_rejected():
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response("{not-json")]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response("{not-json")]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_duplicate_json_key_is_response_rejected():
     body = '{"resultDocs":[{"title":"A","title":"B","url":"/a","summary":"s"}]}'
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_non_object_root_is_selector_mismatch():
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response("[1]")]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response("[1]")]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
 
 
 def test_missing_result_docs_is_selector_mismatch():
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response("{}")]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response("{}")]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
 
 
 def test_first_page_empty_is_no_results():
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response('{"resultDocs":[]}')]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response('{"resultDocs":[]}')]), policy=POLICY)
     assert result.status == "ok"
     assert result.failure_code == "no_results"
     assert result.items == ()
 
 
 def test_flat_and_nested_documents_parse():
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(_fixture_body())]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(_fixture_body())]), policy=POLICY)
     assert result.items[0].title == "北京低空经济政策"
     assert result.items[0].url == "https://example.gov.cn/art/1.html"
     assert result.items[0].snippet == "摘要一"
@@ -184,20 +184,20 @@ def test_flat_and_nested_documents_parse():
 
 def test_missing_title_or_url_is_selector_mismatch():
     body = '{"resultDocs":[{"url":"/a","summary":"s"}]}'
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "selector_mismatch"
 
 
 def test_dangerous_result_url_is_response_rejected():
     body = '{"resultDocs":[{"title":"Bad","url":"javascript:alert(1)","summary":"s"}]}'
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
     assert result.items == ()
 
 
 def test_cross_scope_result_url_is_response_rejected():
     body = '{"resultDocs":[{"title":"Bad","url":"https://other.example/a","summary":"s"}]}'
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
@@ -205,7 +205,7 @@ def test_short_page_stops():
     pagination = SearchPagination(enabled=True, location="form", value_path=("page",), start=1, step=1, page_size_path=("pageSize",), page_size=20, max_pages=3)
     body = '{"resultDocs":[{"title":"A","url":"/a","summary":"s"}]}'
     fetcher = FakeFetcher([_response(body)])
-    result = TRSSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 1
 
@@ -216,7 +216,7 @@ def test_multipage_dedupe_and_stop():
     page2 = json.dumps({"resultDocs": [{"title":"C","url":"/c","summary":"s"}]}, ensure_ascii=False)
     duplicate = _fixture_body()
     fetcher = FakeFetcher([_response(page1), _response(page2), _response(duplicate)])
-    result = TRSSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 2
     assert len(result.items) == 3
@@ -225,7 +225,7 @@ def test_multipage_dedupe_and_stop():
 def test_later_page_failure_is_fail_closed():
     pagination = SearchPagination(enabled=True, location="form", value_path=("page",), start=1, step=1, page_size_path=("pageSize",), page_size=20, max_pages=2)
     fetcher = FakeFetcher([_response(_fixture_body())], error=RuntimeError("boom"))
-    result = TRSSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.status == "failed"
     assert result.failure_code == "transport_failure"
     assert result.items == ()
@@ -234,7 +234,7 @@ def test_later_page_failure_is_fail_closed():
 def test_later_page_structure_failure_is_fail_closed():
     pagination = SearchPagination(enabled=True, location="form", value_path=("page",), start=1, step=1, page_size_path=("pageSize",), page_size=2, max_pages=2)
     fetcher = FakeFetcher([_response(_fixture_body()), _response('{"bad":1}')])
-    result = TRSSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "selector_mismatch"
     assert result.items == ()
 
@@ -245,7 +245,7 @@ def test_no_network_dns_or_redis_access():
 
     fetcher = FakeFetcher([_response(_fixture_body())])
     with patch("socket.getaddrinfo", side_effect=fail), patch("urllib.request.urlopen", side_effect=fail):
-        result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=fetcher, policy=POLICY)
+        result = TRSSearchAdapter().execute(_plan(), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 1
 
@@ -253,7 +253,7 @@ def test_no_network_dns_or_redis_access():
 def test_trs_offset_step_uses_form_value():
     pagination = SearchPagination(enabled=True, location="form", value_path=("start",), start=0, step=10, page_size_path=("pageSize",), page_size=2, max_pages=2)
     fetcher = FakeFetcher([_response(_fixture_body()), _response('{"resultDocs":[{"title":"D","url":"/d","summary":"s"}]}')])
-    result = TRSSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert "start=0" in fetcher.calls[0].body.decode("utf-8")
     assert "start=10" in fetcher.calls[1].body.decode("utf-8")
@@ -263,7 +263,7 @@ def test_trs_duplicate_full_page_stops():
     pagination = SearchPagination(enabled=True, location="form", value_path=("page",), start=1, step=1, page_size_path=("pageSize",), page_size=2, max_pages=3)
     page1 = _fixture_body()
     fetcher = FakeFetcher([_response(page1), _response(page1)])
-    result = TRSSearchAdapter().execute(_plan(pagination), ("k",), fetcher=fetcher, policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(pagination), "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 2
     assert len(result.items) == 2
@@ -276,16 +276,18 @@ def test_trs_resultDocs_titleO_publishTime_mapping():
             {"data": {"title": "第二", "url": "/b", "publishTime": "2026-01-02", "summary": "摘要二"}},
         ]
     }, ensure_ascii=False)
-    result = TRSSearchAdapter().execute(_plan(), ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = TRSSearchAdapter().execute(_plan(), "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.success
     assert result.items[0].title == "标题"
     assert result.items[1].title == "第二"
+    assert result.items[0].published_at == "2026-01-01"
+    assert result.items[1].published_at == "2026-01-02"
 
 
 def test_path_prefix_boundary_is_enforced():
     plan = replace(_plan(), scope=SearchScope(domain=DOMAIN, allowed_path_prefixes=["/news"]), plan_id="")
     plan = replace(plan, plan_id=compute_plan_id(plan))
     body = "{\"resultDocs\":[{\"title\":\"Bad\",\"url\":\"/news-old/a\",\"summary\":\"s\"}]}"
-    result = TRSSearchAdapter().execute(plan, ("k",), fetcher=FakeFetcher([_response(body)]), policy=POLICY)
+    result = TRSSearchAdapter().execute(plan, "k", fetcher=FakeFetcher([_response(body)]), policy=POLICY)
     assert result.failure_code == "response_rejected"
     assert result.items == ()

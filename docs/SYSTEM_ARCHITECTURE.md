@@ -1,6 +1,81 @@
 # 通用爬虫系统架构
 
-## 1. 架构目标
+## 0. 本文定位与文档导航
+
+本文保留仓库既有的实现架构和历史记录，并补充产品级的当前架构与目标 V1 架构区分。若下文与 [docs/PRODUCT_DESIGN_V1.0.md](PRODUCT_DESIGN_V1.0.md) 冲突，以产品设计说明书为权威。
+
+- [docs/PRODUCT_DESIGN_V1.0.md](PRODUCT_DESIGN_V1.0.md)：完整产品设计权威
+- [docs/FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md)：Web 目标架构
+- [docs/API_CONTRACT.md](API_CONTRACT.md)：API/SSE 契约
+- [docs/DATA_MODEL.md](DATA_MODEL.md)：数据与队列设计
+- [docs/DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md)：部署设计
+- [docs/SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md)：安全设计
+- [docs/TEST_STRATEGY.md](TEST_STRATEGY.md)：测试策略
+
+## 0.1 当前架构
+
+当前实现是历史/兼容层与部分 v2 能力并存的形态：
+
+- Python 搜索适配、正文提取、评分、去重和 Worker 基础已实现。
+- Go API/CLI、Redis queue、Worker Pool、MySQL v2 持久化合同和安全基础库已实现。
+- `frontend/index.html` 为 Vue 3 残留，CURRENT_CONFLICT。
+- `api/server.py` FastAPI 是调试/受控接口，不作为生产外部网关。
+- Redis 当前使用 list，与目标 Streams 冲突。
+- Go Worker Pool 当前承担业务下载主链，属于待收敛兼容实现。
+- Python 历史 MySQL 写入模块与权威写入边界冲突。
+- Compose 不是完整产品拓扑。
+
+## 0.2 目标 V1 架构
+
+- Nginx：同源入口和 TLS 终止。
+- React Web：管理面板。
+- Go Gateway：唯一外部业务网关，负责认证、API、状态、SSE、调度协调和 MySQL 权威写入协调。
+- Python Worker：发现、业务抓取、解析、评分、过滤、去重和附件处理。
+- Redis Streams + Consumer Groups + Transactional Outbox：任务与事件传递。
+- MySQL：业务权威数据。
+- DuckDB：分析与导出。
+- 文件卷：不可变原始证据与附件。
+
+### 0.2.1 目标 Streams 流程
+
+Web/API → Go Gateway → MySQL 业务事务 + Transactional Outbox → crawler:search → Python Search Worker → crawler:url → Go 调度协调 → crawler:fetch → Python Fetch Worker → crawler:html → Python Parser/Scorer/Dedup → crawler:result → Go Result Consumer → MySQL 权威写入。
+
+同一 Python 进程内允许合并 Worker 实现，但职责和消息语义不得改变。目标流程不包含 Go Worker Pool 作为业务下载主链。
+
+### 0.2.2 两层 HTTP 限制
+
+A. SEALED transport 硬上限：
+
+- DNS/connect/TLS timeout=5 秒
+- response header timeout=10 秒、read idle timeout=15 秒
+- probe/search total=30 秒、detail total=60 秒
+- request body=1MiB、response headers=256KiB
+- probe/search/detail response body=1/8/20MiB
+- redirects 最多 3 跳
+- transport global_active=20、per_host_active=5、per_host_idle=2
+
+B. TARGET_V1 产品调度默认值：
+
+- global active tasks HTTP budget=16
+- 单域默认=2
+- 产品允许配置的单域上限=4
+
+产品调度值必须小于等于 transport 硬上限，且尚未完整接入，不冒充 transport 硬限制。
+
+## 0.3 当前差距与迁移方向
+
+- Web 从 Vue 残留迁移到 React Web。
+- 外部 API 从双入口收敛到 Go 唯一网关。
+- 队列从 Redis list 迁移到 Redis Streams/outbox/dead-letter。
+- MySQL 权威写入收敛到 Go 控制面。
+- Compose 从监控栈/测试栈迁移到完整产品拓扑。
+- production loader 仍为 NOT_STARTED，deployment 仍为 BLOCKED。
+
+## 0.4 历史说明
+
+下方第 1 章起保留为仓库实现历史与详细记录，第 1—12 章已标记 HISTORICAL_CURRENT_IMPLEMENTATION，第 13 章起为历史任务记录，不作为当前目标。旧文本中的绝对本地路径、TASK-004 等旧编号和未实施说明均不是当前运行依赖；实现状态以 `docs/TASK.md` 和产品设计文档为准。
+
+## 1. HISTORICAL_CURRENT_IMPLEMENTATION：架构目标
 
 本平台目标为通用、稳定、可维护、可扩展的信息采集平台，支持具备搜索入口或可配置发现规则的网站，实现信息的自动发现、搜索、下载、解析、评分和存储。
 
@@ -9,7 +84,7 @@
 - Go 负责平台控制面（API 入口、任务调度、MySQL 持久化）
 - Redis 作为跨运行时通信的唯一中间层
 
-## 2. 总体运行流程
+## 2. HISTORICAL_CURRENT_IMPLEMENTATION：总体运行流程
 
 采集任务的完整生命周期：
 
@@ -27,11 +102,11 @@
   -> Go 更新任务状态
 ```
 
-以上为目标运行流程。TASK-017 已实现 v2 `crawler:search` → Python Search Worker → 正式 `URLMessage` → `crawler:url` → Go Worker Pool 主链；v1 legacy 消息路径仍保留且未修改。
+以上流程属于 HISTORICAL_CURRENT_IMPLEMENTATION，不是目标 V1 流程。TASK-017 已实现 v2 `crawler:search` → Python Search Worker → 正式 `URLMessage` → `crawler:url` → Go Worker Pool 主链；v1 legacy 消息路径仍保留且未修改。Go Worker Pool 业务下载主链属于待收敛兼容实现。
 
 Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标正式入口。
 
-## 3. Go/Python 职责边界
+## 3. HISTORICAL_CURRENT_IMPLEMENTATION：Go/Python 职责边界
 
 ### Go 负责
 1. 正式 CLI 和 API 入口。
@@ -56,17 +131,18 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 - Python 不得管理平台级任务状态或直接写入 MySQL 事务数据。
 - 双方不得直接互相导入对方源码。
 
-## 4. 运行时入口
+## 4. HISTORICAL_CURRENT_IMPLEMENTATION：运行时入口
 
 | 运行时 | 入口文件 | 启动方式 | 用途 |
 |--------|---------|---------|------|
 | Go CLI | go-spider/main.go | go run . --site X --keywords Y | 采集任务 |
 | Go API | go-spider/main.go --api | go run . --api 8080 | API 服务 |
 | Python CLI | main.py | python main.py --site X --keywords Y | 采集任务 |
-| Python API | api/server.py | uvicorn api.server:app --port 8000 | 调试/Parser |
-| Python Worker | parser/redis_worker.py | python parser/redis_worker.py | Redis 消费 |
+| Python API | api/server.py | uvicorn api.server:app --port 8000 | HTTP 调试/解析，不消费 Redis 队列 |
+| Python Worker | workers/parser_worker.py | python workers/parser_worker.py | Redis 消费（正式链，crawler:html 单消费者） |
+| Python Worker（历史） | parser/redis_worker.py | 已删除 | 历史入口，已于 TASK-019B-4C 退役 |
 
-## 5. Redis 消息协议
+## 5. HISTORICAL_CURRENT_IMPLEMENTATION：Redis 消息协议
 
 ### 5.1 当前消息协议
 
@@ -91,7 +167,7 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 
 目标消息公共字段：`protocol_version`、`task_id`、`message_id`、`timestamp`。业务字段由具体消息类型定义。目标协议尚未实施，将由 TASK-004 建立消息模型和双端契约测试。
 
-## 6. 数据存储边界
+## 6. HISTORICAL_CURRENT_IMPLEMENTATION：数据存储边界
 
 | 存储 | 写入权 | 用途 |
 |------|--------|------|
@@ -101,14 +177,14 @@ Python CLI 和 FastAPI 当前作为兼容、调试入口保留，不属于目标
 
 Python MySQL 写入模块 (storage/mysql_store.py) 暂时保留，后续迁移完成后再下线。
 
-## 7. 项目目录结构
+## 7. HISTORICAL_CURRENT_IMPLEMENTATION：项目目录结构
 
 ```
 workspace/crawler/
 - main.py                     Python CLI 入口
 - AGENTS.md                   项目开发规则
 - docker-compose.yml          监控栈
-- api/server.py               FastAPI 服务
+- api/server.py               FastAPI 服务（仅 HTTP API，不消费 crawler:html）
 - config/                     配置 (site/http/score/parser/system/keywords)
 - core/                       关键词扩展
 - crawler/pipeline.py         采集管线
@@ -140,7 +216,7 @@ workspace/crawler/
 - output/                     DuckDB + 导出文件
 ```
 
-## 8. 配置边界
+## 8. HISTORICAL_CURRENT_IMPLEMENTATION：配置边界
 
 | 文件 | 用途 | 加载方 |
 |------|------|--------|
@@ -157,7 +233,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 
 现有配置文件的最终归属将在后续配置契约任务中确定。
 
-## 9. 错误处理与监控
+## 9. HISTORICAL_CURRENT_IMPLEMENTATION：错误处理与监控
 
 ### 9.1 当前实现
 
@@ -172,7 +248,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - Python 上报搜索、解析、评分和去重阶段指标。
 - /metrics 端点及 Grafana 指标必须通过实际运行测试后才能标记为已完成。
 
-## 10. 当前架构与目标架构差异
+## 10. HISTORICAL_CURRENT_IMPLEMENTATION：旧版本当前/目标差异
 
 | 模块 | 当前 | 目标 |
 |------|------|------|
@@ -182,7 +258,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 | 搜索执行 | Go + Python 重复 | 归 Python 唯一 |
 | HTTP 客户端 | Go Resty + Python httpx | 各归各自运行时 |
 
-## 11. 迁移顺序
+## 11. HISTORICAL_CURRENT_IMPLEMENTATION：旧迁移顺序
 
 1. 修复基础契约（TASK-002，已完成）
 2. 确定运行时职责边界（TASK-003，已完成）
@@ -194,7 +270,7 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 8. 收敛重复搜索、HTTP、API 和存储模块
 9. 完善监控、前端展示和端到端验收
 
-## 12. 架构约束
+## 12. HISTORICAL_CURRENT_IMPLEMENTATION：旧架构约束
 
 - Python 与 Go 不互相直接调用。
 - Redis 是唯一的跨运行时通信通道。
@@ -307,3 +383,179 @@ Go 端负责 API、任务调度、Redis、下载和 MySQL 配置；Python 端负
 - 正式调用链为：Analyzer/Candidate evidence → PlanBuilder → SearchPlan v2 → cache/orchestrator → PlanExecutor → AdapterRegistry → Adapter → URLMessage publication。
 - 真实 Analyzer 只有 HTML GET/POST 可自动生成 ready plan；TRS、JPAAS、Generic JSON GET/POST 仍需显式正式 Candidate/SearchPlan 或后续生产者补齐。
 - TASK-018H 最终交付门禁已通过；TASK-022 连接级安全仍不在本轮范围。
+
+
+
+## 21. ArticleResult v2 协议合同
+
+TASK-019B-1 冻结 ArticleResult v2 消息族：
+
+- `URLMessageV2`：type=url，队列目标仍为 `crawler:url`
+- `HTMLMessageV2`：type=html，队列目标仍为 `crawler:html`
+- `ArticleResultV2`：type=article_result，队列目标仍为 `crawler:result`
+
+协议版本显式使用 `2.0`，与 v1 共存；v1 消息、fixture 和运行行为保持不变。本轮只建立协议模型、共享 fixture 和 Go/Python 双端契约测试，未接入 Redis 生产消费，未修改 Worker、Parser、数据库或现有运行逻辑。
+
+
+
+## 22. TASK-019B-2：SearchHit → URLMessageV2
+
+Python v2 orchestrator 已按规范化关键词顺序串行执行 SearchPlan，并把每个 SearchResultItem 构造成 SearchHit 与 URLMessageV2，再通过 `RedisURLMessagePublisher` 写入 `crawler:url`。
+
+- 执行器与四类 Adapter 使用单 `query_term`，不再丢弃 `keywords[0]` 之外的关键词。
+- `hit_id` 由 `protocol_version/task_id/plan_id/original_query/query_term/url` 的 canonical SHA-256 确定性生成。
+- 同一 URL 被不同查询词命中时保留多个逻辑命中记录。
+- TRS/JPAAS 日期映射到 `published_at`。
+- TASK-019B-3 已接通 Go 下载消费者；当前检查点仍不可部署。
+
+
+## 23. TASK-019B-4：Python v2 详情提取与 ArticleResultV2 发布
+
+TASK-019B-4 已接通 `crawler:html → Python 单消费者显式分流 → HTMLMessageV2 严格解码 → 正文提取/详情重评分 → ArticleResultV2 → crawler:result`。
+
+- `crawler:html` 仍只有一个 Python BRPOP 消费者；缺版本与 `protocol_version=1.0` 走原 legacy/v1 路径，`2.0` 走独立 v2 路径。
+- v2 严格解码失败、显式 null、非字符串版本、未知版本、非对象 JSON 均拒绝，不回退 v1，不伪造 v1 ErrorMessage。
+- v2 站点配置按 `final_url.hostname` 精确匹配 `config/site.json`；未命中时使用通用提取，不报 unknown site。
+- 正文提取策略按实际成功结果记录：`site_selector/cms_rule/ai/density/fallback/none`；v2 不应用 3000/10000 字截断。
+- 标题顺序：站点/CMS规则 → h1 → og:title → html title → 消息标题回退；发布日期详情页优先，消息 `published_at` 规范化回退；canonical 只读取 `<link rel="canonical">` 的合法绝对 URL。
+- summary 优先使用纯文本化 snippet，否则取正文前 500 字符；content 来源摘要不重复计分。
+- 详情评分使用 `config/score.json` 的 `title_weight/body_weight/url_weight/threshold`；URL 候选为 canonical_url 非空时优先。
+- accepted 必须由详情页标题或正文的 original evidence 达到阈值；搜索标题、search snippet、expanded 或 URL 单独命中最高为 review_required。
+- ArticleResultV2 发布到 `crawler:result`，accepted/review_required/irrelevant/extract_failed 均保留。
+- B3 Windows Race Detector 已正式通过，本机已记录环境、命令与 exit code=0 结果；B4 未修改 Go 代码，也未重复执行 Race Detector。
+- 当前检查点不可部署；Go 持久化消费者与数据库合同等待 TASK-019B-5。
+- TASK-019B-4C 已退役并删除 `parser/redis_worker.py`；正式链唯一 Python 消费者为 `workers/parser_worker.py`。
+
+- TASK-019B-4D 已退役 `api/server.py` 内联 Redis Parser；`api/server.py` 仅承担 HTTP API，不消费 `crawler:html`。
+
+## 24. TASK-019B-5：ArticleResultV2 MySQL 持久化合同
+
+- 旧 `article/task/crawl_log` 表保留，继续服务 legacy/v1。
+- 新增 v2 表 `articles/task_articles` 及迁移合同，但未自动迁移、未接入生产消费者。
+- `ArticleV2` 保存 URL 身份与正文版本；`TaskArticleV2` 保存任务命中结果与全部状态。
+- `MySQLStore.PersistArticleResultV2` 是单事务入口，支持幂等重放与 `ErrArticleResultConflict`。
+- 当前正式链仍为 `crawler:result → 旧 ResultMessage v1 消费者 → 旧 article`。
+- ArticleResultV2 仍发布到 `crawler:result`，但 Go v2 生产消费者尚未接入。
+
+## 25. TASK-019B-6：crawler:result 显式版本分流
+
+- `crawler:result` 正式链使用单次 `PopResultDispatch()`。
+- 缺失版本与 `1.0` 继续走旧 ResultMessage v1 消费、旧 `article` 表和旧任务统计。
+- `2.0` 严格解码为 ArticleResultV2 并调用 `PersistArticleResultV2` 写入 `articles/task_articles`。
+- v2 不更新旧 task 状态、不修改 article_count、不经过旧 URL 去重。
+- `PopResultMessage/PopResult` 保留兼容但不再作为生产入口。
+- 未新增第二个 `crawler:result` 消费者；迁移未自动执行。
+
+## 26. TASK-019B-6R：Legacy GORM 表名固化
+
+- 旧 GORM 模型显式映射 singular 表：`Article → article`、`Task → task`、`CrawlLog → crawl_log`。
+- v2 模型保持：`ArticleV2 → articles`、`TaskArticleV2 → task_articles`。
+- 不启用全局 SingularTable；AutoMigrate 仍只管理三个 legacy 模型。
+- 五个表名无冲突；config/schema.sql、Python MySQL 和 Go GORM 表名一致。
+- B5 migration 仍独立显式执行，未自动接入。
+
+## 27. TASK-019B-7：一次性隔离 E2E 已验证
+
+- 使用唯一 Compose project 和 loopback 随机端口验证真实 MySQL/Redis。
+- Legacy AutoMigrate 只创建 singular 表；B5 migration 显式执行两次成功。
+- 五表并存，正式结果消费者到 MySQL 的真实路径通过。
+- replay、conflict rollback、五种状态、legacy/v1 共存和非法版本隔离均通过。
+- 精确项目容器/网络/卷残留为 0；migration 仍不属于自动启动流程。
+
+## 28. TASK-019B-8/8R：本地全链 v2 E2E
+
+- 本地 httptest + 隔离 Redis/MySQL 贯通 URLMessageV2 到 MySQL 持久化。
+- `PopURLDispatch` 使用显式 protocol_version 键存在性判定，null/非字符串不再回退 legacy。
+- 多 hit 共用一次下载；accepted/review_required/irrelevant/extract_failed 真实贯通。
+- PDF MIME 被下载边界拒绝；非法消息请求数为 0。
+- migration 独立执行，未自动接入生产启动。
+
+## 29. TASK-019C-1：PDF/Office 安全回归边界
+
+- PDF/DOCX/XLSX 解析函数当前为库级休眠能力，无生产调用方。
+- v2 下载链通过 MIME 拒绝 PDF/Office，不进入 Python 详情处理或持久化。
+- 新增离线能力矩阵、安全副作用测试与资源风险记录。
+- 不新增 OCR、解密、复杂解析、Office/COM、subprocess 或附件保存。
+
+## 30. TASK-019C-2：文档解析安全门
+
+- `safe_parse_document` 作为独立安全入口，当前无生产调用方。
+- 在调用旧 PDF/DOCX/XLSX 辅助函数前执行资源预检，超限整体拒绝。
+- 不接 Worker/Redis/API/数据库，不保存附件。
+- 未来接入生产前必须强制只使用安全入口。
+
+## 31. 出站请求安全边界（TASK-022A-R 合同已冻结）
+
+`docs/OUTBOUND_REQUEST_SECURITY_CONTRACT.md` 与 ADR-016 已于 TASK-022A-R 批准冻结（D-01 至 D-12），但生产代码尚未统一接入安全 transport，当前版本不可部署。
+
+已知出站面：
+
+- Python legacy `requests` 链：CLI、legacy 搜索插件、详情抓取、v1 搜索 Worker。
+- Python v2 Analyzer 入口抓取：预检 IP 后仍由 requests 二次解析，存在 TOCTOU。
+- Python v2 PinnedProbeFetcher：全地址 IP 分类并固定连接，是当前安全形态最完整的一条路径。
+- Go RestyFetcher：v2/legacy 下载，默认环境代理、默认自动重定向、无 IP/DNS/域名/响应体策略。
+- Go `SearchArticles` 与 `internal/httpx.Client`：当前无生产调用方，属于休眠路径，不得绕过后续统一 transport。
+- Redis/MySQL 属于内部服务边界，不作为普通出站 HTTP 处理，但属于 SSRF 威胁模型资产。
+
+实施原则：
+
+- 所有正式出站路径共享安全 transport，不允许 Probe、Adapter、Worker、redirect、proxy、legacy/v1 旁路。
+- 连接固定到已验证 IP，Host/SNI/证书使用原 hostname。
+- 安全拒绝 fail closed；不得伪造 v1 成功或 `extract_failed`。
+- 测试 loopback 许可通过依赖注入实现，不得变成生产开关。
+- 未完成 022B–022H 前，不得宣称生产级 SSRF 防护。
+
+## 32. 出站安全基础库（TASK-022B）
+
+- Python 新增 `crawler/security`：`url_normalizer`、`ip_policy`、`dns_policy`、`outbound_policy`、`models`。
+- Go 新增 `go-spider/internal/security`：`url_normalizer.go`、`ip_policy.go`、`dns_policy.go`、`outbound_policy.go`、`models.go`。
+- Python/Go 读取同一份 `tests/fixtures/outbound_request_security_contract.json`（164 cases），不维护第二份期望结果。
+- IDNA 使用 UTS #46 lookup profile；Python `idna==3.18` 已直接声明，Go `golang.org/x/net/idna v0.52.0` 已提升为直接依赖。
+- 本轮基础库不接入现有 HTTP 客户端、Adapter、Worker、queue 或 protocol；生产请求链行为不变。
+- 固定连接属于 TASK-022C，生产接线属于 TASK-022G；当前版本不可部署。
+## 33. Pinned Address Transport（TASK-022C）
+
+- Python 新增 `crawler/security/pinned_connection.py` 与 `tls_policy.py`。
+- Go 新增 `go-spider/internal/security/pinned_target.go`、`pinned_dialer.go`、`pinned_transport.go`。
+- `PinnedTarget` 保存规范化 host、有效端口、Host header、server_name、已验证地址与策略身份；不保存原始 URL、userinfo、fragment、Cookie 或 header。
+- TCP 只连接已验证数字 IP；HTTPS 使用原规范化 hostname 作为 ServerName 并正常验证证书链与 hostname/IP SAN。
+- 本地 loopback 测试通过测试内部构造方式注入；生产公开 API 无 allow_loopback/test_mode/skip_policy/insecure。
+- 当前没有生产调用方；生产接线属于 TASK-022G。
+## 34. Redirect, Proxy and Resource Budget（TASK-022D-1）
+
+- Python 新增 `crawler/security/transport_budget.py`、`redirect_policy.py`；Go 新增 `transport_budget.go`、`redirect_policy.go`。
+- 固定整数 ms/bytes 预算模型覆盖 DNS/connect/TLS/header/read idle/request body/response headers/redirects/并发；probe/search/detail 三类 total deadline 与 response body 上限不可变。
+- redirect planner 只做纯决策：每跳重新规范化 URL、执行 scheme/exact host/port/DNS/IP/https-downgrade 校验并生成全新 PinnedTarget，不执行网络请求。
+- V1 代理合同拒绝任意非空代理配置，安全包不读取环境代理。
+- 当前没有生产调用方；实际响应读取、流式计数、idle timer、并发限流与生产接线属于 TASK-022D-2/022G。
+## 35. Bounded I/O and Concurrency Runtime（TASK-022D-2）
+
+- Python 新增 `crawler/security/bounded_io.py`、`concurrency_limiter.py`；Go 新增 `bounded_io.go`、`concurrency_limiter.go`。
+- D2 从 D1 TransportBudget 读取全部固定限制，实现请求体/响应头/响应体大小门、deadline-aware 有界读取、read-idle/total 联合约束与 fail-fast 全局/单 hostname 限流。
+- 实际 socket/HTTP Transport 适配、wire-level header 计数、idle pool 与生产组合由 TASK-022D-3 完成；本轮不接入生产请求链。
+## 36. Isolated Secure HTTP Transport Composition（TASK-022D-3）
+
+- Python 新增 `crawler/security/http_transport.py`、`http_executor.py`；Go 新增 `go-spider/internal/security/http_transport.go`、`http_executor.go`。
+- 执行器把 URL/PolicyDecision → PinnedTarget → 共享 ConcurrencyLimiter → 数字 IP 连接 → Host/SNI/证书校验 → HTTP 请求 → raw response header 上限 → Content-Length 预检 → deadline-aware bounded body → 逐跳 redirect 重验组合为单一隔离路径。
+- 阶段 timeout：DNS/connect/TLS 5s、response header 10s、read idle 15s、total probe/search 30s、detail 60s；每阶段取 `min(阶段, remaining)`，remaining=0 不开始下一阶段；redirect 不重置 total deadline。
+- raw response header 上限 262144 bytes（含状态行、字段行与终止空行），前置固定 buffer 限制，超 1 byte 即拒绝；interim 1xx 与最终响应共享累计上限，101 与 CL+TE 一律 fail closed，TE 仅单一 chunked，chunk extension 与非空 trailer 拒绝。
+- V1 只实现 HTTP/1.1，请求固定 `Connection: close`，不启用 HTTP/2 多路复用；实际 idle=0，满足 per-host idle<=2 但不声称实现连接复用。
+- redirect 301/302/303/307/308 最多 3 跳，每跳重新 policy/DNS/IP/pin 验证并生成新 PinnedTarget；POST redirect 一律拒绝重放；跨 hostname 剥离 Authorization/Proxy-Authorization/Cookie。
+- 新执行器只在 security 包、测试和文档中出现；Resty、requests/httpx、Adapter、Probe、Worker、queue、protocol、store 均未切换。
+- 共享 fixture：tests/fixtures/secure_http_transport_contract.json（FIX 后 84 cases：request 18、response 42、redirect 16、resource 8）；ADR-021 状态 proposed。
+- 当前没有生产请求走该执行器；当前版本不可部署。
+
+
+## 37. Outbound Security Configuration Contract（TASK-022E-B）
+
+- 未来生产安全配置使用独立文件 `config/outbound_security.json`（本阶段只冻结路径，不创建生产文件）。
+- 合同结构：顶层 `config_version`（const "1.0"）与 `policies`；policy 为 `policy_id`、`allowed_domains`、`allowed_schemes`、`allowed_ports`；JSON Schema 位于 `config/outbound_security.schema.json`。
+- hostname 仅规范化小写 ASCII IDNA A-label；V1 仅 exact hostname；redirect 使用主 allowlist；禁止 IP literal；不修改 OutboundPolicy 模型。
+- 共享 fixture `tests/fixtures/outbound_security_config_contract.json`（104 cases）与 Python/Go 合同完整性测试已新增；生产 loader 与 site.json 迁移未实施。
+
+## 38. Production Outbound-Security Loader Contract（TASK-022E-C-A-D）
+
+- 生产 loader 输入为 `config/outbound_security.json`；固定路径、启动时单次快照读取、不热加载；错误 reason 增至 18（含 config_unreadable/config_limit_exceeded）。
+- 全局验证顺序、混合错误优先级、policies/site/静态字段确定性顺序、双端独立验证责任均已冻结；loader 不执行 DNS/redirect，不处理任务级 allowed_domains 交集。
+- 生产 loader 尚未实现；production_loader=NOT_STARTED；deployment=BLOCKED。
+- fixture 聚合口径：`OSEC-CASE-AGGREGATE-V1`；BASE104_V1=`bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8`；NEW21_V1=`dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850`；ALL125_V1=`75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b`。

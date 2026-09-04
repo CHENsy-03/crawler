@@ -10,7 +10,7 @@ class FakeAdapter:
     def __init__(self, name):
         self.adapter_name = name
 
-    def execute(self, plan, keywords, *, fetcher, policy):
+    def execute(self, plan, query_term, *, fetcher, policy):
         return SearchPlanExecutionResult(plan.plan_id, "ok", (), "text/html")
 
 

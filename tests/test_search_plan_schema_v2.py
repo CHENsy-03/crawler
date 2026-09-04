@@ -210,7 +210,7 @@ def _assert_json_conflict_rejected_before_fetch(shape, pagination):
             raise AssertionError("fetch must not be called for invalid plan")
 
     fetcher = FakeFetcher()
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=SearchProbePolicy())
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=SearchProbePolicy())
     assert result.failure_code == "plan_invalid"
     assert fetcher.calls == 0
 

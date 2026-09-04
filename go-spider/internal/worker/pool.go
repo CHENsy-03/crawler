@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -32,6 +34,12 @@ type taskStore interface {
 	SaveArticle(article *store.Article) error
 }
 
+// articleResultV2Store is implemented by production MySQLStore after B5.
+// It is intentionally separate from taskStore so legacy fakes remain untouched.
+type articleResultV2Store interface {
+	PersistArticleResultV2(context.Context, *protocol.ArticleResultV2) (store.PersistArticleResultV2Outcome, error)
+}
+
 type Stats struct {
 	Submitted int64
 	Completed int64
@@ -59,6 +67,7 @@ type Pool struct {
 	taskStatuses map[string]*TaskStatus
 	taskMu       sync.Mutex
 	fetcher      *client.RestyFetcher
+	v2           *V2DownloadCoordinator
 	submitted    atomic.Int64
 	completed    atomic.Int64
 	failed       atomic.Int64
@@ -77,6 +86,9 @@ func NewPool(workerCount int, rq *queue.RedisQueue, mysqlStore taskStore) *Pool 
 
 func (p *Pool) Start() {
 	p.fetcher = client.NewRestyFetcher(0.5)
+	if p.redis != nil {
+		p.v2 = NewV2DownloadCoordinator(p.fetcher, p.redis)
+	}
 	for i := 0; i < p.workers; i++ {
 		p.wg.Add(1)
 		go p.worker(i)
@@ -93,6 +105,9 @@ func (p *Pool) Start() {
 }
 
 func (p *Pool) Stop() {
+	if p.v2 != nil {
+		p.v2.Stop()
+	}
 	close(p.stopCh)
 	p.wg.Wait()
 	p.resultWg.Wait()
@@ -105,10 +120,17 @@ func (p *Pool) Submit(task Task) {
 }
 
 func (p *Pool) Stats() Stats {
+	submitted, completed, failed := p.submitted.Load(), p.completed.Load(), p.failed.Load()
+	if p.v2 != nil {
+		v2Submitted, v2Completed, v2Failed := p.v2.Stats()
+		submitted += v2Submitted
+		completed += v2Completed
+		failed += v2Failed
+	}
 	return Stats{
-		Submitted: p.submitted.Load(),
-		Completed: p.completed.Load(),
-		Failed:    p.failed.Load(),
+		Submitted: submitted,
+		Completed: completed,
+		Failed:    failed,
 		QueueLen:  len(p.taskCh),
 	}
 }
@@ -210,21 +232,58 @@ func (p *Pool) StartResultConsumer() {
 				log.Println("[worker] Result consumer stopped")
 				return
 			default:
-				msg, err := p.redis.PopResultMessage()
+				dispatch, err := p.redis.PopResultDispatch()
 				if err != nil {
 					continue
 				}
-				if msg == nil {
+				if dispatch == nil {
 					continue
 				}
-				if err := p.consumeResult(msg); err != nil {
-					log.Printf("[result] consume error: %v", err)
+				if err := p.handleResultDispatch(dispatch); err != nil {
+					log.Printf("[result] dispatch error: %v", err)
 				}
 			}
 		}
 	}()
 }
 
+func (p *Pool) handleResultDispatch(dispatch *queue.ResultDispatch) error {
+	if dispatch == nil {
+		return fmt.Errorf("result dispatch is nil")
+	}
+	switch dispatch.Kind {
+	case queue.ResultDispatchLegacy, queue.ResultDispatchV1:
+		if dispatch.Message == nil {
+			return fmt.Errorf("legacy/v1 result message is nil")
+		}
+		return p.consumeResult(dispatch.Message)
+	case queue.ResultDispatchV2:
+		if dispatch.V2 == nil {
+			return fmt.Errorf("v2 article_result is nil")
+		}
+		return p.consumeV2Result(dispatch.V2)
+	default:
+		return fmt.Errorf("unknown result dispatch kind %d", dispatch.Kind)
+	}
+}
+
+func (p *Pool) consumeV2Result(msg *protocol.ArticleResultV2) error {
+	v2Store, ok := p.store.(articleResultV2Store)
+	if !ok {
+		return fmt.Errorf("store does not support ArticleResultV2 persistence")
+	}
+	outcome, err := v2Store.PersistArticleResultV2(context.Background(), msg)
+	if err != nil {
+		if errors.Is(err, store.ErrArticleResultConflict) {
+			log.Printf("[result] v2 conflict: task=%s hit=%s", msg.TaskID, msg.HitID)
+		} else {
+			log.Printf("[result] v2 persist error: task=%s hit=%s err=%v", msg.TaskID, msg.HitID, err)
+		}
+		return err
+	}
+	log.Printf("[result] v2 persisted: task=%s hit=%s status=%s inserted=%t replayed=%t", msg.TaskID, msg.HitID, msg.Status, outcome.Inserted, outcome.Replayed)
+	return nil
+}
 func (p *Pool) getOrCreateTaskStatus(taskID string) *TaskStatus {
 	if ts, ok := p.taskStatuses[taskID]; ok {
 		return ts
@@ -443,26 +502,41 @@ func (p *Pool) StartRedisConsumer() {
 				log.Println("[worker] Redis consumer stopped")
 				return
 			default:
-				payload, err := p.redis.PopURL()
+				result, err := p.redis.PopURLDispatch()
 				if err != nil {
 					continue
 				}
-				if payload == nil {
+				if result == nil {
 					continue
 				}
-				p.submitted.Add(1)
-				p.taskCh <- Task{
-					TaskID:  payload.TaskID,
-					URL:     payload.URL,
-					Title:   payload.Title,
-					Site:    payload.Site,
-					Keyword: payload.Keyword,
-					Level:   payload.Level,
+				if result.Legacy != nil {
+					p.submitted.Add(1)
+					p.taskCh <- Task{
+						TaskID:  result.Legacy.TaskID,
+						URL:     result.Legacy.URL,
+						Title:   result.Legacy.Title,
+						Site:    result.Legacy.Site,
+						Keyword: result.Legacy.Keyword,
+						Level:   result.Legacy.Level,
+					}
+				} else if result.V2 != nil {
+					p.handleV2URLMessage(result.V2)
 				}
 			}
 		}
 	}()
 }
+
+func (p *Pool) handleV2URLMessage(msg *protocol.URLMessageV2) {
+	if p.v2 == nil {
+		log.Printf("[v2] no coordinator: task=%s url=%s", msg.TaskID, msg.URL)
+		return
+	}
+	if err := p.v2.Handle(msg); err != nil {
+		log.Printf("[v2] handle url failed: task=%s hit=%s url=%s err=%v", msg.TaskID, msg.HitID, msg.URL, err)
+	}
+}
+
 func (wm *WorkerManager) StartEventConsumer() { wm.pool.StartEventConsumer() }
 func (p *Pool) StartErrorConsumer() {
 	p.resultWg.Add(1)

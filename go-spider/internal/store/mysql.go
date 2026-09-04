@@ -48,6 +48,18 @@ type CrawlLog struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+func (Article) TableName() string {
+	return "article"
+}
+
+func (Task) TableName() string {
+	return "task"
+}
+
+func (CrawlLog) TableName() string {
+	return "crawl_log"
+}
+
 type MySQLStore struct {
 	db *gorm.DB
 }

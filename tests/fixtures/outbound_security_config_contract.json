@@ -1,0 +1,1646 @@
+{
+  "algorithm": "OSEC-CASE-AGGREGATE-V1",
+  "baseline_case_ids": [
+    "v-001",
+    "v-002",
+    "v-003",
+    "v-004",
+    "v-005",
+    "t-001",
+    "t-002",
+    "t-003",
+    "t-004",
+    "t-005",
+    "t-006",
+    "t-007",
+    "ver-001",
+    "ver-002",
+    "ver-003",
+    "ver-004",
+    "ver-005",
+    "ver-006",
+    "ver-007",
+    "pid-001",
+    "pid-002",
+    "pid-003",
+    "pid-004",
+    "pid-005",
+    "pid-006",
+    "pid-007",
+    "h-001",
+    "h-002",
+    "h-003",
+    "h-004",
+    "h-005",
+    "h-006",
+    "h-007",
+    "h-008",
+    "h-009",
+    "h-010",
+    "h-011",
+    "h-012",
+    "h-013",
+    "h-014",
+    "h-015",
+    "h-016",
+    "h-017",
+    "h-018",
+    "s-001",
+    "s-002",
+    "s-003",
+    "s-004",
+    "s-005",
+    "s-006",
+    "s-007",
+    "s-008",
+    "s-009",
+    "s-010",
+    "p-001",
+    "p-002",
+    "p-003",
+    "p-004",
+    "p-005",
+    "p-006",
+    "p-007",
+    "p-008",
+    "p-009",
+    "p-010",
+    "p-011",
+    "p-012",
+    "d-001",
+    "d-002",
+    "d-003",
+    "d-004",
+    "d-005",
+    "d-006",
+    "d-007",
+    "pr-001",
+    "pr-002",
+    "pr-003",
+    "pr-004",
+    "pr-005",
+    "sc-001",
+    "sc-002",
+    "sc-003",
+    "sc-004",
+    "sc-005",
+    "sc-006",
+    "sc-007",
+    "sc-008",
+    "l-001",
+    "l-002",
+    "l-003",
+    "l-004",
+    "l-005",
+    "l-006",
+    "f-001",
+    "f-002",
+    "f-003",
+    "f-004",
+    "f-005",
+    "f-006",
+    "f-007",
+    "f-008",
+    "f-009",
+    "f-010",
+    "f-011",
+    "f-012"
+  ],
+  "expected_base104_v1": "bc38711ddf559eb5319eac9b080eeec611e3742d9cf0bbdb09072317cfc975b8",
+  "expected_new21_v1": "dfda4174b62f27b4132cf157e96b89be2982f9268724dc12f47ebc97c7df8850",
+  "expected_all125_v1": "75336a374cd9ee82a8c811f380fd9ce6893364d65eaf0fbed76424307b2baa5b",
+  "schema_version": "1.0",
+  "frozen_reasons": [
+    "config_missing",
+    "config_invalid_json",
+    "config_invalid_top_level",
+    "config_unsupported_version",
+    "config_unknown_field",
+    "config_missing_field",
+    "config_invalid_type",
+    "config_duplicate",
+    "config_invalid_policy_id",
+    "config_invalid_hostname",
+    "config_forbidden_ip_literal",
+    "config_invalid_scheme",
+    "config_invalid_port",
+    "config_invalid_policy_reference",
+    "config_site_host_not_covered",
+    "config_conflict",
+    "config_unreadable",
+    "config_limit_exceeded"
+  ],
+  "categories": {
+    "valid_config": [
+      {
+        "id": "v-001",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "HTTPS-only policy with canonical values",
+        "policy_id": "site-https",
+        "hostname": "example.com",
+        "scheme": [
+          "https"
+        ],
+        "ports": {
+          "https": [
+            443
+          ]
+        },
+        "category": "valid_config"
+      },
+      {
+        "id": "v-002",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "HTTP+HTTPS policy with canonical order",
+        "policy_id": "site-mixed",
+        "hostname": "example.net",
+        "scheme": [
+          "http",
+          "https"
+        ],
+        "ports": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "category": "valid_config"
+      },
+      {
+        "id": "v-003",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Single policy with multiple exact hostnames",
+        "policy_id": "site-multi",
+        "hostname": [
+          "a.example",
+          "b.example"
+        ],
+        "scheme": [
+          "https"
+        ],
+        "ports": {
+          "https": [
+            443
+          ]
+        },
+        "category": "valid_config"
+      },
+      {
+        "id": "v-004",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Already canonical lowercase ASCII hostname",
+        "canonical": "example.com",
+        "hostname": "example.com",
+        "category": "valid_config"
+      },
+      {
+        "id": "v-005",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Exact version 1.0",
+        "version": "1.0",
+        "category": "valid_config"
+      },
+      {
+        "id": "v-006",
+        "action": "ordering",
+        "allowed": true,
+        "reason": null,
+        "description": "Policies validated in file input order",
+        "expected_policy_order": [
+          "site-a",
+          "site-b"
+        ],
+        "category": "valid_config"
+      }
+    ],
+    "top_level": [
+      {
+        "id": "t-001",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "Unknown top-level field",
+        "field": "redirect_allowed_domains",
+        "category": "top_level"
+      },
+      {
+        "id": "t-002",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_missing_field",
+        "description": "Missing config_version",
+        "field": "config_version",
+        "category": "top_level"
+      },
+      {
+        "id": "t-003",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_missing_field",
+        "description": "Missing policies array",
+        "field": "policies",
+        "category": "top_level"
+      },
+      {
+        "id": "t-004",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_top_level",
+        "description": "Top-level value is an array",
+        "payload_text": "[]",
+        "category": "top_level"
+      },
+      {
+        "id": "t-005",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_top_level",
+        "description": "Empty policies array",
+        "payload_text": "{\"config_version\":\"1.0\",\"policies\":[]}",
+        "category": "top_level"
+      },
+      {
+        "id": "t-006",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_missing",
+        "description": "Required config source absent before parsing",
+        "category": "top_level",
+        "source": "config/outbound_security.json",
+        "input_state": "source_absent"
+      },
+      {
+        "id": "t-007",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Config source exists but content is not one valid UTF-8 JSON document",
+        "category": "top_level",
+        "source": "config/outbound_security.json",
+        "payload_text": "{\"config_version\": \"1.0\","
+      },
+      {
+        "id": "t-008",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unreadable",
+        "description": "Source exists but permission denied",
+        "source_state": "unreadable",
+        "category": "top_level"
+      },
+      {
+        "id": "t-009",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unreadable",
+        "description": "Source path is a directory",
+        "source_state": "directory",
+        "category": "top_level"
+      },
+      {
+        "id": "t-010",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unreadable",
+        "description": "Source is non-regular or unsupported file",
+        "source_state": "non_regular_source",
+        "category": "top_level"
+      },
+      {
+        "id": "t-011",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_limit_exceeded",
+        "description": "Raw config exceeds 1,048,576 bytes",
+        "source_size": 1048577,
+        "parameterized": true,
+        "category": "top_level"
+      },
+      {
+        "id": "t-012",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_limit_exceeded",
+        "description": "Valid JSON container depth exceeds 32",
+        "depth": 33,
+        "parameterized": true,
+        "category": "top_level"
+      },
+      {
+        "id": "t-013",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Empty file",
+        "payload_text": "",
+        "category": "top_level"
+      },
+      {
+        "id": "t-014",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "UTF-8 BOM",
+        "payload_hex": "efbbbf",
+        "category": "top_level"
+      },
+      {
+        "id": "t-015",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Invalid UTF-8 byte",
+        "payload_hex": "ff",
+        "category": "top_level"
+      },
+      {
+        "id": "t-016",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Trailing second JSON value",
+        "payload_text": "{\"config_version\":\"1.0\"} {\"policies\":[]}",
+        "category": "top_level"
+      },
+      {
+        "id": "t-017",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_json",
+        "description": "Malformed JSON with apparent duplicate key wins lexical stage",
+        "payload_text": "{\"config_version\":\"1.0\",\"config_version\":\"1.0\",",
+        "scenario": "malformed_json_apparent_duplicate",
+        "category": "top_level"
+      },
+      {
+        "id": "t-018",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "Unknown field precedes missing required",
+        "payload_text": "{\"unknown_top\":1}",
+        "scenario": "unknown_field_missing_required",
+        "category": "top_level"
+      }
+    ],
+    "version": [
+      {
+        "id": "ver-001",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_missing_field",
+        "description": "config_version missing",
+        "category": "version"
+      },
+      {
+        "id": "ver-002",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "config_version null",
+        "value": "null",
+        "category": "version"
+      },
+      {
+        "id": "ver-003",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "config_version number",
+        "value": 1.0,
+        "category": "version"
+      },
+      {
+        "id": "ver-004",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "config_version boolean",
+        "value": true,
+        "category": "version"
+      },
+      {
+        "id": "ver-005",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "config_version empty string",
+        "value": "",
+        "category": "version"
+      },
+      {
+        "id": "ver-006",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unsupported_version",
+        "description": "config_version 1.1",
+        "value": "1.1",
+        "category": "version"
+      },
+      {
+        "id": "ver-007",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "config_version 1.0",
+        "value": "1.0",
+        "category": "version"
+      }
+    ],
+    "policy_id": [
+      {
+        "id": "pid-001",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Valid policy_id site-a",
+        "policy_id": "site-a",
+        "category": "policy_id"
+      },
+      {
+        "id": "pid-002",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_policy_id",
+        "description": "Empty policy_id",
+        "policy_id": "",
+        "category": "policy_id"
+      },
+      {
+        "id": "pid-003",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_policy_id",
+        "description": "Uppercase start",
+        "policy_id": "Site-a",
+        "category": "policy_id"
+      },
+      {
+        "id": "pid-004",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_policy_id",
+        "description": "65 characters",
+        "policy_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "category": "policy_id"
+      },
+      {
+        "id": "pid-005",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_policy_id",
+        "description": "Dot not allowed",
+        "policy_id": "site.a",
+        "category": "policy_id"
+      },
+      {
+        "id": "pid-006",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "policy_id null",
+        "policy_id": null,
+        "category": "policy_id"
+      },
+      {
+        "id": "pid-007",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate policy_id in registry",
+        "policy_id": "site-a",
+        "category": "policy_id"
+      }
+    ],
+    "hostname": [
+      {
+        "id": "h-001",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Canonical hostname",
+        "canonical": "example.com",
+        "hostname": "example.com",
+        "category": "hostname"
+      },
+      {
+        "id": "h-002",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Uppercase hostname",
+        "hostname": "Example.COM",
+        "category": "hostname"
+      },
+      {
+        "id": "h-003",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Unicode hostname",
+        "hostname": "例え.jp",
+        "category": "hostname"
+      },
+      {
+        "id": "h-004",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Root dot",
+        "hostname": "example.com.",
+        "category": "hostname"
+      },
+      {
+        "id": "h-005",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Wildcard",
+        "hostname": "*.example.com",
+        "category": "hostname"
+      },
+      {
+        "id": "h-006",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Scheme embedded",
+        "hostname": "https://example.com",
+        "category": "hostname"
+      },
+      {
+        "id": "h-007",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Userinfo embedded",
+        "hostname": "user@example.com",
+        "category": "hostname"
+      },
+      {
+        "id": "h-008",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Path embedded",
+        "hostname": "example.com/path",
+        "category": "hostname"
+      },
+      {
+        "id": "h-009",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Port embedded",
+        "hostname": "example.com:8443",
+        "category": "hostname"
+      },
+      {
+        "id": "h-010",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_forbidden_ip_literal",
+        "description": "IPv4 literal",
+        "hostname": "192.0.2.1",
+        "category": "hostname"
+      },
+      {
+        "id": "h-011",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_forbidden_ip_literal",
+        "description": "IPv6 literal",
+        "hostname": "2001:db8::1",
+        "category": "hostname"
+      },
+      {
+        "id": "h-012",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_forbidden_ip_literal",
+        "description": "Private IPv4 literal",
+        "hostname": "10.0.0.1",
+        "category": "hostname"
+      },
+      {
+        "id": "h-013",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_forbidden_ip_literal",
+        "description": "Loopback literal",
+        "hostname": "127.0.0.1",
+        "category": "hostname"
+      },
+      {
+        "id": "h-014",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Empty string",
+        "hostname": "",
+        "category": "hostname"
+      },
+      {
+        "id": "h-015",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Canonical duplicate Example.COM vs example.com",
+        "hostname": [
+          "Example.COM",
+          "example.com"
+        ],
+        "category": "hostname"
+      },
+      {
+        "id": "h-016",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Multiple canonical hosts",
+        "canonical": [
+          "a.example",
+          "b.example"
+        ],
+        "hostname": [
+          "a.example",
+          "b.example"
+        ],
+        "category": "hostname"
+      },
+      {
+        "id": "h-017",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Single-label hostname localhost",
+        "category": "hostname",
+        "hostname": "localhost"
+      },
+      {
+        "id": "h-018",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "Single-label hostname example",
+        "category": "hostname",
+        "hostname": "example"
+      },
+      {
+        "id": "h-019",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_forbidden_ip_literal",
+        "description": "IP literal check precedes generic hostname pattern",
+        "hostname": "127.0.0.1",
+        "scenario": "ip_literal_invalid_hostname",
+        "category": "hostname"
+      },
+      {
+        "id": "h-020",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "domain field is hostname only",
+        "field": "domain",
+        "hostname": "czj.beijing.gov.cn",
+        "category": "hostname"
+      },
+      {
+        "id": "h-021",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_hostname",
+        "description": "domain field must not contain scheme",
+        "field": "domain",
+        "hostname": "https://czj.beijing.gov.cn",
+        "category": "hostname"
+      }
+    ],
+    "scheme": [
+      {
+        "id": "s-001",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Canonical https only",
+        "scheme": [
+          "https"
+        ],
+        "category": "scheme"
+      },
+      {
+        "id": "s-002",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Canonical http+https",
+        "scheme": [
+          "http",
+          "https"
+        ],
+        "category": "scheme"
+      },
+      {
+        "id": "s-003",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_scheme",
+        "description": "http only forbidden",
+        "scheme": [
+          "http"
+        ],
+        "category": "scheme"
+      },
+      {
+        "id": "s-004",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_scheme",
+        "description": "Empty scheme list",
+        "scheme": [],
+        "category": "scheme"
+      },
+      {
+        "id": "s-005",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_scheme",
+        "description": "Uppercase scheme",
+        "scheme": [
+          "HTTPS"
+        ],
+        "category": "scheme"
+      },
+      {
+        "id": "s-006",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate scheme",
+        "scheme": [
+          "https",
+          "https"
+        ],
+        "category": "scheme"
+      },
+      {
+        "id": "s-007",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_scheme",
+        "description": "Non-canonical order",
+        "scheme": [
+          "https",
+          "http"
+        ],
+        "category": "scheme"
+      },
+      {
+        "id": "s-008",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_scheme",
+        "description": "Unknown scheme",
+        "scheme": [
+          "ftp"
+        ],
+        "category": "scheme"
+      },
+      {
+        "id": "s-009",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "Scheme list null",
+        "scheme": null,
+        "category": "scheme"
+      },
+      {
+        "id": "s-010",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "Scheme as string",
+        "scheme": "https",
+        "category": "scheme"
+      }
+    ],
+    "port": [
+      {
+        "id": "p-001",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Default https 443",
+        "ports": {
+          "https": [
+            443
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-002",
+        "action": "accept",
+        "allowed": true,
+        "reason": null,
+        "description": "Default http 80 and https 443",
+        "ports": {
+          "http": [
+            80
+          ],
+          "https": [
+            443
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-003",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_port",
+        "description": "Boolean port",
+        "ports": {
+          "https": [
+            true
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-004",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_port",
+        "description": "Float port",
+        "ports": {
+          "https": [
+            443.0
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-005",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_port",
+        "description": "String port",
+        "ports": {
+          "https": [
+            "443"
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-006",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_port",
+        "description": "Port zero",
+        "ports": {
+          "https": [
+            0
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-007",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_port",
+        "description": "Port above 65535",
+        "ports": {
+          "https": [
+            65536
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-008",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate port",
+        "ports": {
+          "https": [
+            443,
+            443
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-009",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_port",
+        "description": "Non-ascending ports",
+        "ports": {
+          "https": [
+            443,
+            80
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-010",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_conflict",
+        "description": "allowed_schemes and allowed_ports keys differ",
+        "scheme": [
+          "https"
+        ],
+        "ports": {
+          "http": [
+            80
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-011",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_conflict",
+        "description": "Missing port key for allowed scheme",
+        "scheme": [
+          "http",
+          "https"
+        ],
+        "ports": {
+          "https": [
+            443
+          ]
+        },
+        "category": "port"
+      },
+      {
+        "id": "p-012",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_port",
+        "description": "Empty port list",
+        "ports": {
+          "https": []
+        },
+        "category": "port"
+      }
+    ],
+    "duplicate": [
+      {
+        "id": "d-001",
+        "action": "marker",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate JSON key in raw document",
+        "payload_text": "{\"config_version\":\"1.0\",\"config_version\":\"1.0\"}",
+        "category": "duplicate"
+      },
+      {
+        "id": "d-002",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate policy_id",
+        "policy_id": "site-a",
+        "category": "duplicate"
+      },
+      {
+        "id": "d-003",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate raw hostname",
+        "hostname": [
+          "example.com",
+          "example.com"
+        ],
+        "category": "duplicate"
+      },
+      {
+        "id": "d-004",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate canonical hostname",
+        "hostname": [
+          "Example.COM",
+          "example.com"
+        ],
+        "category": "duplicate"
+      },
+      {
+        "id": "d-005",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate exact host in allowed_domains",
+        "hostname": [
+          "a.example",
+          "a.example"
+        ],
+        "category": "duplicate"
+      },
+      {
+        "id": "d-006",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate scheme",
+        "scheme": [
+          "https",
+          "https"
+        ],
+        "category": "duplicate"
+      },
+      {
+        "id": "d-007",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate port",
+        "ports": {
+          "https": [
+            443,
+            443
+          ]
+        },
+        "category": "duplicate"
+      },
+      {
+        "id": "d-008",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Duplicate JSON key precedes type check",
+        "payload_text": "{\"config_version\":1,\"config_version\":\"1.0\"}",
+        "scenario": "duplicate_json_key_invalid_type",
+        "category": "duplicate"
+      },
+      {
+        "id": "d-009",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_invalid_type",
+        "description": "Semantic duplicate with invalid type reports type first",
+        "policy_id_values": [
+          {
+            "policy_id": "site-a"
+          },
+          {
+            "policy_id": 123
+          }
+        ],
+        "scenario": "semantic_duplicate_invalid_type",
+        "category": "duplicate"
+      },
+      {
+        "id": "d-010",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_duplicate",
+        "description": "Semantic duplicate precedes cross-field conflict",
+        "ports": {
+          "https": [
+            443,
+            443
+          ]
+        },
+        "scenario": "duplicate_conflict",
+        "category": "duplicate"
+      }
+    ],
+    "policy_reference": [
+      {
+        "id": "pr-001",
+        "action": "reference",
+        "allowed": true,
+        "reason": null,
+        "description": "Site references existing policy",
+        "site_key": "czj_beijing",
+        "policy_id": "site-https",
+        "category": "policy_reference"
+      },
+      {
+        "id": "pr-002",
+        "action": "reference",
+        "allowed": false,
+        "reason": "config_invalid_policy_reference",
+        "description": "Site references missing policy",
+        "site_key": "czj_beijing",
+        "policy_id": "missing",
+        "category": "policy_reference"
+      },
+      {
+        "id": "pr-003",
+        "action": "reference",
+        "allowed": false,
+        "reason": "config_conflict",
+        "description": "Site inline security override",
+        "site_key": "czj_beijing",
+        "payload_text": "{\"allowed_domains\":[\"x.example\"]}",
+        "category": "policy_reference"
+      },
+      {
+        "id": "pr-004",
+        "action": "reference",
+        "allowed": false,
+        "reason": "config_missing_field",
+        "description": "Outbound-capable site missing outbound_policy_id",
+        "site_key": "czj_beijing",
+        "category": "policy_reference"
+      },
+      {
+        "id": "pr-005",
+        "action": "reference",
+        "allowed": false,
+        "reason": "config_conflict",
+        "description": "Environment/CLI security override concept",
+        "site_key": "czj_beijing",
+        "category": "policy_reference"
+      },
+      {
+        "id": "pr-006",
+        "action": "reference",
+        "allowed": false,
+        "reason": "config_invalid_policy_reference",
+        "description": "Unknown policy reference precedes site host uncovered",
+        "site_key": "czj_beijing",
+        "policy_id": "missing",
+        "static_url": "https://czj.beijing.gov.cn",
+        "scenario": "unknown_policy_reference_site_host_uncovered",
+        "category": "policy_reference"
+      }
+    ],
+    "site_cross_validation": [
+      {
+        "id": "sc-001",
+        "action": "cross_validation",
+        "allowed": true,
+        "reason": null,
+        "description": "Site domain host covered by policy",
+        "site_key": "czj_beijing",
+        "static_url": "https://czj.beijing.gov.cn",
+        "policy_id": "site-https",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-002",
+        "action": "cross_validation",
+        "allowed": false,
+        "reason": "config_site_host_not_covered",
+        "description": "Site domain host not covered",
+        "site_key": "czj_beijing",
+        "static_url": "https://other.example",
+        "policy_id": "site-https",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-003",
+        "action": "cross_validation",
+        "allowed": false,
+        "reason": "config_conflict",
+        "description": "Site scheme not in allowed_schemes",
+        "site_key": "czj_beijing",
+        "static_url": "http://czj.beijing.gov.cn",
+        "policy_id": "site-https",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-004",
+        "action": "cross_validation",
+        "allowed": false,
+        "reason": "config_conflict",
+        "description": "Site port not in allowed_ports",
+        "site_key": "czj_beijing",
+        "static_url": "https://czj.beijing.gov.cn:8443",
+        "policy_id": "site-https",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-005",
+        "action": "cross_validation",
+        "allowed": false,
+        "reason": "config_forbidden_ip_literal",
+        "description": "Site URL uses IP literal",
+        "site_key": "czj_beijing",
+        "static_url": "https://192.0.2.1/x",
+        "policy_id": "site-https",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-006",
+        "action": "cross_validation",
+        "allowed": true,
+        "reason": null,
+        "description": "Site page_url host covered",
+        "site_key": "czj_hangzhou",
+        "static_url": "https://search.zj.gov.cn/search",
+        "policy_id": "site-zhejiang",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-007",
+        "action": "cross_validation",
+        "allowed": true,
+        "reason": null,
+        "description": "Search endpoint host covered",
+        "site_key": "sxcs_shaoxing",
+        "static_url": "https://search.zj.gov.cn/search",
+        "policy_id": "site-zhejiang",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-008",
+        "action": "cross_validation",
+        "allowed": true,
+        "reason": null,
+        "description": "Startup cross-validation does not replace runtime per-request policy/DNS/IP checks",
+        "site_key": "czj_beijing",
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-009",
+        "action": "ordering",
+        "allowed": true,
+        "reason": null,
+        "description": "Static field check order",
+        "expected_field_order": [
+          "domain",
+          "base_url",
+          "api_url",
+          "page_url"
+        ],
+        "category": "site_cross_validation"
+      },
+      {
+        "id": "sc-010",
+        "action": "ordering",
+        "allowed": true,
+        "reason": null,
+        "description": "Site validation order is site_id ASCII ascending",
+        "expected_site_order": [
+          "czj_beijing",
+          "czj_hangzhou",
+          "sc_czt",
+          "sd_czt",
+          "sxcs_shaoxing"
+        ],
+        "category": "site_cross_validation"
+      }
+    ],
+    "logging": [
+      {
+        "id": "l-001",
+        "action": "logging",
+        "allowed": true,
+        "reason": null,
+        "description": "Errors must contain stable reason only, no raw config/URL/query/credentials",
+        "category": "logging",
+        "logging_rule": "no_raw_config",
+        "raw_input": "{\"config_version\":\"1.0\",\"policies\":[{\"policy_id\":\"site-https\",\"allowed_domains\":[\"example.com\"],\"allowed_schemes\":[\"https\"],\"allowed_ports\":{\"https\":[443]}}]}",
+        "expected_log": {
+          "reason": "config_unknown_field",
+          "field_path": "config_version"
+        },
+        "required_log_fields": [
+          "reason",
+          "field_path"
+        ],
+        "forbidden_values": [
+          "{\"config_version\":\"1.0\",\"policies\":[{\"policy_id\":\"site-https\",\"allowed_domains\":[\"example.com\"],\"allowed_schemes\":[\"https\"],\"allowed_ports\":{\"https\":[443]}}]}"
+        ]
+      },
+      {
+        "id": "l-002",
+        "action": "logging",
+        "allowed": true,
+        "reason": null,
+        "description": "No Cookie/Authorization/body values in logs",
+        "category": "logging",
+        "logging_rule": "no_full_url",
+        "raw_input": "https://example.com/path?q=SENTINEL_QUERY#SENTINEL_FRAG",
+        "expected_log": {
+          "reason": "config_conflict",
+          "field_path": "url",
+          "hostname": "example.com"
+        },
+        "required_log_fields": [
+          "reason",
+          "field_path",
+          "hostname"
+        ],
+        "forbidden_values": [
+          "https://example.com/path?q=SENTINEL_QUERY#SENTINEL_FRAG",
+          "/path",
+          "?q=SENTINEL_QUERY",
+          "#SENTINEL_FRAG"
+        ]
+      },
+      {
+        "id": "l-003",
+        "action": "logging",
+        "allowed": true,
+        "reason": null,
+        "description": "Authorization/Cookie/token/credential sentinel values must not appear in logs",
+        "category": "logging",
+        "sensitive_value": "SENTINEL_AUTH_COOKIE_TOKEN_CREDENTIAL",
+        "logging_rule": "no_credentials",
+        "raw_input": "Authorization: SENTINEL_AUTH\nCookie: SENTINEL_COOKIE\ntoken: SENTINEL_TOKEN\ncredential: SENTINEL_CRED",
+        "expected_log": {
+          "reason": "config_invalid_type",
+          "field_path": "credentials"
+        },
+        "required_log_fields": [
+          "reason",
+          "field_path"
+        ],
+        "forbidden_values": [
+          "SENTINEL_AUTH",
+          "SENTINEL_COOKIE",
+          "SENTINEL_TOKEN",
+          "SENTINEL_CRED"
+        ]
+      },
+      {
+        "id": "l-004",
+        "action": "logging",
+        "allowed": true,
+        "reason": null,
+        "description": "Stable reason and field path may be logged",
+        "category": "logging",
+        "allowed_log_field": "field_path",
+        "logging_rule": "allow_reason_field_path",
+        "raw_input": "{\"reason\":\"config_invalid_hostname\",\"field_path\":\"policies[0].allowed_domains[0]\"}",
+        "expected_log": {
+          "reason": "config_invalid_hostname",
+          "field_path": "policies[0].allowed_domains[0]"
+        },
+        "required_log_fields": [
+          "reason",
+          "field_path"
+        ],
+        "forbidden_values": []
+      },
+      {
+        "id": "l-005",
+        "action": "logging",
+        "allowed": true,
+        "reason": null,
+        "description": "policy_id may be logged without full policy configuration",
+        "category": "logging",
+        "allowed_log_field": "policy_id",
+        "logging_rule": "allow_policy_id_no_policy",
+        "raw_input": "policy_id=site-zhejiang policy={\"policy_id\":\"site-zhejiang\",\"allowed_domains\":[\"czj.hangzhou.gov.cn\",\"search.zj.gov.cn\"],\"allowed_schemes\":[\"https\"],\"allowed_ports\":{\"https\":[443]}}",
+        "expected_log": {
+          "policy_id": "site-zhejiang"
+        },
+        "required_log_fields": [
+          "policy_id"
+        ],
+        "forbidden_values": [
+          "policy={",
+          "\"allowed_domains\"",
+          "\"allowed_schemes\"",
+          "\"allowed_ports\""
+        ]
+      },
+      {
+        "id": "l-006",
+        "action": "logging",
+        "allowed": true,
+        "reason": null,
+        "description": "Normalized hostname may be logged without full URL/path/query/fragment",
+        "category": "logging",
+        "allowed_log_field": "normalized_hostname",
+        "logging_rule": "allow_hostname_no_url",
+        "raw_input": "https://search.zj.gov.cn/search?q=SENTINEL_QUERY",
+        "expected_log": {
+          "hostname": "search.zj.gov.cn"
+        },
+        "required_log_fields": [
+          "hostname"
+        ],
+        "forbidden_values": [
+          "https://search.zj.gov.cn",
+          "/search",
+          "?q=SENTINEL_QUERY"
+        ]
+      }
+    ],
+    "forbidden_field": [
+      {
+        "id": "f-001",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "allowed_subdomain_roots forbidden",
+        "field": "allowed_subdomain_roots",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-002",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "redirect_allowed_domains forbidden",
+        "field": "redirect_allowed_domains",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-003",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "redirect_allowed_subdomain_roots forbidden",
+        "field": "redirect_allowed_subdomain_roots",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-004",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "allow_http forbidden",
+        "field": "allow_http",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-005",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "allow_controlled_subdomains forbidden",
+        "field": "allow_controlled_subdomains",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-006",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "proxy forbidden",
+        "field": "proxy",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-007",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "private network switch forbidden",
+        "field": "allow_private",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-008",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "TLS disable forbidden",
+        "field": "insecure_tls",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-009",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "budget override forbidden",
+        "field": "budget_override",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-010",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "profile override forbidden",
+        "field": "profile_override",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-011",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "credentials forbidden",
+        "field": "credentials",
+        "category": "forbidden_field"
+      },
+      {
+        "id": "f-012",
+        "action": "reject",
+        "allowed": false,
+        "reason": "config_unknown_field",
+        "description": "full URL forbidden",
+        "field": "url",
+        "category": "forbidden_field"
+      }
+    ]
+  },
+  "site_migration_draft": [
+    {
+      "site_key": "czj_beijing",
+      "hosts": [
+        "czj.beijing.gov.cn"
+      ],
+      "schemes": [
+        "https"
+      ],
+      "ports": [
+        443
+      ],
+      "suggested_policy_id": "site-beijing",
+      "multi_host": false,
+      "http": false,
+      "notes": ""
+    },
+    {
+      "site_key": "czj_hangzhou",
+      "hosts": [
+        "czj.hangzhou.gov.cn",
+        "search.zj.gov.cn"
+      ],
+      "schemes": [
+        "https"
+      ],
+      "ports": [
+        443
+      ],
+      "suggested_policy_id": "site-zhejiang",
+      "multi_host": true,
+      "http": false,
+      "notes": "shares search.zj.gov.cn"
+    },
+    {
+      "site_key": "sxcs_shaoxing",
+      "hosts": [
+        "sxcs.sx.gov.cn",
+        "search.zj.gov.cn"
+      ],
+      "schemes": [
+        "https"
+      ],
+      "ports": [
+        443
+      ],
+      "suggested_policy_id": "site-zhejiang",
+      "multi_host": true,
+      "http": false,
+      "notes": "shares search.zj.gov.cn"
+    },
+    {
+      "site_key": "sc_czt",
+      "hosts": [
+        "czt.sc.gov.cn"
+      ],
+      "schemes": [
+        "https"
+      ],
+      "ports": [
+        443
+      ],
+      "suggested_policy_id": "site-sichuan",
+      "multi_host": false,
+      "http": false,
+      "notes": ""
+    },
+    {
+      "site_key": "sd_czt",
+      "hosts": [
+        "czt.shandong.gov.cn"
+      ],
+      "schemes": [
+        "http"
+      ],
+      "ports": [
+        80
+      ],
+      "suggested_policy_id": "site-shandong",
+      "multi_host": false,
+      "http": true,
+      "notes": "requires http:80"
+    }
+  ]
+}

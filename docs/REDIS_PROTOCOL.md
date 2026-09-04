@@ -7,6 +7,7 @@
 ## 2. 版本规则
 
 - 当前版本为 v1，protocol_version 固定为 "1.0"。
+- v2 使用显式 protocol_version "2.0"，用于 SearchRequested 和 ArticleResult 消息族；v1 保持不变。
 - 兼容的字段增补允许向后兼容。
 - 不兼容的变更必须提升主版本号。
 
@@ -145,7 +146,7 @@ Python Search Worker 在完成所有 URLMessage 推送后，发送一次 SearchD
 
 v1 模型当前仅作为目标协议定义，尚未接入运行队列。
 
-现有 queue.HTMLPayload、api/server.py 和 parser/redis_worker.py 继续使用旧消息格式。TASK-004 不改变现有 Redis 生产者、消费者或队列名称。
+现有 queue.HTMLPayload、api/server.py（内联 Parser 已于 TASK-019B-4D 退役）和 parser/redis_worker.py（已于 TASK-019B-4C 退役）当时继续使用旧消息格式。TASK-004 不改变现有 Redis 生产者、消费者或队列名称。
 
 | 差异项 | 旧协议 | v1 协议 |
 |--------|--------|---------|
@@ -289,3 +290,149 @@ v1 模型当前仅作为目标协议定义，尚未接入运行队列。
 | 正确版本 | 缺少必填字段 | 400 必填字段错误 |
 | 任意 | 未知字段 | 400 明确未知字段错误 |
 | v1 | 同时存在 `site` 与 `profile` | 400 site and profile are mutually exclusive |
+
+
+
+## 14. ArticleResult v2 消息族
+
+TASK-019B-1 冻结 ArticleResult v2 协议合同，protocol_version=2.0。
+TASK-019B-2 已把 Python v2 orchestrator 生产侧切换为 URLMessageV2 发布。TASK-019B-3 已接通 Go 严格解码、单次下载与 HTMLMessageV2 扇出；仍无任务结束合同，当前检查点不可部署。
+
+
+历史 tests/fixtures/url_message_contract.json 中的 protocol_version=2.0 + site/keyword 属于过渡形态，不再代表正式 URLMessageV2；生产分流入口会拒绝该形态。
+
+所有 v2 消息使用公共信封：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| protocol_version | string | 是 | 固定为 "2.0" |
+| task_id | string | 是 | 任务 ID |
+| message_id | string | 是 | 消息 ID |
+| timestamp | string | 是 | RFC3339 UTC |
+| type | string | 是 | url / html / article_result |
+
+版本和 type 必须显式分流，禁止根据字段猜测协议版本。
+
+### 14.1 URLMessageV2
+
+type 固定为 `url`，队列目标仍为 `crawler:url`。
+
+| 字段 | 类型 | 必填 | 约束 |
+|---|---|---|---|
+| hit_id | string | 是 | 非空白 |
+| plan_id | string | 是 | 非空白 |
+| original_query | string | 是 | 规范化后的用户原始关键词 |
+| query_term | string | 是 | 实际执行的原词或扩展词 |
+| url | string | 是 | 绝对 HTTP/HTTPS URL |
+| title | string | 是 | |
+| snippet | string | 是 | 允许空字符串 |
+| published_at | string | 是 | 允许空字符串 |
+| source | string | 是 | 非空白 |
+| level | int | 是 | 非负整数 |
+
+### 14.2 HTMLMessageV2
+
+type 固定为 `html`，队列目标仍为 `crawler:html`。生产格式仅允许 HTML。
+
+| 字段 | 类型 | 必填 | 约束 |
+|---|---|---|---|
+| hit_id | string | 是 | 非空白 |
+| plan_id | string | 是 | 非空白 |
+| original_query | string | 是 | 非空白 |
+| query_term | string | 是 | 非空白 |
+| requested_url | string | 是 | 绝对 HTTP/HTTPS URL |
+| final_url | string | 是 | 绝对 HTTP/HTTPS URL |
+| content_type | string | 是 | text/html 或 application/xhtml+xml，允许合法参数 |
+| title | string | 是 | |
+| snippet | string | 是 | 允许空字符串 |
+| published_at | string | 是 | 允许空字符串 |
+| source | string | 是 | 非空白 |
+| level | int | 是 | 非负整数 |
+| html | string | 是 | 仅作为队列传输内容，不定义为数据库持久化字段 |
+
+### 14.3 MatchedEvidence
+
+| 字段 | 类型 | 必填 | 约束 |
+|---|---|---|---|
+| term | string | 是 | 非空白 |
+| origin | string | 是 | original / expanded |
+| field | string | 是 | title / summary / content / url |
+| weight | number | 是 | 有限非负数 |
+
+序列化顺序固定为 `term、origin、field、weight`；集合为空时输出 `[]`。
+
+### 14.4 ArticleResultV2
+
+type 固定为 `article_result`，队列目标仍为 `crawler:result`。
+
+| 字段 | 类型 | 必填 | 约束 |
+|---|---|---|---|
+| hit_id | string | 是 | 非空白 |
+| plan_id | string | 是 | 非空白 |
+| original_query | string | 是 | 非空白 |
+| query_term | string | 是 | 非空白 |
+| requested_url | string | 是 | 绝对 HTTP/HTTPS URL |
+| final_url | string | 是 | 绝对 HTTP/HTTPS URL |
+| canonical_url | string | 否 | 空或绝对 HTTP/HTTPS URL |
+| title | string | 否 | 允许空字符串 |
+| publish_date | string | 否 | 允许空字符串 |
+| source | string | 是 | 非空白 |
+| summary | string | 否 | 允许空字符串 |
+| content | string | 否 | 允许空字符串 |
+| content_hash | string | 否 | 正文非空时为正文 UTF-8 的 SHA-256 小写十六进制 |
+| score | int | 是 | 非负整数，boolean 不是整数 |
+| matched_evidence | array | 是 | 空输出 []，不允许 null |
+| status | string | 是 | accepted / review_required / irrelevant / extract_failed / unsupported_format |
+| extraction_method | string | 是 | site_selector / cms_rule / ai / density / fallback / pdf / docx / xlsx / none |
+
+显式 null、未知字段、非法 URL、非法状态、非法哈希、非法 score 和非法 evidence 必须两端一致拒绝。
+
+
+## 15. TASK-019B-4：crawler:html v2 消费与 crawler:result 发布
+
+TASK-019B-4 已接通 Python 侧 v2 详情链：
+
+- 正式链 `workers/parser_worker.py` 是 `crawler:html` 的单 BRPOP 消费者，按 `protocol_version` 显式分流；缺版本与 `1.0` 走 legacy/v1，`2.0` 走 B1 `HTMLMessageV2` 严格解码。`parser/redis_worker.py` 已在 TASK-019B-4C 退役并删除，不再参与任何消息消费。
+- 显式 null、非字符串版本、未知版本、非法 JSON、非对象 JSON、未知字段、非法 URL/MIME 均拒绝；解码失败不回退 v1，也不发布 v1 ErrorMessage。
+- 每个合法 `HTMLMessageV2` 生成并严格验证一个 `ArticleResultV2`，写入 `crawler:result`。
+- `extract_failed/review_required/irrelevant/accepted` 均发布；不静默删除低分、不相关或待复核结果。
+- 原始 HTML 仅存在于消息与进程内存中，不写入 ArticleResultV2、文件、MySQL、DuckDB 或附件目录。
+- 当前 `crawler:result` 的 Go 持久化消费者尚未接通，当前检查点不可部署。
+- B3 Windows Race Detector 已正式通过；B4 未修改 Go 队列或下载代码，也未重复执行 Race Detector。
+- TASK-019B-4C 已退役并删除 `parser/redis_worker.py`；`workers/parser_worker.py` 是唯一正式 Python 消费者。
+
+- TASK-019B-4D 已退役 `api/server.py` 内联 Redis Parser；`api/server.py` 不再读取或消费 `crawler:html`。
+
+## 16. TASK-019B-5 存储合同说明
+
+- ArticleResultV2 仍发布到 `crawler:result`。
+- Go v2 生产消费者尚未接入；当前 `crawler:result` 仍由旧 ResultMessage v1 路径消费。
+- TASK-019B-5 仅建立 `articles/task_articles` 与 `PersistArticleResultV2` 合同，未接线、未执行迁移、不可部署。
+
+## 17. TASK-019B-6：crawler:result 分流已接通
+
+- 正式 Worker 使用单次 `PopResultDispatch()` 显式分流。
+- 缺失版本与 `1.0` 继续走旧 v1 ResultMessage 路径。
+- `2.0` 严格解码 ArticleResultV2，并调用 `PersistArticleResultV2`。
+- v2 不更新旧 task 状态、不修改 article_count、不经过旧 URL 去重。
+- `PopResultMessage/PopResult` 保留兼容，但不再作为生产入口。
+- 当前无 ACK/重试/死信/背压；BRPOP 后数据库瞬时失败可能丢失消息，由 TASK-021 处理。
+
+## 18. TASK-019B-7 隔离 E2E 结果
+
+- 真实隔离 Redis/MySQL 已验证 `crawler:result` 正式消费者到 `PersistArticleResultV2` 的路径。
+- replay、conflict rollback、全部状态、legacy/v1 共存和非法版本隔离均通过。
+- BRPOP 仍无 ACK、重试、死信或背压；该风险保留。
+
+## 19. TASK-019B-8/8R 全链验证
+
+- crawler:url 正式分流修复为显式 protocol_version 判定；null/非字符串拒绝且不下载。
+- 本地 httptest 到正式 Python parser 再到 Go 持久化路径通过。
+- PDF MIME 不产生 HTML/result；非法消息后合法 barrier 贯通。
+- Redis BRPOP 仍无 ACK、重试、死信和背压。
+
+## 20. PDF/Office MIME 边界
+
+- v2 下载链仅接受 `text/html` 与 `application/xhtml+xml`。
+- PDF/Office MIME 在 Go `FetchHTML` 阶段拒绝，不产生 `crawler:html` 或 `crawler:result`。
+- `unsupported_format` 只是协议状态，当前不由正式链生成。

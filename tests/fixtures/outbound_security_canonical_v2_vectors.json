@@ -1,0 +1,193 @@
+{
+  "format_version": "1.0",
+  "profile": "OSEC-EVIDENCE-PROFILE-V2",
+  "amendment": "OSEC-EVIDENCE-PROFILE-V2-AMENDMENT-1",
+  "canonical_json_version": "OSEC-CANONICAL-JSON-V2",
+  "canonical_case_version": "OSEC-CANONICAL-CASE-V2",
+  "evidence_limits_version": "OSEC-EVIDENCE-LIMITS-V2",
+  "provenance": {
+    "method": "independently_constructed"
+  },
+  "inherits_v1_valid_vectors": {
+    "fixture_path": "tests/fixtures/outbound_security_aggregate_vectors.json",
+    "normalized_lf_sha256": "3dd12b56d4f04af48ffd7d5f1d27246524aa9b4d0aab063646c30f915a6407cc",
+    "valid_vector_count": 25,
+    "required_valid_names": [
+      "canonical_case_id_64",
+      "canonical_case_minimal",
+      "canonical_cjk",
+      "canonical_control_short",
+      "canonical_control_u00xx",
+      "canonical_crlf_equivalent",
+      "canonical_depth_128",
+      "canonical_html_specials",
+      "canonical_integer_zero",
+      "canonical_internal_bom",
+      "canonical_key_sort_ascii_cjk_nonbmp",
+      "canonical_large_integer",
+      "canonical_literal_backslash_u",
+      "canonical_negative_zero",
+      "canonical_nested_key_sort",
+      "canonical_null_empty_distinction",
+      "canonical_quote_backslash",
+      "canonical_slash",
+      "canonical_surrogate_pair",
+      "canonical_type_int_bool_string",
+      "canonical_u007f_c1",
+      "canonical_u2028",
+      "canonical_u2029",
+      "canonical_unicode_object_key",
+      "canonical_whitespace_equivalent"
+    ]
+  },
+  "valid_vectors": [
+    {
+      "name": "number_1_0",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "312e30",
+      "expected_canonical_utf8_hex": "312e30",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_443_0",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "3434332e30",
+      "expected_canonical_utf8_hex": "3434332e30",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_1_00",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "312e3030",
+      "expected_canonical_utf8_hex": "312e3030",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_1e5",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "316535",
+      "expected_canonical_utf8_hex": "316535",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_1E_plus_5",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "31452b35",
+      "expected_canonical_utf8_hex": "31452b35",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_negative_zero_fraction",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "2d302e30",
+      "expected_canonical_utf8_hex": "2d302e30",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_zero_fraction",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "302e30",
+      "expected_canonical_utf8_hex": "302e30",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_0_10",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "302e3130",
+      "expected_canonical_utf8_hex": "302e3130",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_1e_minus_5",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "31652d35",
+      "expected_canonical_utf8_hex": "31652d35",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "number_negative_1_25e_plus_3",
+      "target": "canonical_json",
+      "input_json_utf8_hex": "2d312e3235652b33",
+      "expected_canonical_utf8_hex": "2d312e3235652b33",
+      "expected_case_sha256": null
+    },
+    {
+      "name": "canonical_case_p004_shape",
+      "target": "canonical_case",
+      "input_json_utf8_hex": "7b22706f727473223a7b226874747073223a5b3434332e305d7d2c226964223a22702d303034227d",
+      "expected_canonical_utf8_hex": "7b226964223a22702d303034222c22706f727473223a7b226874747073223a5b3434332e305d7d7d",
+      "expected_case_sha256": "b3c3de96070b6b1e777448472e515f8846d84db69b3d824b6d81a649d9778b71"
+    },
+    {
+      "name": "canonical_case_ver003_shape",
+      "target": "canonical_case",
+      "input_json_utf8_hex": "7b2276616c7565223a312e302c226964223a227665722d303033227d",
+      "expected_canonical_utf8_hex": "7b226964223a227665722d303033222c2276616c7565223a312e307d",
+      "expected_case_sha256": "e5de3e28f87e3de599befb0eab0a64249b00322eabde9c5d66cd9eb4c1171890"
+    }
+  ],
+  "resource_recipes": [
+    {
+      "name": "number_digits_4096_valid",
+      "generator": "non_integer_digit_count",
+      "count": 4096,
+      "output_kind": "json_number",
+      "expected_input_sha256": "1a333e81edc3d2d2b16b1617f30d3958e34d081c50c7712a9fb2912276d08cbb",
+      "expected_outcome": "valid",
+      "expected_stage": "canonical",
+      "expected_error": null
+    },
+    {
+      "name": "number_digits_4097_reject",
+      "generator": "non_integer_digit_count",
+      "count": 4097,
+      "output_kind": "json_number",
+      "expected_input_sha256": "c92a1c339eafdca9beace977107a9f396a12f1f29972654b7277d8c3e0106ede",
+      "expected_outcome": "reject",
+      "expected_stage": "evidence_limits",
+      "expected_error": "evidence_limit_number_digits"
+    }
+  ],
+  "direct_wrapper_vectors": [
+    {
+      "name": "direct_wrapper_integer_lexeme",
+      "raw_lexeme_utf8_hex": "31",
+      "expected_error": "canonical_invalid_number_lexeme"
+    },
+    {
+      "name": "direct_wrapper_leading_plus",
+      "raw_lexeme_utf8_hex": "2b312e30",
+      "expected_error": "canonical_invalid_number_lexeme"
+    },
+    {
+      "name": "direct_wrapper_leading_zero",
+      "raw_lexeme_utf8_hex": "30312e30",
+      "expected_error": "canonical_invalid_number_lexeme"
+    },
+    {
+      "name": "direct_wrapper_truncated_exponent",
+      "raw_lexeme_utf8_hex": "3165",
+      "expected_error": "canonical_invalid_number_lexeme"
+    },
+    {
+      "name": "direct_wrapper_nan",
+      "raw_lexeme_utf8_hex": "4e614e",
+      "expected_error": "canonical_invalid_number_lexeme"
+    },
+    {
+      "name": "direct_wrapper_infinity",
+      "raw_lexeme_utf8_hex": "496e66696e697479",
+      "expected_error": "canonical_invalid_number_lexeme"
+    },
+    {
+      "name": "direct_wrapper_whitespace",
+      "raw_lexeme_utf8_hex": "20312e30",
+      "expected_error": "canonical_invalid_number_lexeme"
+    },
+    {
+      "name": "direct_wrapper_non_ascii_digit",
+      "raw_lexeme_utf8_hex": "efbc912e30",
+      "expected_error": "canonical_invalid_number_lexeme"
+    }
+  ]
+}

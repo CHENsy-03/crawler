@@ -120,7 +120,7 @@ def _html_response(body=None, url="https://example.gov.cn/search", status=200):
 def test_ready_plan_executes():
     plan = _plan()
     fetcher = FakeFetcher(_html_response())
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert [item.url for item in result.items] == [
         "https://example.gov.cn/a.html",
@@ -131,7 +131,7 @@ def test_ready_plan_executes():
 def test_draft_plan_makes_zero_requests():
     plan = _plan(status="draft")
     fetcher = FakeFetcher(_html_response())
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert not result.success
     assert result.failure_code == "plan_not_executable"
     assert fetcher.calls == []
@@ -140,7 +140,7 @@ def test_draft_plan_makes_zero_requests():
 def test_unknown_status_makes_zero_requests():
     plan = _plan(status="blocked")
     fetcher = FakeFetcher(_html_response())
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "plan_not_executable"
     assert fetcher.calls == []
 
@@ -149,7 +149,7 @@ def test_fingerprint_mismatch_rejected():
     plan = _plan()
     bad = replace(plan, plan_id="tampered")
     fetcher = FakeFetcher(_html_response())
-    result = execute_search_plan(bad, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(bad, "k", fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "plan_invalid"
     assert fetcher.calls == []
 
@@ -159,7 +159,7 @@ def test_missing_selectors_rejected():
     missing = replace(plan, selectors=SearchSelectors("", "", "", "", ""), plan_id="")
     missing = replace(missing, plan_id=compute_plan_id(missing))
     fetcher = FakeFetcher(_html_response())
-    result = execute_search_plan(missing, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(missing, "k", fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "plan_not_executable"
     assert fetcher.calls == []
 
@@ -167,7 +167,7 @@ def test_missing_selectors_rejected():
 def test_get_request_keyword_encoded_once():
     plan = _plan()
     fetcher = FakeFetcher(_html_response())
-    execute_search_plan(plan, ("低空经济",), fetcher=fetcher, policy=POLICY)
+    execute_search_plan(plan, "低空经济", fetcher=fetcher, policy=POLICY)
     assert fetcher.calls[0].body is None
     assert "q=%E4%BD%8E%E7%A9%BA%E7%BB%8F%E6%B5%8E" in fetcher.calls[0].url
 
@@ -194,7 +194,7 @@ def test_post_form_body_uses_structured_request_shape():
     )
     plan = replace(base, plan_id=compute_plan_id(base))
     fetcher = FakeFetcher(_html_response())
-    execute_search_plan(plan, ("低空经济",), fetcher=fetcher, policy=POLICY)
+    execute_search_plan(plan, "低空经济", fetcher=fetcher, policy=POLICY)
     body = fetcher.calls[0].body.decode("utf-8")
     assert "siteCode=abc" in body
     assert "q=" in body
@@ -216,7 +216,7 @@ def test_json_plan_constructs_json_body():
             None,
         )
     )
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     body = json.loads(fetcher.calls[0].body.decode("utf-8"))
     assert body["query"]["kw"] == "k"
@@ -226,14 +226,14 @@ def test_json_duplicate_keys_rejected():
     plan = _json_plan()
     body = b'{"data":{"items":[{"title":"A","title":"B","url":"https://api.example.gov.cn/a"},{"title":"C","url":"https://api.example.gov.cn/b"}]}}'
     fetcher = FakeFetcher(ProbeOutcome(SearchProbeResponse(200, "application/json", body, "https://api.example.gov.cn/search", 0), None))
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
 def test_transport_failure_no_retry():
     plan = _plan()
     fetcher = FakeFetcher(error=RuntimeError("boom"))
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "transport_failure"
     assert len(fetcher.calls) == 1
 
@@ -241,7 +241,7 @@ def test_transport_failure_no_retry():
 def test_content_type_mismatch_rejected():
     plan = _plan()
     fetcher = FakeFetcher(ProbeOutcome(SearchProbeResponse(200, "text/plain", b"plain", plan.endpoint, 0), None))
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "response_rejected"
 
 
@@ -249,7 +249,7 @@ def test_empty_html_result_is_no_results():
     plan = _plan()
     body = b"<html><body>no results</body></html>"
     fetcher = FakeFetcher(_html_response(body=body))
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.failure_code == "no_results"
     assert result.items == ()
 
@@ -257,7 +257,7 @@ def test_empty_html_result_is_no_results():
 def test_result_repr_does_not_leak_body_or_keyword():
     plan = _plan()
     fetcher = FakeFetcher(_html_response())
-    result = execute_search_plan(plan, ("secret-keyword",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "secret-keyword", fetcher=fetcher, policy=POLICY)
     assert "secret-keyword" not in repr(result)
     assert "html" not in repr(result).lower()
 
@@ -274,6 +274,6 @@ def test_multipage_html_plan_executes_through_adapter():
     base = replace(_plan(), pagination=pagination)
     plan = replace(base, plan_id=compute_plan_id(base))
     fetcher = FakeFetcher(_html_response())
-    result = execute_search_plan(plan, ("k",), fetcher=fetcher, policy=POLICY)
+    result = execute_search_plan(plan, "k", fetcher=fetcher, policy=POLICY)
     assert result.success
     assert len(fetcher.calls) == 2

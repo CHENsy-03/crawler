@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, replace
 
-from protocol.messages import SearchRequestedMessage, URLMessage
+from protocol.messages import SearchRequestedMessage, URLMessageV2
 
 import crawler.search.search_orchestrator as orch
 from crawler.search.plan_builder import PlanBuildResult
@@ -106,8 +106,8 @@ class FakeExecutor:
         self.result = result
         self.calls = []
 
-    def __call__(self, plan, keywords, *, fetcher, policy):
-        self.calls.append((plan, keywords))
+    def __call__(self, plan, query_term, *, fetcher, policy):
+        self.calls.append((plan, query_term))
         return self.result
 
 
@@ -173,18 +173,20 @@ def test_cache_hit_executes_and_publishes_url_message(monkeypatch):
         publisher=publisher,
     )
     assert result.status == "published"
-    assert result.published_count == 1
+    assert result.published_count == 2
     assert analyzer.calls == []
     assert builder.calls == []
-    assert len(publisher.messages) == 1
-    assert isinstance(publisher.messages[0], URLMessage)
+    assert len(publisher.messages) == 2
+    assert isinstance(publisher.messages[0], URLMessageV2)
     payload = publisher.messages[0].to_dict()
     assert "time" not in payload
     assert payload["task_id"] == "task-1"
     assert payload["url"] == "https://example.gov.cn/a.html"
-    assert payload["site"] == "example.gov.cn"
-    assert payload["keyword"] == "k1"
+    assert payload["original_query"] == "k1"
+    assert payload["query_term"] == "k1"
+    assert payload["source"] == "example.gov.cn"
     assert payload["level"] == 0
+    assert publisher.messages[1].to_dict()["original_query"] == "k2"
 
 
 def test_draft_cache_is_not_treated_as_hit(monkeypatch):
@@ -255,7 +257,7 @@ def test_miss_pipeline_builds_caches_executes_publishes(monkeypatch):
     )
     assert result.status == "published"
     assert len(cache.write_calls) == 1
-    assert len(publisher.messages) == 1
+    assert len(publisher.messages) == 2
 
 
 def test_all_probes_fail_without_publishing(monkeypatch):
