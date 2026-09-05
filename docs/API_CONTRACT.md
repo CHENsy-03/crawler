@@ -80,6 +80,7 @@
 | 403 | 无权限或 CSRF 失败 |
 | 404 | 资源不存在 |
 | 409 | 状态冲突或幂等冲突 |
+| 410 | 资源/游标已过期或不可恢复 |
 | 422 | 业务规则校验失败 |
 | 429 | 限流或背压 |
 | 500 | 内部错误 |
@@ -106,13 +107,13 @@
 | `/auth/tokens` | POST | Session | 创建 API Token，secret 只在创建响应出现一次 | 201 | Idempotency-Key | N/A | token_limit_exceeded | NOT_STARTED |
 | `/auth/tokens/{tokenId}` | DELETE | Session | 吊销 Token | 204 | 幂等 | N/A | not_found | NOT_STARTED |
 | `/tasks` | GET | Session/Token | 任务列表按 status/created_at 筛选 | 200 | 幂等 | 是 | validation_error | NOT_STARTED |
-| `/tasks` | POST | Session/Token | 创建 DRAFT；body: site_code,keywords,mode,limits | 201 | Idempotency-Key | N/A | site_not_found, limits_invalid | NOT_STARTED |
+| `/tasks` | POST | Session/Token | 创建 DRAFT；body: site_code,keywords,mode,limits | 201 | Idempotency-Key | N/A | site_not_found, limits_invalid, task_limit_exceeded | NOT_STARTED |
 | `/tasks/{taskId}/scope-suggestion` | POST | Session/Token | 创建任务返回范围建议，不开始执行 | 200 | Idempotency-Key | N/A | task_not_found, state_conflict | NOT_STARTED |
-| `/tasks/{taskId}/confirm` | POST | Session/Token | 确认范围并进入 QUEUED | 200 | Idempotency-Key | N/A | state_conflict, over_limit | NOT_STARTED |
+| `/tasks/{taskId}/confirm` | POST | Session/Token | 确认范围并进入 QUEUED | 200 | Idempotency-Key | N/A | state_conflict, over_limit, task_limit_exceeded | NOT_STARTED |
 | `/tasks/{taskId}` | GET | Session/Token | 返回任务状态、阶段、进度和 checkpoint | 200 | 幂等 | N/A | not_found | NOT_STARTED |
 | `/tasks/{taskId}/cancel` | POST | Session/Token | 请求取消，进入 CANCELLING | 202 | Idempotency-Key | N/A | state_conflict, already_terminal | NOT_STARTED |
 | `/tasks/{taskId}/retry` | POST | Session/Token | 保留原任务终态，创建新 CrawlTask；响应返回 new_task_id 和 source_task_id | 201 | Idempotency-Key | N/A | not_retryable, state_conflict | NOT_STARTED |
-| `/tasks/{taskId}/events` | GET SSE | Session/Token | task event 流；Last-Event-ID 恢复 | 200 | N/A | event_id 游标 | unauthorized | NOT_STARTED |
+| `/tasks/{taskId}/events` | GET SSE | Session/Token | task event 流；Last-Event-ID 恢复 | 200 | N/A | event_id 游标 | unauthorized, event_history_expired | NOT_STARTED |
 | `/results` | GET | Session/Token | 结果列表含任务、站点、审核状态 | 200 | 幂等 | 是 | validation_error | NOT_STARTED |
 | `/results/{articleId}` | GET | Session/Token | 返回规范化正文、证据、审核状态 | 200 | 幂等 | N/A | not_found | NOT_STARTED |
 | `/results/{articleId}/review` | PUT | Session | 审核决定 approved/rejected/needs_review | 200 | Idempotency-Key | N/A | state_conflict, evidence_missing | NOT_STARTED |
@@ -142,7 +143,7 @@
 - 客户端用 `Last-Event-ID` 恢复断档。
 - 服务端每 15 秒发送 heartbeat。
 - 客户端 45 秒无事件时重连。
-- 服务端只保留最近 N 条任务事件；断档超过保留窗口时返回 410 或要求 polling。
+- 服务端只保留最近 N 条任务事件；Last-Event-ID 早于保留窗口时，在建立 `text/event-stream` 前返回 410 错误 envelope，错误码为 `event_history_expired`；客户端获取任务快照后再按新 cursor 恢复。
 - SSE 不可用时前端按 5 秒 polling fallback。
 
 事件类型：
@@ -155,6 +156,17 @@
 | result_persisted | task_id, article_id, article_key |
 | task_error | task_id, error_code, retryable, request_id |
 | export_finished | job_id, download_url |
+
+## 6.1 任务硬上限与 SSE 恢复错误
+
+- V1.0 §7.4 的关键词、搜索页、候选量或策略硬上限使用 canonical `task_limit_exceeded`，HTTP 422。
+- 请求结构、字段类型校验仍使用 `validation_error`，HTTP 400。
+- 既有 `over_limit` 429 保持限流/背压语义；后续 `/api/v1` 任务硬上限优先使用更具体的 422。
+- Last-Event-ID 早于 SSE 保留窗口使用 canonical `event_history_expired`，HTTP 410；错误发生在成功建立流之前，已建立流不改成 HTTP 410。
+- 导出文件过期仍使用 `export_expired`，HTTP 410。
+- 错误响应使用统一 JSON envelope，不回显 session/token secret、内部存储路径、内部异常栈或原始凭证。
+
+canonical 字典版本已更新为 1.1；完整计数与兼容决策见 `docs/STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md`。ADR-026 格式勘误见 `docs/decisions/ADR-026-opaque-ulid-identifier-contract.md`。
 ## 7. 关键请求/响应对象
 
 ### Task

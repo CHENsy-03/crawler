@@ -243,7 +243,7 @@ func TestStatusErrorEventDictionaryStatusMetadata(t *testing.T) {
 
 func TestStatusErrorEventDictionaryErrorMetadataAndCounts(t *testing.T) {
 	fixture := loadDictionaryFixture(t)
-	if len(fixture.Errors) != 61 {
+	if len(fixture.Errors) != 63 {
 		t.Fatalf("error count %d", len(fixture.Errors))
 	}
 	counts := map[string]int{}
@@ -259,8 +259,40 @@ func TestStatusErrorEventDictionaryErrorMetadataAndCounts(t *testing.T) {
 			t.Fatalf("client exposable error missing http status")
 		}
 	}
-	if counts["NEVER"] != 44 || counts["ALWAYS"] != 8 || counts["CONDITIONAL"] != 9 {
+	if counts["NEVER"] != 46 || counts["ALWAYS"] != 8 || counts["CONDITIONAL"] != 9 {
 		t.Fatalf("retryability counts: %v", counts)
+	}
+}
+
+func TestStatusErrorEventDictionaryScenarioErrorMetadata(t *testing.T) {
+	fixture := loadDictionaryFixture(t)
+	if fixture.ContractVersion != "1.1" {
+		t.Fatalf("contract version %q", fixture.ContractVersion)
+	}
+	byCode := map[string]fixtureError{}
+	for _, item := range fixture.Errors {
+		byCode[item.CanonicalCode] = item
+	}
+	for code, wantStatus := range map[string]int{
+		"validation_error":      400,
+		"task_limit_exceeded":   422,
+		"event_history_expired": 410,
+		"over_limit":            429,
+		"export_expired":        410,
+	} {
+		item, ok := byCode[code]
+		if !ok {
+			t.Fatalf("missing canonical error %s", code)
+		}
+		if !item.ClientExposable || item.Namespace == "" || item.CompatibilityClass != "CANONICAL" {
+			t.Fatalf("metadata mismatch for %s: %+v", code, item)
+		}
+		if item.HTTPStatus == nil || *item.HTTPStatus != wantStatus {
+			t.Fatalf("http status mismatch for %s: %+v", code, item)
+		}
+	}
+	if len(fixture.CompatibilityDecisions) != 6 {
+		t.Fatalf("compatibility decision count %d", len(fixture.CompatibilityDecisions))
 	}
 }
 
