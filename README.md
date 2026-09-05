@@ -14,6 +14,7 @@
 - [V1.1 差异矩阵](docs/baselines/V1.0_V1.1_DELTA_MATRIX.md)
 - [阅读与批准证明](docs/baselines/V1.0_V1.1_READ_ATTESTATION.md)
 - [状态/错误/事件字典](docs/STATUS_ERROR_EVENT_DICTIONARY_V1.0_V1.1.md)
+- [V1.0/V1.1 数据模型](docs/DATA_MODEL_V1.0_V1.1.md)
 
 V1.0/V1.1 固化不表示产品代码已完成，当前发布状态仍为 RELEASE_BLOCKED。
 
@@ -85,6 +86,8 @@ V1.0/V1.1 固化不表示产品代码已完成，当前发布状态仍为 RELEAS
 - [docs/decisions/ADR-023-react-typescript-vite-frontend.md](docs/decisions/ADR-023-react-typescript-vite-frontend.md)
 - [docs/decisions/ADR-024-go-unique-external-gateway.md](docs/decisions/ADR-024-go-unique-external-gateway.md)
 - [docs/decisions/ADR-025-redis-streams-transactional-outbox.md](docs/decisions/ADR-025-redis-streams-transactional-outbox.md)
+- [docs/decisions/ADR-026-opaque-ulid-identifier-contract.md](docs/decisions/ADR-026-opaque-ulid-identifier-contract.md)
+- [migrations/mysql/README.md](migrations/mysql/README.md)：MySQL migration 执行契约
 
 ## 仓库目录导航
 

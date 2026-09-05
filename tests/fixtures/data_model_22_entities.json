@@ -1,0 +1,66 @@
+{
+  "contract_version": "1.1",
+  "v1_0_entities": [
+    "Admin", "Session", "APIToken", "IdempotencyRecord", "CrawlTask", "TaskAttempt", "TaskStage", "TaskEvent", "SearchCandidate", "FetchArtifact", "Article", "ArticleVersion", "TaskArticle", "ReviewDecision", "ExportJob", "Site", "Plugin", "OutboxEvent", "AuditLog", "DeadLetter", "Checkpoint"
+  ],
+  "v1_1_added_entities": ["GlobalBlockEntry"],
+  "entities": [
+    "Admin", "Session", "APIToken", "IdempotencyRecord", "CrawlTask", "TaskAttempt", "TaskStage", "TaskEvent", "SearchCandidate", "FetchArtifact", "Article", "ArticleVersion", "TaskArticle", "ReviewDecision", "ExportJob", "Site", "Plugin", "OutboxEvent", "AuditLog", "DeadLetter", "Checkpoint", "GlobalBlockEntry"
+  ],
+  "tables": [
+    "admin", "session", "api_token", "idempotency_record", "crawl_task", "task_attempt", "task_stage", "task_event", "search_candidate", "fetch_artifact", "article", "article_version", "task_article", "review_decision", "export_job", "site", "plugin", "outbox_event", "audit_log", "dead_letter", "checkpoint", "global_block_entry"
+  ],
+  "primary_keys": {
+    "Admin": "admin_id",
+    "Session": "session_id",
+    "APIToken": "token_id",
+    "IdempotencyRecord": "idempotency_record_id",
+    "CrawlTask": "task_id",
+    "TaskAttempt": "attempt_id",
+    "TaskStage": "stage_id",
+    "TaskEvent": "event_id",
+    "SearchCandidate": "candidate_id",
+    "FetchArtifact": "artifact_id",
+    "Article": "article_id",
+    "ArticleVersion": "article_version_id",
+    "TaskArticle": "task_article_id",
+    "ReviewDecision": "decision_id",
+    "ExportJob": "job_id",
+    "Site": "site_code",
+    "Plugin": "plugin_id",
+    "OutboxEvent": "outbox_event_id",
+    "AuditLog": "audit_log_id",
+    "DeadLetter": "dead_letter_id",
+    "Checkpoint": "checkpoint_id",
+    "GlobalBlockEntry": "block_entry_id"
+  },
+  "ulid_entities": [
+    "Admin", "Session", "APIToken", "IdempotencyRecord", "CrawlTask", "TaskAttempt", "TaskStage", "TaskEvent", "SearchCandidate", "FetchArtifact", "Article", "ArticleVersion", "TaskArticle", "ReviewDecision", "ExportJob", "Site", "Plugin", "OutboxEvent", "DeadLetter", "Checkpoint", "GlobalBlockEntry"
+  ],
+  "audit_log_exception_entity": "AuditLog",
+  "primary_key_type": "CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL",
+  "audit_log_primary_key_type": "BIGINT UNSIGNED NOT NULL AUTO_INCREMENT",
+  "sample_primary_keys": {
+    "Admin": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+    "Session": "01ARZ3NDEKTSV4RRFFQ69G5FAW",
+    "APIToken": "01ARZ3NDEKTSV4RRFFQ69G5FAX",
+    "IdempotencyRecord": "01ARZ3NDEKTSV4RRFFQ69G5FAY",
+    "CrawlTask": "01ARZ3NDEKTSV4RRFFQ69G5FAZ",
+    "TaskAttempt": "01ARZ3NDEKTSV4RRFFQ69G5FB2",
+    "TaskStage": "01ARZ3NDEKTSV4RRFFQ69G5FB3",
+    "TaskEvent": "01ARZ3NDEKTSV4RRFFQ69G5FB4",
+    "SearchCandidate": "01ARZ3NDEKTSV4RRFFQ69G5FB5",
+    "FetchArtifact": "01ARZ3NDEKTSV4RRFFQ69G5FB6",
+    "Article": "01ARZ3NDEKTSV4RRFFQ69G5FB7",
+    "ArticleVersion": "01ARZ3NDEKTSV4RRFFQ69G5FB8",
+    "TaskArticle": "01ARZ3NDEKTSV4RRFFQ69G5FB9",
+    "ReviewDecision": "01ARZ3NDEKTSV4RRFFQ69G5FBA",
+    "ExportJob": "01ARZ3NDEKTSV4RRFFQ69G5FBB",
+    "Site": "01ARZ3NDEKTSV4RRFFQ69G5FBC",
+    "Plugin": "01ARZ3NDEKTSV4RRFFQ69G5FBD",
+    "OutboxEvent": "01ARZ3NDEKTSV4RRFFQ69G5FBE",
+    "DeadLetter": "01ARZ3NDEKTSV4RRFFQ69G5FBF",
+    "Checkpoint": "01ARZ3NDEKTSV4RRFFQ69G5FBG",
+    "GlobalBlockEntry": "01ARZ3NDEKTSV4RRFFQ69G5FBH"
+  }
+}

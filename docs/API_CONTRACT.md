@@ -23,6 +23,8 @@
 - 认证：浏览器会话 Cookie 或 `Authorization: Bearer <api_token>`，二选一，禁止混用
 - CSRF：同源浏览器写请求携带 CSRF token；API Token 请求不要求 Cookie CSRF
 - 版本：OpenAPI 为权威，版本采用 `/api/v1` 路径和向后兼容废弃策略
+- 目标实体 ID：task_id、article_id、article_version_id、task_article_id、job_id、plugin_id、tokenId、session_id 等实体 ID 直接使用对应 MySQL ULID 主键文本；JSON 类型为 string，不进行 BINARY(16)、Base64 或数字转换
+- ID 格式权威：canonical ULID 定义见 [ADR-026](decisions/ADR-026-opaque-ulid-identifier-contract.md)；输入引用必须通过 canonical ULID 校验，输出保持 26 位大写字符串
 
 ## 2. JSON Envelope 与错误模型
 

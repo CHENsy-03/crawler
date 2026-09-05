@@ -107,6 +107,70 @@
 - 发布仍为 RELEASE_BLOCKED
 - DEV-002 等待独立只读 R4
 
+### DEV-004 Added
+
+- 建立当前权威数据模型：`docs/DATA_MODEL_V1.0_V1.1.md`
+- 新增 22 实体 forward migration 与 down migration
+- 新增 Go 数据模型元数据与契约测试
+- 新增 22 实体 fixture
+- 未实现 API、Redis Streams、Outbox dispatcher、GlobalBlockEntry 运行时或 AuditLog 业务代码
+- 真实 MySQL 执行未验证
+- 发布仍为 RELEASE_BLOCKED
+- DEV-004 等待独立只读 Review
+
+### DEV-004 Fixed (B3)
+
+- 新增 ADR-026：21 类非审计实体 canonical ULID 主键契约，AuditLog 作为唯一 AUTO_INCREMENT 例外
+- 0002 forward/down 改为 fail-closed：只支持空的 migration 0001 前置状态；拒绝非空 legacy 数据；down 拒绝删除有数据目标表
+- 六处 task_id FK 收敛为 CHAR(26) ascii ascii_bin，真实 MySQL 8 创建无 errno 3780
+- ReviewDecision 改为 hold_artifact_id/hold_artifact_checksum/evidence_schema_version 强引用，并移除对可清理 ArticleVersion 的强 FK
+- GlobalBlockEntry 字段收敛为 match_type/pattern_normalized/reason_code/reason_summary 并增加活动唯一与查询索引
+- TaskArticle 增加 persisted_at/relevance_score/review_state 和四种窄列表索引
+- Go 正式模型从元数据注册表升级为 22 实体字段模型
+- 新增 100k Article/200k TaskArticle 真实 MySQL EXPLAIN 验证证据
+- 未实现非空 legacy 内容迁移、不可变存储引用、AuditLog 业务写入、API、Redis Streams 或 Outbox
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- 发布仍为 RELEASE_BLOCKED
+- DEV-004 等待独立只读 R2
+
+### DEV-004 Fixed (B4)
+
+- 0002 up/down 移除 CREATE PROCEDURE/CALL/DELIMITER/GROUP_CONCAT guard，改用会话级 TEMPORARY TABLE
+- 空库、结构漂移和非空 legacy 状态返回可识别 guard 错误，不再出现 raw 1146
+- down 在目标表非空、legacy 非空、纯 0001、legacy singular 或 partial 状态均 fail closed
+- 新增 `migrations/mysql/README.md` migration 执行契约
+- 六类 100k/200k EXPLAIN SQL 已固化，Q5 使用规范化 OR/keyset 形式
+- 未实现非空 legacy 内容迁移、不可变存储引用、API、Redis Streams 或 Outbox
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- 发布仍为 RELEASE_BLOCKED
+- DEV-004 等待独立只读 R3
+
+### DEV-004 Fixed (B5)
+
+- migration SQL 增加 MySQL 8.0.16+ 版本能力门禁与 certified 8.0.46 执行契约
+- up/down 在创建 guard 前自行启用 SESSION STRICT_ALL_TABLES 并验证
+- 修正 B4 第四测试数据库历史范围偏差记录：guard_b4 标记 UNAUTHORIZED_AT_EXECUTION，所有者处置为 ACCEPTED_HISTORICAL_SCOPE_DEVIATION_NON_PRECEDENTIAL
+- evidence 文件更名为 `DEV004_MYSQL8_VALIDATION.md` 并分节记录 B3/B4/B5
+- 非 strict 初始 SESSION 下完成真实 MySQL B5 状态矩阵
+- CHECK 约束经真实插入拒绝验证
+- 未实现非空 legacy 内容迁移、API、Redis Streams、Outbox 或 production loader
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- 发布仍为 RELEASE_BLOCKED
+- DEV-004 等待独立只读 R4
+
+### DEV-004 Fixed (B6)
+
+- 修复 R4 P1：preflight 版本/strict guard 不再使用 CHECK
+- 改为会话级 TEMPORARY TABLE 命名 UNIQUE KEY 重复键碰撞
+- MariaDB 通过 VERSION() 和 @@version_comment 双来源显式排除
+- 支持谓词固定为 MySQL 8.0、patch>=16
+- evidence 新增 B6 分节并注明历史 migration 哈希仅对应当时版本
+- 8.0.15 无本地镜像且禁止 pull，标记 MYSQL_8_0_15_RUNTIME_NOT_EXECUTED
+- 未实现非空 legacy 内容迁移、API、Redis Streams、Outbox 或 production loader
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- 发布仍为 RELEASE_BLOCKED
+- DEV-004 等待独立只读 R5
+
 ### Added
 
 - Product Design V1.0 历史文档记录：`docs/PRODUCT_DESIGN_V1.0.md`，后续已由 DOCX V1.0 主基线与 V1.1 附属补丁取代
