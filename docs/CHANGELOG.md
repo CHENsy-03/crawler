@@ -171,6 +171,18 @@
 - 发布仍为 RELEASE_BLOCKED
 - DEV-004 等待独立只读 R5
 
+### DEV-004 Integrated
+
+- 独立只读 R5 返回 DEV004_REVIEW_R5_PASS_WAITING_COMMIT_AUTHORIZATION
+- 候选提交为 e508ab82282be2ccf6b96705b1f1a2b7f74c062d
+- GitHub PR #7 使用普通 merge commit 集成
+- 集成提交为 c508f5bcb2164d0983222a6ac3150d28a61f594e
+- dev_004=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- production_loader、deployment 和 release 仍保持阻断或未开始
+- DEV-003 是下一项开发任务，DEV-005 仍未开始
+- 本次集成只代表 DEV-004 数据模型资产完成，不代表产品功能、部署或发布完成
+
 ### Added
 
 - Product Design V1.0 历史文档记录：`docs/PRODUCT_DESIGN_V1.0.md`，后续已由 DOCX V1.0 主基线与 V1.1 附属补丁取代
