@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.0",
+  "contract_version": "1.1",
   "baseline_bundle": {
     "v1_0": {
       "file": "docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx",
@@ -176,7 +176,9 @@
     {"canonical_code":"not_found","namespace":"api","retryability":"NEVER","http_status":404,"client_exposable":true,"normative_source":"API_CONTRACT endpoint matrix","meaning":"generic resource not found","compatibility_class":"CANONICAL"},
     {"canonical_code":"export_not_supported","namespace":"export","retryability":"NEVER","http_status":422,"client_exposable":true,"normative_source":"API_CONTRACT endpoint matrix","meaning":"export format or scope unsupported","compatibility_class":"CANONICAL"},
     {"canonical_code":"not_ready","namespace":"api","retryability":"ALWAYS","http_status":503,"client_exposable":true,"normative_source":"API_CONTRACT endpoint matrix","meaning":"resource not ready","compatibility_class":"CANONICAL"},
-    {"canonical_code":"already_terminal","namespace":"task","retryability":"NEVER","http_status":409,"client_exposable":true,"normative_source":"API_CONTRACT endpoint matrix","meaning":"task already terminal","compatibility_class":"CANONICAL"}
+    {"canonical_code":"already_terminal","namespace":"task","retryability":"NEVER","http_status":409,"client_exposable":true,"normative_source":"API_CONTRACT endpoint matrix","meaning":"task already terminal","compatibility_class":"CANONICAL"},
+    {"canonical_code":"task_limit_exceeded","namespace":"api","retryability":"NEVER","http_status":422,"client_exposable":true,"normative_source":"V1.0 7.4; DEV003_CONTRACT_FIX_001","meaning":"task request exceeds a configured hard limit; revise the request before resubmission","compatibility_class":"CANONICAL"},
+    {"canonical_code":"event_history_expired","namespace":"api","retryability":"NEVER","http_status":410,"client_exposable":true,"normative_source":"V1.0 14.5; DEV003_CONTRACT_FIX_001","meaning":"Last-Event-ID precedes the retained task event history; obtain a task snapshot before resuming","compatibility_class":"CANONICAL"}
   ],
   "events": [
     {"event_type":"task_status_changed","family":"TASK_EVENT","transport":"SSE","version":"1","producer":"go_api","consumer":"web","normative_source":"API_CONTRACT SSE","payload_contract_owner":"DEV-003","compatibility_class":"CANONICAL"},
@@ -225,6 +227,7 @@
     {"id":"DEV002_DECISION_002","source":"V1.0 8.4 and current ArticleResultV2","current_value":"lower-case wire values","target_value":"upper-case canonical symbols with lower-case wire values","decision":"ArticleResultV2 and SearchPlan keep existing lower-case wire values while canonical symbols use upper-case names.","scope":"status wire value","work_package":"DEV-002"},
     {"id":"DEV002_DECISION_003","source":"V1.0 C.1-C.6 and current code","current_value":"mixed status groups","target_value":"domain-separated status groups","decision":"Task stage names, stage statuses, task statuses and article result statuses remain domain-separated.","scope":"status domains","work_package":"DEV-002"},
     {"id":"DEV002_DECISION_004","source":"V1.0 14.5 and V1.1 9-11","current_value":"unfrozen payload contracts","target_value":"contracts owned by DEV-003 and DEV-005","decision":"Full event payload contracts and Redis Stream payloads are deferred to DEV-003 and DEV-005.","scope":"events","work_package":"DEV-003/DEV-005"},
-    {"id":"DEV002_DECISION_005","source":"V1.0 9.3 and V1.1 5","current_value":"unfrozen state machine","target_value":"transition guards owned by DEV-204","decision":"State transition guards and complete state machine behavior are deferred to DEV-204.","scope":"state machine","work_package":"DEV-204"}
+    {"id":"DEV002_DECISION_005","source":"V1.0 9.3 and V1.1 5","current_value":"unfrozen state machine","target_value":"transition guards owned by DEV-204","decision":"State transition guards and complete state machine behavior are deferred to DEV-204.","scope":"state machine","work_package":"DEV-204"},
+    {"id":"DEV003_CONTRACT_FIX_001","source":"V1.0 7.4 and 14.5; DEV-003 P4 audit and CONTRACT-FIX-B1","current_value":"over_limit=429; no dedicated SSE history-expired code","target_value":"task_limit_exceeded=422; event_history_expired=410","decision":"Adds two scenario-specific canonical error codes while preserving all 61 existing error records. New /api/v1 task hard-limit errors use task_limit_exceeded=422. SSE Last-Event-ID outside retained history uses event_history_expired=410. NEVER means no automatic retry of the same request or expired cursor; clients may revise task parameters or obtain a fresh task snapshot before resuming.","scope":"public HTTP errors for task hard limits and SSE resumption","work_package":"DEV-003 shared contract fix"}
   ]
 }

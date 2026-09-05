@@ -183,6 +183,18 @@
 - DEV-003 是下一项开发任务，DEV-005 仍未开始
 - 本次集成只代表 DEV-004 数据模型资产完成，不代表产品功能、部署或发布完成
 
+### DEV-003 Contract Fix (B1)
+
+- canonical ULID 校验增加首字符 `0`—`7` 和 128 bit 溢出拒绝，修复前会接受 `8`/`9` 开头或 26 个 `Z` 的越界表示
+- ADR-026 修正 128 bit 结构、时间前缀可见性、ascii_bin 大小写语义与最大值说明
+- 新增 canonical error：`task_limit_exceeded` / 422、`event_history_expired` / 410
+- 字典 contract_version 更新为 1.1，旧 61 条错误与原有兼容决策保持不变
+- Go/Python 枚举与定向测试同步更新
+- API_CONTRACT 明确任务硬上限 422 和 SSE Last-Event-ID 过期 410 的恢复语义
+- 未实现 OpenAPI/SSE 成品、API handler、业务实现或发布能力
+- shared_contract_fix=IMPLEMENTED_WAITING_REVIEW
+- DEV-003 OpenAPI BUILD 仍为 NOT_STARTED
+
 ### Added
 
 - Product Design V1.0 历史文档记录：`docs/PRODUCT_DESIGN_V1.0.md`，后续已由 DOCX V1.0 主基线与 V1.1 附属补丁取代

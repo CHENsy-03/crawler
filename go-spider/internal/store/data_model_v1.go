@@ -81,6 +81,9 @@ func IsCanonicalULIDV1(value string) bool {
 	if len(value) != 26 {
 		return false
 	}
+	if value[0] < '0' || value[0] > '7' {
+		return false
+	}
 	for _, r := range value {
 		if !strings.ContainsRune(canonicalULIDAlphabet, r) {
 			return false

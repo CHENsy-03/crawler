@@ -5,7 +5,7 @@
   "additionalProperties": false,
   "required": ["contract_version", "baseline_bundle", "statuses", "errors", "events", "legacy_aliases", "compatibility_decisions"],
   "properties": {
-    "contract_version": {"type": "string", "const": "1.0"},
+    "contract_version": {"type": "string", "const": "1.1"},
     "baseline_bundle": {
       "type": "object",
       "additionalProperties": false,

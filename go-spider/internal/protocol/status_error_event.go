@@ -281,6 +281,8 @@ const (
 	ErrSiteNotReady                   ErrorCode = "site_not_ready"
 	ErrScopeExpired                   ErrorCode = "scope_expired"
 	ErrOverLimit                      ErrorCode = "over_limit"
+	ErrTaskLimitExceeded              ErrorCode = "task_limit_exceeded"
+	ErrEventHistoryExpired            ErrorCode = "event_history_expired"
 	ErrSecurityPolicyRejected         ErrorCode = "security_policy_rejected"
 	ErrSearchFailed                   ErrorCode = "search_failed"
 	ErrNoExecutablePlan               ErrorCode = "no_executable_plan"
@@ -340,6 +342,7 @@ func ErrorCodeValues() []string {
 	return copyErrors(
 		ErrValidationError, ErrUnauthorized, ErrCSRFFailed, ErrStateConflict, ErrIdempotencyConflict,
 		ErrDependencyNotReady, ErrSiteNotReady, ErrScopeExpired, ErrOverLimit, ErrSecurityPolicyRejected,
+		ErrTaskLimitExceeded, ErrEventHistoryExpired,
 		ErrSearchFailed, ErrNoExecutablePlan, ErrFetchFailed, ErrParseFailed, ErrUnsupportedFormat,
 		ErrEvidenceMissing, ErrNotRetryable, ErrExportExpired, ErrWorkerLost, ErrParserMemoryLimitExceeded,
 		ErrParserTimeout, ErrParserProcessLost, ErrParserDeadlineExceeded, ErrEvidenceHoldUnavailable,

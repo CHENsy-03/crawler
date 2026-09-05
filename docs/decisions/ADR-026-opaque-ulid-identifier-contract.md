@@ -6,6 +6,8 @@
 
 **关联：** DEV-004 Fix B3；V1.0 §12.1；API_CONTRACT
 
+**修订：** DEV-003 CONTRACT-FIX-B1（2026-09-05）
+
 ## 决策背景
 
 V1.0 §12.1 要求所有业务主键使用不透明 UUID/ULID 或等价稳定标识，避免泄露自增规模，并允许审计表使用内部单调 ID。当前候选 DDL 仍以 BIGINT UNSIGNED AUTO_INCREMENT 作为多数实体主键，不能满足不透明要求。
@@ -16,9 +18,9 @@ V1.0 §12.1 要求所有业务主键使用不透明 UUID/ULID 或等价稳定标
 
 - ULID 是 26 字符 Crockford Base32 文本，可直接作为 JSON string 输出，不需要 Base64 或二进制转换。
 - ULID 带时间前缀，可按创建顺序粗排序；但时间部分不代替 created_at/persisted_at 等业务时间字段。
-- ULID 的 128 bit 熵满足跨服务、跨进程稳定不透明标识要求。
+- ULID 总长为 128 bit，由前 48 bit 时间和后 80 bit 随机部分组成；monotonic 生成不表示每个 ID 都获得独立的 80 bit 新随机熵。
 - 相比 UUID 文本，ULID 更短且可排序；相比 BINARY(16)，ULID 避免 API/DB 编码转换。
-- 相比 AUTO_INCREMENT，ULID 不泄露实体数量或创建速率。
+- 相比 AUTO_INCREMENT，ULID 不直接编码自增计数；但其时间前缀可见，不能承诺隐藏创建时间或无法推断创建速率。
 
 ## 21 类 ULID 实体清单
 
@@ -39,11 +41,14 @@ Admin、Session、APIToken、IdempotencyRecord、CrawlTask、TaskAttempt、TaskS
 
 - 类型：`CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL`
 - canonical 文本：长度精确 26，仅大写 Crockford Base32
+- canonical 首字符必须是 `0`—`7`
 - 合法字符：`0123456789ABCDEFGHJKMNPQRSTVWXYZ`
 - 禁止字符：I、L、O、U
 - 无实体前缀、无连字符、无花括号
 - 不接受小写 canonical 表示
 - 结构：前 48 bit 为 Unix epoch milliseconds，后 80 bit 为密码学安全随机数
+- 26 个 Base32 字符可表达 130 bit，因此必须拒绝超过 128 bit 最大值的表示；最大合法值为 `7ZZZZZZZZZZZZZZZZZZZZZZZZZ`
+- 格式校验 pattern：`^[0-7][0-9A-HJKMNP-TV-Z]{25}$`，minLength=maxLength=26
 
 所有引用这些主键的外键列必须使用相同类型、长度、CHARACTER SET 与 COLLATE；nullable 只由关系语义决定。
 
@@ -75,9 +80,14 @@ task_id、article_id、article_version_id、task_article_id、job_id、plugin_id
 ## 安全、索引和排序影响
 
 - canonical ULID 使用受限字符集，可安全用于 URL path、JSON string 与 ascii_bin 索引。
-- CHAR(26) ascii_bin 不区分大小写问题，索引固定长度，不使用前缀索引。
+- CHAR(26) ascii_bin 是大小写敏感比较；canonical 输入本身只接受大写。
 - ULID 时间前缀可以粗排序，但不能替代 UTC 业务时间字段。
 - 所有 ULID FK 与父列类型、长度、charset、collation 必须一致，避免 MySQL errno 3780。
+- ULID 是实体标识，不是授权凭证；token/session secret、article_key、content_hash、checksum 等不因 ULID 规则获得授权语义。
+
+## 修订记录
+
+- `DEV003_CONTRACT_FIX_001`：纠正 ULID bit 表述、可见时间前缀、ascii_bin 大小写语义，增加首字符 0—7、128 bit 最大值与溢出拒绝规则。
 
 ## 不采用方案
 

@@ -197,8 +197,27 @@ def test_error_metadata_and_counts():
         }
         if item["client_exposable"]:
             assert item["http_status"] is not None
-    assert counts == {"NEVER": 44, "ALWAYS": 8, "CONDITIONAL": 9}
-    assert len(fixture["errors"]) == 61
+    assert counts == {"NEVER": 46, "ALWAYS": 8, "CONDITIONAL": 9}
+    assert len(fixture["errors"]) == 63
+
+
+def test_scenario_error_metadata_and_boundaries():
+    fixture, _ = _load()
+    by_code = {item["canonical_code"]: item for item in fixture["errors"]}
+    expected = {
+        "validation_error": 400,
+        "task_limit_exceeded": 422,
+        "event_history_expired": 410,
+        "over_limit": 429,
+        "export_expired": 410,
+    }
+    for code, status in expected.items():
+        item = by_code[code]
+        assert item["client_exposable"] is True
+        assert item["compatibility_class"] == "CANONICAL"
+        assert item["http_status"] == status
+    assert fixture["contract_version"] == "1.1"
+    assert len(fixture["compatibility_decisions"]) == 6
 
 
 def test_event_metadata_and_counts():
@@ -399,7 +418,7 @@ def test_python_enums_match_fixture_without_fixture_generation():
     assert error_values == {item["canonical_code"] for item in fixture["errors"]}
     event_values = {member.value for member in see.EventType}
     assert event_values == {item["event_type"] for item in fixture["events"]}
-    assert len(error_values) == 61
+    assert len(error_values) == 63
     assert len(event_values) == 22
 
 

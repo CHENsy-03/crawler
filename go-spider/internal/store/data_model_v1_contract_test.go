@@ -644,18 +644,29 @@ func TestEvidenceFileRenamedAndHistoryPreserved(t *testing.T) {
 }
 
 func TestCanonicalULIDValidation(t *testing.T) {
-	valid := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
-	if !IsCanonicalULIDV1(valid) {
-		t.Fatalf("valid ULID rejected")
+	for _, valid := range []string{
+		"00000000000000000000000000",
+		"01ARZ3NDEKTSV4RRFFQ69G5FAV",
+		"7ZZZZZZZZZZZZZZZZZZZZZZZZZ",
+	} {
+		if !IsCanonicalULIDV1(valid) {
+			t.Fatalf("valid ULID rejected: %s", valid)
+		}
 	}
 	for _, invalid := range []string{
-		"01ARZ3NDEKTSV4RRFFQ69G5FA",   // too short
-		"01ARZ3NDEKTSV4RRFFQ69G5FAV1", // too long
-		"01arz3ndektsv4rrffq69g5fav",  // lowercase
-		"01ARZ3NDEKTSV4RRFFQ69G5FAL",  // contains L
-		"01ARZ3NDEKTSV4RRFFQ69G5FAI",  // contains I
-		"01ARZ3NDEKTSV4RRFFQ69G5FAO",  // contains O
-		"01ARZ3NDEKTSV4RRFFQ69G5FAU",  // contains U
+		"01ARZ3NDEKTSV4RRFFQ69G5FA",       // too short
+		"01ARZ3NDEKTSV4RRFFQ69G5FAV1",     // too long
+		"01arz3ndektsv4rrffq69g5fav",      // lowercase
+		"01ARZ3NDEKTSV4RRFFQ69G5FAL",      // contains L
+		"01ARZ3NDEKTSV4RRFFQ69G5FAI",      // contains I
+		"01ARZ3NDEKTSV4RRFFQ69G5FAO",      // contains O
+		"01ARZ3NDEKTSV4RRFFQ69G5FAU",      // contains U
+		"80000000000000000000000000",      // exceeds 128-bit ULID range
+		"90000000000000000000000000",      // exceeds 128-bit ULID range
+		"ZZZZZZZZZZZZZZZZZZZZZZZZZZ",      // exceeds 128-bit ULID range
+		" 01ARZ3NDEKTSV4RRFFQ69G5FAV",     // leading whitespace
+		"01ARZ3NDEKTSV4RRFFQ69G5FAV\n",    // trailing newline
+		"01ARZ3NDEKTSV4RRFFQ69G5FA\u20ac", // non-ASCII and wrong length
 	} {
 		if IsCanonicalULIDV1(invalid) {
 			t.Fatalf("invalid ULID accepted: %s", invalid)

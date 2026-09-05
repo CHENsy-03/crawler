@@ -58,9 +58,9 @@ Go/Python 枚举与 canonical fixture 精确一致；本文件只提供来源导
 | readiness | 2 |
 | release | 1 |
 
-错误共 61 项：
+错误共 63 项：
 
-- NEVER：44
+- NEVER：46
 - ALWAYS：8
 - CONDITIONAL：9
 - 无公开 HTTP 映射的内部错误：4
@@ -73,7 +73,20 @@ Go/Python 枚举与 canonical fixture 精确一致；本文件只提供来源导
 - CONTROL_EVENT：4
 - OPERATIONAL_EVENT：4
 
-legacy alias 共 16 项，兼容决策共 5 项。
+legacy alias 共 16 项，兼容决策共 6 项。
+
+字典 contract_version：`1.1`。新增兼容决策 `DEV003_CONTRACT_FIX_001`，保留 DEV-002 原有五项决策不变。
+
+## 4.1 场景专用错误
+
+- `task_limit_exceeded`：HTTP 422，namespace=api，retryability=NEVER，client_exposable=true，用于 V1.0 §7.4 关键词、搜索页、候选量或策略硬上限。
+- `event_history_expired`：HTTP 410，namespace=api，retryability=NEVER，client_exposable=true，用于 Last-Event-ID 早于 SSE 保留窗口。
+- `validation_error` 继续表示请求结构、字段类型等 400 校验错误。
+- `over_limit` 429 保留给既有限流/背压语义；新 `/api/v1` 任务硬上限不再继续用 `over_limit` 代替。
+- `export_expired` 410 继续只用于导出文件过期，不复用到 SSE。
+- NEVER 表示不应自动原样重试同一失败请求或同一过期游标；修改任务参数后提交或获取任务快照后以新游标恢复不被禁止。
+
+ADR-026 已记录 `DEV003_CONTRACT_FIX_001` 修订：ULID 首字符 0—7、128 bit 最大值、ascii_bin 大小写语义和格式 pattern。
 
 ## 5. 覆盖证明
 
@@ -124,4 +137,4 @@ legacy alias 共 16 项，兼容决策共 5 项。
 
 ## 10. 状态
 
-当前状态：`IMPLEMENTED_WAITING_REVIEW`。
+当前状态：共享契约修复候选 `IMPLEMENTED_WAITING_REVIEW`；DEV-003 OpenAPI/SSE 成品仍未实施。

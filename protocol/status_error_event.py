@@ -224,6 +224,8 @@ class ErrorCode(str, Enum):
     SITE_NOT_READY = "site_not_ready"
     SCOPE_EXPIRED = "scope_expired"
     OVER_LIMIT = "over_limit"
+    TASK_LIMIT_EXCEEDED = "task_limit_exceeded"
+    EVENT_HISTORY_EXPIRED = "event_history_expired"
     SECURITY_POLICY_REJECTED = "security_policy_rejected"
     SEARCH_FAILED = "search_failed"
     NO_EXECUTABLE_PLAN = "no_executable_plan"
