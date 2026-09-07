@@ -167,9 +167,9 @@ AGENTS.md
 
 docs/TASK.md
 
-docs/SYSTEM\_ARCHITECTURE.md
+docs/SYSTEM_ARCHITECTURE.md
 
-docs/DEVELOPMENT\_RULES.md
+docs/DEVELOPMENT_RULES.md
 
 docs/decisions/
 
@@ -353,7 +353,7 @@ draft
 
 ready
 
-in\_progress
+in_progress
 
 blocked
 
@@ -379,13 +379,13 @@ cancelled
 
 | `ready`       | 范围和验收标准已明确，可以开始    |
 
-| `in\_progress` | 正在实施               |
+| `in_progress` | 正在实施               |
 
 | `blocked`     | 因依赖、权限、设计冲突或环境问题暂停 |
 
 | `review`      | 实施完成，等待检查或验收       |
 
-| `completed`   | 已满足验收标准并记录真实测试结果   |
+| `completed`   | 已满足本任务适用验收标准，并如实记录所要求的验证结果。 |
 
 | `cancelled`   | 任务取消，不再继续          |
 
@@ -395,7 +395,10 @@ cancelled
 属于另一类状态表达，不由本表约束；本文件不在此处新增或重新定义
 整套治理状态机。产品 domain 状态、错误和事件引用见 §16、§17。
 
-不得在测试未执行、失败未记录或验收标准未核对时，将任务标记为 `completed`。
+不得在本任务明确要求的验证尚未完成、验证失败尚未按验收要求
+处理并如实记录、或适用验收标准尚未满足时，将任务标记为 `completed`。
+只读或纯文档任务按 §29 和当前任务要求完成适用验证，
+不得为标记 `completed` 而补跑无关代码测试或虚构测试通过。
 
 
 
@@ -1121,13 +1124,13 @@ except Exception:
 
 ```text
 
-task\_id
+task_id
 
 stage
 
 url
 
-error\_code
+error_code
 
 message
 
@@ -1203,7 +1206,7 @@ AGENTS.md 不另建错误码清单。
 
 ```text
 
-task\_id
+task_id
 
 stage
 
@@ -1211,13 +1214,13 @@ url
 
 method
 
-status\_code
+status_code
 
-duration\_ms
+duration_ms
 
-error\_code
+error_code
 
-retry\_count
+retry_count
 
 timestamp
 
@@ -1769,7 +1772,7 @@ Go代码必须：
 
 * 避免数据竞争；
 
-* 为每个 `task\_id` 独立维护状态；
+* 为每个 `task_id` 独立维护状态；
 
 * 保持handler、service和repository职责清晰；
 
@@ -2449,9 +2452,9 @@ AI执行任务时，按当前任务类型选择适用分支；不是每轮依次
 
 | ---------- | ------------------------------- |
 
-| 系统职责或数据流   | `docs/SYSTEM\_ARCHITECTURE.md`   |
+| 系统职责或数据流   | `docs/SYSTEM_ARCHITECTURE.md`   |
 
-| 长期开发规则     | `docs/DEVELOPMENT\_RULES.md`     |
+| 长期开发规则     | `docs/DEVELOPMENT_RULES.md`     |
 
 | 当前任务实施和测试  | `docs/TASK.md`                  |
 
