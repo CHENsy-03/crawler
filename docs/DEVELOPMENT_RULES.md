@@ -12,9 +12,18 @@
 6. 新加入的任意出站路径（包括 AI/第三方服务）必须先纳入安全合同，再实施。
 7. 本规则实施状态以 `docs/OUTBOUND_REQUEST_SECURITY_CONTRACT.md` 为准；未实施前不得宣称生产级 SSRF 防护。
 
-## 2. 当前唯一任务路线
+## 2. 历史任务路线与当前工作包依赖
 
-正式执行路线：
+本节列示的旧 TASK 正式路线和后续路线，均为历史时点的执行安排，
+保留用于追溯，不再构成当前唯一执行路线或后续任务授权。
+
+当前工作包依赖遵守 V1.0/V1.1 联合基线及适用 ADR。
+当前执行任务按 AGENTS.md §6 和 docs/TASK.md 唯一现行入口判断。
+
+不得从历史 TASK 排序推导新的 DEV 工作包强制顺序，
+也不得将 DEV-003/DEV-004 的依赖关系改写为未经批准的串行约束。
+
+历史正式执行路线：
 
 ```text
 TASK-019
@@ -24,7 +33,7 @@ TASK-019
 → TASK-020B
 ```
 
-后续路线：
+历史后续路线：
 
 ```text
 TASK-020B
@@ -96,3 +105,36 @@ TASK-020B
 - 全局验证顺序与混合错误优先级按 OUTBOUND_SECURITY_CONFIGURATION.md 冻结；policies 文件顺序、site site_id ASCII 升序、site 字段 domain→base_url→api_url→page_url。
 - 每个出站进程启动时 fail-closed，仅读取一次，不热加载；loader 不执行 DNS/redirect，不处理任务级 allowed_domains 交集。
 - fixture 聚合口径：`OSEC-CASE-AGGREGATE-V1`（MAGIC + 4-byte BE COUNT + 按 case ID UTF-8 字节序排序的 ID 长度/ID/raw digest 记录；元数据不计入逐 case SHA）。
+
+## 13. GitHub 检查证据用语
+
+以下用语描述不同维度，不是互斥的三态枚举：
+
+- REQUIRED_CHECKS_POLICY_NOT_VERIFIED：
+  无法完整确认适用分支保护规则或 rulesets。
+- NO_CHECKS_REPORTED：
+  本次查询成功，且在明确的查询范围内没有报告 checks。
+- NO_REQUIRED_CHECKS_CONFIGURED：
+  已取得足够的适用规则证据，确认没有配置必需检查。
+
+查询失败、权限不足或结果不完整，应分别记录，
+不能概括为“没有 checks”。
+
+NO_REQUIRED_CHECKS_CONFIGURED 只表示未配置必需检查，
+不表示没有审查、签名或其他保护要求。
+
+判断边界：
+
+- 无 checks 输出不等于没有 required checks。
+- API 返回 403 不等于未配置保护规则。
+- mergeable/CLEAN 不足以完整证明检查或审查政策。
+- 一次合并成功不等于已经查明全部保护规则。
+- 不把历史查询结果表述为当前远端状态。
+- 本地远端跟踪引用不等于实时远端读取。
+- 证据记录应注明仓库、目标分支、适用的 PR、head commit、
+  查询时间与范围；不适用的字段如实说明。
+- 状态不明时如实报告，不自行批准例外或绕过规则。
+- 证据不足不自动构成永久禁止；
+  后续动作按适用规则、平台限制和已有明确授权判断。
+
+本节不构成推送、创建 PR、合并或修改保护规则的授权。
