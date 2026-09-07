@@ -4,6 +4,35 @@
 
 ## [Unreleased]
 
+### Governance Task Entry
+
+- 将 AGENTS.md、DEVELOPMENT_RULES.md 和 TASK.md 中旧 TASK 路线明确标记为历史参考。
+- 在 TASK.md 建立唯一现行任务入口，区分已集成工作、未提交治理修改和未开始的 OpenAPI BUILD。
+- 保留历史执行证据及现有安全、契约和发布约束。
+- 本次变更仅涉及治理文档，尚待审查与提交；未实施 OpenAPI 或其他产品功能。
+
+### Governance Validation Policy
+
+- TEST_STRATEGY 增加验证阶段与证据复用边界，保留发布级完整门禁。
+- DEVELOPMENT_RULES 增加 GitHub 检查证据用语及判断边界。
+- TASK 唯一入口切换到本轮任务，并保留 B4 历史记录及文字勘误。
+- 本次仅涉及治理文档，尚待审查与提交；未实施 OpenAPI 或其他产品功能。
+
+### Governance Historical Evidence
+
+- README 完成度百分比改为历史记录说明，不再作为当前完成度。
+- TEST_STRATEGY 保留历史测试结果，并注明文档来源及执行证据局限。
+- TASK 唯一入口切换到本轮任务，保留 B5 历史记录。
+- 未重算完成度、未重跑历史测试、未修改测试门禁。
+- 本次变更尚待审查与提交，治理整改尚未完成最终 GitHub 审阅。
+
+### Governance Review Fix (B7)
+
+- AGENTS §7 更新 completed 含义与完成判定边界。
+- 修正 AGENTS 现行规范中的路径、状态 token 和字段名字面转义。
+- TASK 唯一入口切换到本轮任务，并补充 B5/B6 缺失范围说明及 B6 归档。
+- 本修正仍为待审阅状态；未提交、未推送、未合并。
+
 ### Added
 
 - 固化 V1.0 完整主基线：`docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx`

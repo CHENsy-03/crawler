@@ -1,13 +1,424 @@
 # TASK.md
 
-> 本文件主体为历史任务记录；只有最新产品基线状态块和当前 Fix Build 记录反映当前任务。历史段落中的旧路径、旧任务编号和旧状态仅用于追溯，不作为当前操作指令。
+> 本文件包含唯一现行任务入口及历史任务记录。
+> 当前工作从“当前唯一任务入口”读取；
+> 历史章节保留当时事实，不构成当前执行授权。
 
-本文件只描述当前正在执行的任务。
-当前只能启用一个任务，不得同时混入其他重构、修复或功能开发。
-执行本任务前必须先阅读项目根目录的 AGENTS.md。
-## 当前冻结任务路线（唯一规范）
+本文件唯一当前入口为“当前唯一任务入口”。
+历史章节中的 active_task、当前状态、next_task 等仅代表写入时点状态，不作为当前执行授权。
 
-正式执行路线：
+## 当前唯一任务入口
+
+### 当前任务
+
+- active_task=TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-REVIEW-FIX-B7
+- task_status=review
+- 当前任务：修复固定审阅快照遗留问题并补充范围说明
+- 当前任务定义：[本轮任务定义](#本轮任务定义)
+- DEV-003 OpenAPI BUILD：尚未开始，治理整改期间继续暂停
+
+本轮交回审查时不得提前标记 completed。
+最终 GitHub 全文审阅通过前，不得宣称最终审查通过。
+提交、推送、审阅通过和合并集成应分别记录；
+只有完成实际合并并核验后，才能记录为已集成。
+
+### 已确认的项目状态
+
+- dev_001=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_002=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_004=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix_merge_commit=3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- dev_003_openapi_build=NOT_STARTED
+- dev_005=NOT_STARTED
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- production_loader=NOT_STARTED
+- deployment=BLOCKED
+- release=BLOCKED
+
+### 本次核验与工作区说明
+
+- 记录日期：2026-09-07（Asia/Shanghai）
+- 当前本地分支：feat/dev-003-openapi-v1-contract
+- HEAD：af7174b6ae13b0ec5d09010f87913d3abf837225
+- local main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地 main 分支）
+- origin/main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地远端跟踪引用，不代表本轮实时查询远端）
+- 固定审阅快照提交：af7174b6ae13b0ec5d09010f87913d3abf837225
+- B1-B6 治理修改已在本提交内，但尚未完成最终 GitHub 全文审阅
+- 本轮未重新联网核验远端；PR 和远端状态不在本轮重新查询
+- 本段描述本次记录时点，不保证后续实时工作区状态
+
+### 本轮任务定义
+
+- 任务编号：
+  TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-REVIEW-FIX-B7
+- 任务名称：
+  修复固定审阅快照遗留问题并补充范围说明
+- 任务类型：
+  治理文档修改
+- 当前状态：
+  以本入口 task_status 字段为准
+- 任务背景：
+  固定提交 af7174b6ae13b0ec5d09010f87913d3abf837225
+  经 GitHub 内容审阅发现三项遗留问题。
+- 当前问题：
+  AGENTS §7 completed 含义与完成判定仍需修正；
+  B5/B6 历史任务缺少可直接定位的允许修改范围；
+  AGENTS 现行规范中存在多余字面转义。
+- 任务目标：
+  修正 §7 完成判定；
+  为 B5/B6 补充缺失范围说明；
+  修正路径、状态 token 和字段名的字面转义；
+  保留 B1-B6 成果。
+- 非目标：
+  不进入 OpenAPI BUILD；
+  不修改 canonical 契约、数据模型或业务代码；
+  不完成最终 GitHub 全文审阅；
+  不提交、不推送、不合并。
+- 允许修改范围：
+  AGENTS.md §7 的 completed 含义与完成判定；
+  AGENTS.md 现行规范中代码块和行内代码内的多余字面转义；
+  docs/TASK.md 唯一入口切换、B7 完整任务定义、B6 归档及 B5/B6 缺失范围说明；
+  docs/CHANGELOG.md 新增本轮治理修正记录。
+- 禁止修改范围：
+  上述范围以外的文件和内容。
+- 实施步骤：
+  输入核验；
+  修正 AGENTS §7 与字面转义；
+  切换 TASK 入口并归档 B6；
+  补充 B5/B6 缺失范围；
+  添加 CHANGELOG 记录；
+  执行直接 diff 和文档验证；
+  交回审查。
+- 测试与验证：
+  本轮不运行业务测试、构建或服务；
+  执行直接输入输出比较、git diff --check、
+  Markdown 围栏与链接检查、范围保护核对。
+- 验收标准：
+  三项遗留问题均已修正；
+  当前入口唯一；
+  B6 已归档且 B5/B6 范围说明存在；
+  未修改范围外文件；
+  未将历史任务归档写成最终审查通过或已集成。
+- 回滚方案：
+  仅在获准后撤销 B7 增量；
+  恢复依据为本轮真实输入，而非直接恢复固定提交；
+  不覆盖后续修改或撤销 B1-B6 成果。
+
+## 历史任务与执行记录
+
+以下记录保留各自写入时点的状态，包括完成、失败、停止和待审查。
+其中“当前状态”“active_task”“next_task”“正式路线”等，
+均不覆盖文件前部的现行入口，也不自动授予执行权限。
+
+本区域边界覆盖本文件后续历史任务记录。
+其中引用的独立规范资产不因归档而被删除或改写；
+现行适用性仍按 AGENTS.md §3 及对应资产说明判断。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-TASK-ENTRY-FIX-B4
+
+- 本轮文档修改已完成，并通过协调内容初审。
+- 最终 GitHub 全文审阅尚未完成。
+- 在本次归档时，治理修改尚未提交、推送或合并。
+- 归档表示它不再是当前任务，不表示最终审查通过或已经集成。
+- B4 原文含“不得写 completed”；文字勘误：原意是“交回审查时不得提前标记 completed”。
+- B4 原文含“local main / origin main：本地 tracking 均为……”；文字勘误：应区分 local main 本地分支与 origin/main 本地远端跟踪引用。
+
+#### B4 当前任务记录（历史）
+
+- active_task=TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-TASK-ENTRY-FIX-B4
+- task_status=review
+- 当前任务：治理规范中的历史路线与现行任务入口整改
+- B4 任务定义：见下方“B4 历史任务定义”
+- DEV-003 OpenAPI BUILD：尚未开始，治理整改期间继续暂停
+
+review 只表示等待审查，不表示审查通过。
+不得写 completed，也不得宣称治理整改已集成。
+
+#### B4 归档时已确认的项目状态
+
+- dev_001=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_002=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_004=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix_merge_commit=3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- dev_003_openapi_build=NOT_STARTED
+- dev_005=NOT_STARTED
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- production_loader=NOT_STARTED
+- deployment=BLOCKED
+- release=BLOCKED
+
+#### B4 核验与工作区说明
+
+- 记录日期：2026-09-07（Asia/Shanghai）
+- 当前本地分支：feat/dev-003-openapi-v1-contract
+- HEAD：3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- local main / origin main：本地 tracking 均为 3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- DEV-001/002/004 与共享契约修复的既有审查和合并记录来源：CHANGELOG、TASK 既有记录及本地 Git 祖先关系
+- 本地 Git 祖先关系核验范围：e508ab82282be2ccf6b96705b1f1a2b7f74c062d、c508f5bcb2164d0983222a6ac3150d28a61f594e、084707e9b68c95f435003f6275625993dc5fc41d 均为 HEAD 祖先
+- 本轮未重新联网核验远端；PR #9 等信息来自既有任务报告，未声称本轮已重新核对远端
+- 治理整改仍为工作区修改，尚未提交、推送或集成
+- 本段描述本次记录时点，不保证后续实时工作区状态
+
+#### B4 历史任务定义
+
+- 任务编号：
+  TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-TASK-ENTRY-FIX-B4
+- 任务名称：
+  历史任务路线与唯一现行任务入口整改
+- 任务类型：
+  治理文档修改
+- 当前状态：
+  以本入口 task_status 字段为准
+- 任务背景：
+  联合基线工作包及共享契约修复已经推进，
+  部分长期规则和 TASK 历史段仍以“当前路线”指导执行。
+- 当前问题：
+  旧 TASK 路线与现行 DEV 工作混用；
+  多个历史状态段竞争当前入口；
+  共享契约修复集成事实未在统一入口表达。
+- 任务目标：
+  消除旧路线的现行指令效力；
+  建立唯一入口；
+  保留历史记录；
+  准确区分已集成工作、未提交治理修改和未开始的 OpenAPI BUILD。
+- 非目标：
+  不实施 OpenAPI/SSE；
+  不修改业务代码、canonical 契约、数据模型或 migration；
+  不整理其他尚未轮到的治理事项；
+  不放宽联合基线及发布门禁。
+- 允许修改范围：
+  AGENTS.md §41；
+  docs/DEVELOPMENT_RULES.md §2；
+  docs/TASK.md 的开头、现行入口、必要历史边界及末尾旧路线标签；
+  docs/CHANGELOG.md 的新增 Unreleased 治理记录。
+- 禁止修改范围：
+  上述范围以外所有文件和内容。
+- 实施步骤：
+  核验输入和证据；
+  更新三个文件的路线/入口；
+  添加 CHANGELOG 记录；
+  核对跨文件一致性；
+  完成定向文档验证并交回审查。
+- 测试与验证：
+  本轮不运行业务测试；
+  进行直接增量 diff、历史内容保留、链接、Markdown、
+  Git 范围和 git diff --check 验证。
+- 验收标准：
+  当前入口唯一；
+  历史路线不再授予执行权限；
+  状态事实有来源；
+  已有约束不被误降级；
+  修改限于四个文件；
+  前三步 AGENTS 修改保持不变。
+- 回滚方案：
+  仅在另获回滚授权后撤销 B4 增量；
+  AGENTS.md 恢复到本轮输入，而不是直接恢复 HEAD；
+  不得撤销前三步修改；
+  不得覆盖本轮之后出现的其他修改；
+  执行前重新核验目标内容和范围。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-VALIDATION-POLICY-FIX-B5
+
+- B5 文档修改已通过协调内容初审。
+- 最终 GitHub 全文审阅尚未完成。
+- 本次归档时，治理修改尚未提交或集成。
+- 归档仅表示不再是当前任务，不表示最终审查通过。
+- 本轮补充说明：B5 允许修改范围实际为 docs/TEST_STRATEGY.md 新增 §16；
+  docs/DEVELOPMENT_RULES.md 新增 §13；
+  docs/TASK.md B5 入口、完整定义、B4 归档及批准措辞勘误；
+  docs/CHANGELOG.md 对应 Unreleased 新增记录。
+- 不得声称上述具体范围原本完整存在。
+
+#### B5 当前任务记录（历史）
+
+- active_task=TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-VALIDATION-POLICY-FIX-B5
+- task_status=review
+- 当前任务：验证阶段与 GitHub 检查证据规则整改
+- B5 任务定义：见下方“B5 历史任务定义”
+- DEV-003 OpenAPI BUILD：尚未开始，治理整改期间继续暂停
+
+本轮交回审查时不得提前标记 completed。
+最终 GitHub 全文审阅通过前，不得宣称最终审查通过。
+提交、推送、审阅通过和合并集成应分别记录；
+只有完成实际合并并核验后，才能记录为已集成。
+
+#### B5 归档时已确认的项目状态
+
+- dev_001=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_002=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_004=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix_merge_commit=3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- dev_003_openapi_build=NOT_STARTED
+- dev_005=NOT_STARTED
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- production_loader=NOT_STARTED
+- deployment=BLOCKED
+- release=BLOCKED
+
+#### B5 核验与工作区说明
+
+- 记录日期：2026-09-07（Asia/Shanghai）
+- 当前本地分支：feat/dev-003-openapi-v1-contract
+- HEAD：3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- local main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地 main 分支）
+- origin/main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地远端跟踪引用，不代表本轮实时查询远端）
+- DEV-001/002/004 与共享契约修复的既有审查和合并记录来源：CHANGELOG、TASK 既有记录及本地 Git 祖先关系
+- 本地 Git 祖先关系核验范围：e508ab82282be2ccf6b96705b1f1a2b7f74c062d、c508f5bcb2164d0983222a6ac3150d28a61f594e、084707e9b68c95f435003f6275625993dc5fc41d 均为 HEAD 祖先
+- 本轮未重新联网核验远端；PR #9 等信息来自既有任务报告，未声称本轮已重新核对远端
+- B1-B4 治理修改仍为工作区修改，尚未提交、推送或集成
+- 本段描述本次记录时点，不保证后续实时工作区状态
+
+#### B5 历史任务定义
+
+- 任务编号：
+  TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-VALIDATION-POLICY-FIX-B5
+- 任务名称：
+  验证阶段与 GitHub 检查证据规则整改
+- 任务类型：
+  治理文档修改
+- 当前状态：
+  以本入口 task_status 字段为准
+- 任务背景：
+  AGENTS 已区分执行阶段，相关验证文档及 GitHub 证据用语需要一致。
+- 当前问题：
+  完整测试清单容易被当成默认命令；
+  检查查询、保护规则和合并事实可能被混用。
+- 任务目标：
+  落实本指令批准条款，保留既有门禁，
+  完成 TASK 切换与历史保留。
+- 非目标：
+  不实施产品功能、不修改 AGENTS、
+  不调查或修改 GitHub 配置、不处理第六步历史数字。
+- 允许修改范围：
+  本指令第二节四文件及限定区域。
+- 禁止修改范围：
+  其他文件和内容。
+- 实施步骤：
+  输入核验、规则更新、TASK 归档切换、
+  CHANGELOG 记录、定向文档验证、交回审查。
+- 测试与验证：
+  直接增量 diff、范围保护、
+  Markdown/链接/状态核对及 git diff --check。
+- 验收标准：
+  规则与批准文字一致；
+  既有门禁未降低；
+  当前入口唯一；
+  B4 历史保留；
+  AGENTS 未变；
+  累计 dirty 精确为五文件。
+- 回滚方案：
+  仅在获准后撤销 B5 增量，
+  保留 B1-B4 成果，不将已有 dirty 文件直接恢复到 HEAD；
+  执行前核对后续修改与实际恢复来源。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-HISTORICAL-EVIDENCE-FIX-B6
+
+- B6 文档修改已通过协调内容初审。
+- 最终 GitHub 全文审阅尚未完成。
+- 本次归档时，治理修改尚未提交或集成。
+- 归档仅表示不再是当前任务，不表示最终审查通过。
+- 本轮补充说明：B6 允许修改范围实际为 README.md 历史完成度相关段落；
+  docs/TEST_STRATEGY.md 历史测试记录引言及组件测试状态行；
+  docs/TASK.md B6 入口、完整定义及 B5 归档；
+  docs/CHANGELOG.md 对应 Unreleased 新增记录。
+- 不得声称上述具体范围原本完整存在。
+
+#### B6 当前任务记录（历史）
+
+- active_task=TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-HISTORICAL-EVIDENCE-FIX-B6
+- task_status=review
+- 当前任务：历史完成度与测试记录来源整理
+- B6 任务定义：见下方“B6 历史任务定义”
+- DEV-003 OpenAPI BUILD：尚未开始，治理整改期间继续暂停
+
+本轮交回审查时不得提前标记 completed。
+最终 GitHub 全文审阅通过前，不得宣称最终审查通过。
+提交、推送、审阅通过和合并集成应分别记录；
+只有完成实际合并并核验后，才能记录为已集成。
+
+#### B6 归档时已确认的项目状态
+
+- dev_001=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_002=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_004=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix_merge_commit=3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- dev_003_openapi_build=NOT_STARTED
+- dev_005=NOT_STARTED
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- production_loader=NOT_STARTED
+- deployment=BLOCKED
+- release=BLOCKED
+
+#### B6 核验与工作区说明
+
+- 记录日期：2026-09-07（Asia/Shanghai）
+- 当前本地分支：feat/dev-003-openapi-v1-contract
+- HEAD：3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- local main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地 main 分支）
+- origin/main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地远端跟踪引用，不代表本轮实时查询远端）
+- DEV-001/002/004 与共享契约修复的既有审查和合并记录来源：CHANGELOG、TASK 既有记录及本地 Git 祖先关系
+- 本地 Git 祖先关系核验范围：e508ab82282be2ccf6b96705b1f1a2b7f74c062d、c508f5bcb2164d0983222a6ac3150d28a61f594e、084707e9b68c95f435003f6275625993dc5fc41d 均为 HEAD 祖先
+- 本轮未重新联网核验远端；PR #9 等信息来自既有任务报告，未声称本轮已重新核对远端
+- B1-B5 治理修改仍为工作区修改，尚未提交、推送或集成
+- 本段描述本次记录时点，不保证后续实时工作区状态
+
+#### B6 历史任务定义
+
+- 任务编号：
+  TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-HISTORICAL-EVIDENCE-FIX-B6
+- 任务名称：
+  历史完成度与测试记录来源整理
+- 任务类型：
+  治理文档修改
+- 当前状态：
+  以本入口 task_status 字段为准
+- 任务背景：
+  README 和 TEST_STRATEGY 仍将历史数字表达为当前结果。
+- 当前问题：
+  文档引入提交与实际执行身份容易混淆，
+  旧百分比和测试 PASS 缺少充分的当前适用依据。
+- 任务目标：
+  保留历史记录，注明来源及证据局限，
+  移除未经证实的当前结论。
+- 非目标：
+  不重算完成度、不重跑测试、
+  不改变测试门禁、不实施产品功能、
+  不完成 GitHub 最终审阅或合并。
+- 允许修改范围：
+  本指令第二节四文件及限定区域。
+- 禁止修改范围：
+  其他文件和内容。
+- 实施步骤：
+  输入核验、来源提交核对、
+  两份文档定向修改、TASK 切换与归档、
+  CHANGELOG 记录、文档验证、交回审查。
+- 测试与验证：
+  直接增量 diff、数字与来源核对、
+  内容保护、Markdown/链接检查、git diff --check。
+- 验收标准：
+  历史数字含义不变；
+  不冒充当前结论；
+  来源提交不冒充执行提交；
+  门禁不变；
+  B1-B5 成果保留；
+  当前入口唯一；
+  累计 dirty 精确为六文件。
+- 回滚方案：
+  仅在获准后撤销 B6 增量，
+  使用本轮真实输入作为恢复依据，
+  不将已有 dirty 文件直接恢复 HEAD，
+  不覆盖后续修改或撤销 B1-B5 成果。
+
+### 历史冻结任务路线（TASK-019 时期，无当前执行效力）
+
+历史正式执行路线：
 
 ```text
 TASK-019
@@ -17,7 +428,7 @@ TASK-019
 → TASK-020B
 ```
 
-后续路线：
+历史后续路线：
 
 ```text
 TASK-020B
@@ -3446,4 +3857,4 @@ TASK-020B 通过后只能称为“单站点 Web V1 完成”，不得称为企�
 - next_task=TASK-022A
 - TASK-022A=CLOSED（E-3 封板时点为 NOT_STARTED；当前状态见 TASK-022 章节）
 
-正式路线：`TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B`。
+历史路线（无当前执行效力）：`TASK-019 → TASK-022 → TASK-021A → TASK-020A → TASK-020B`。
