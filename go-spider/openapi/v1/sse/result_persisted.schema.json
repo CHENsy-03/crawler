@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "result_persisted.schema.json",
+  "title": "result_persisted",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_version",
+    "occurred_at",
+    "task_id",
+    "task_article_id",
+    "result_status"
+  ],
+  "properties": {
+    "event_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 26,
+      "maxLength": 26,
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "task_article_id": {
+      "type": "string",
+      "minLength": 26,
+      "maxLength": 26,
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "result_status": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "review_required",
+        "irrelevant",
+        "extract_failed",
+        "unsupported_format"
+      ]
+    },
+    "article_id": {
+      "type": "string",
+      "minLength": 26,
+      "maxLength": 26,
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "article_version_id": {
+      "type": "string",
+      "minLength": 26,
+      "maxLength": 26,
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "article_key": {
+      "type": "string",
+      "maxLength": 255
+    }
+  }
+}

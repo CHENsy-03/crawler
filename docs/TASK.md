@@ -11,16 +11,11 @@
 
 ### 当前任务
 
-- active_task=TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-REVIEW-FIX-B7
+- active_task=TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B7-E1
 - task_status=review
-- 当前任务：修复固定审阅快照遗留问题并补充范围说明
+- 当前任务：修复未知错误码在验证中被静默丢弃的问题
 - 当前任务定义：[本轮任务定义](#本轮任务定义)
-- DEV-003 OpenAPI BUILD：尚未开始，治理整改期间继续暂停
-
-本轮交回审查时不得提前标记 completed。
-最终 GitHub 全文审阅通过前，不得宣称最终审查通过。
-提交、推送、审阅通过和合并集成应分别记录；
-只有完成实际合并并核验后，才能记录为已集成。
+- DEV-003 OpenAPI BUILD：继续；API handler、SSE 服务仍未开始
 
 ### 已确认的项目状态
 
@@ -28,8 +23,8 @@
 - dev_002=IMPLEMENTED_REVIEWED_AND_INTEGRATED
 - dev_004=IMPLEMENTED_REVIEWED_AND_INTEGRATED
 - shared_contract_fix=IMPLEMENTED_REVIEWED_AND_INTEGRATED
-- shared_contract_fix_merge_commit=3ea67100891073f9dbaf07397b7a64e8dc02b91f
-- dev_003_openapi_build=NOT_STARTED
+- governance_review_fix_merge_commit=5111b3e6cedc6b2bcb77e4ffa62257044a76de83
+- dev_003_openapi_build=IN_PROGRESS
 - dev_005=NOT_STARTED
 - legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
 - production_loader=NOT_STARTED
@@ -38,72 +33,60 @@
 
 ### 本次核验与工作区说明
 
-- 记录日期：2026-09-07（Asia/Shanghai）
-- 当前本地分支：feat/dev-003-openapi-v1-contract
-- HEAD：af7174b6ae13b0ec5d09010f87913d3abf837225
-- local main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地 main 分支）
-- origin/main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地远端跟踪引用，不代表本轮实时查询远端）
-- 固定审阅快照提交：af7174b6ae13b0ec5d09010f87913d3abf837225
-- B1-B6 治理修改已在本提交内，但尚未完成最终 GitHub 全文审阅
-- 本轮未重新联网核验远端；PR 和远端状态不在本轮重新查询
-- 本段描述本次记录时点，不保证后续实时工作区状态
+- 记录日期：2026-09-08（Asia/Shanghai）
+- 当前本地分支：feat/dev-003-openapi-v1-build-b1
+- HEAD：5111b3e6cedc6b2bcb77e4ffa62257044a76de83
+- local main：5111b3e6cedc6b2bcb77e4ffa62257044a76de83（本地 main 分支）
+- origin/main：5111b3e6cedc6b2bcb77e4ffa62257044a76de83（本地远端跟踪引用）
+- B1-B7 文件仍未提交；untracked=15 是未提交 BUILD 的正常状态
+- 本轮未提交、未推送、未创建 PR
 
 ### 本轮任务定义
 
 - 任务编号：
-  TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-REVIEW-FIX-B7
+  TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B7-E1
 - 任务名称：
-  修复固定审阅快照遗留问题并补充范围说明
+  修复未知错误码静默丢弃
 - 任务类型：
-  治理文档修改
+  测试门禁定点补充
 - 当前状态：
   以本入口 task_status 字段为准
 - 任务背景：
-  固定提交 af7174b6ae13b0ec5d09010f87913d3abf837225
-  经 GitHub 内容审阅发现三项遗留问题。
+  R7 原报告给出 PASS；协调复核发现 unknown code 在分组函数中被静默 continue 丢弃，与 B7 既定验收要求不一致。
 - 当前问题：
-  AGENTS §7 completed 含义与完成判定仍需修正；
-  B5/B6 历史任务缺少可直接定位的允许修改范围；
-  AGENTS 现行规范中存在多余字面转义。
+  fixtureErrorsByStatus 与 xErrorsByStatus 遇到 knownStatus 未映射的错误码时静默跳过，validateThreeWay 无法发现。
 - 任务目标：
-  修正 §7 完成判定；
-  为 B5/B6 补充缺失范围说明；
-  修正路径、状态 token 和字段名的字面转义；
-  保留 B1-B6 成果。
+  让未知码产生来源/operation/code 诊断；
+  将诊断传递到 validateThreeWay；
+  增加 U1/U2/U3 内存负例；
+  更新 TASK/CHANGELOG。
 - 非目标：
-  不进入 OpenAPI BUILD；
-  不修改 canonical 契约、数据模型或业务代码；
-  不完成最终 GitHub 全文审阅；
-  不提交、不推送、不合并。
+  不重新设计契约；
+  不修改 OpenAPI/SSE/fixture/canonical；
+  不创建 PR、不推送、不合并。
 - 允许修改范围：
-  AGENTS.md §7 的 completed 含义与完成判定；
-  AGENTS.md 现行规范中代码块和行内代码内的多余字面转义；
-  docs/TASK.md 唯一入口切换、B7 完整任务定义、B6 归档及 B5/B6 缺失范围说明；
-  docs/CHANGELOG.md 新增本轮治理修正记录。
+  go-spider/internal/api/openapi_contract_test.go；
+  docs/TASK.md；
+  docs/CHANGELOG.md。
 - 禁止修改范围：
-  上述范围以外的文件和内容。
+  其他全部项目交付路径与未授权内容。
 - 实施步骤：
-  输入核验；
-  修正 AGENTS §7 与字面转义；
-  切换 TASK 入口并归档 B6；
-  补充 B5/B6 缺失范围；
-  添加 CHANGELOG 记录；
-  执行直接 diff 和文档验证；
-  交回审查。
+  修改两个分组函数签名并返回诊断；
+  validateThreeWay 汇入诊断；
+  增加 U1/U2/U3；
+  执行 Go/gofmt/diff。
 - 测试与验证：
-  本轮不运行业务测试、构建或服务；
-  执行直接输入输出比较、git diff --check、
-  Markdown 围栏与链接检查、范围保护核对。
+  go test ./internal/api -count=1 -v；
+  gofmt -d；
+  git diff --check。
 - 验收标准：
-  三项遗留问题均已修正；
-  当前入口唯一；
-  B6 已归档且 B5/B6 范围说明存在；
-  未修改范围外文件；
-  未将历史任务归档写成最终审查通过或已集成。
+  未知码不再被静默丢弃；
+  U1/U2/U3 精确命中目标 operation/code；
+  原始契约通过；
+  17 个未允许文件不变。
 - 回滚方案：
-  仅在获准后撤销 B7 增量；
-  恢复依据为本轮真实输入，而非直接恢复固定提交；
-  不覆盖后续修改或撤销 B1-B6 成果。
+  仅在获准后撤销 B7-E1 增量；保留 B1-B7 成果；
+  不覆盖未提交内容，不直接恢复 HEAD。
 
 ## 历史任务与执行记录
 
@@ -415,6 +398,169 @@ review 只表示等待审查，不表示审查通过。
   使用本轮真实输入作为恢复依据，
   不将已有 dirty 文件直接恢复 HEAD，
   不覆盖后续修改或撤销 B1-B5 成果。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-REVIEW-FIX-B7
+
+- B7 文档修正已通过协调内容初审并推送。
+- 本地提交为 ae9b6c9f83fdf5226d21ae0a12b9cf01302efa5e。
+- 治理修正已合入 main，合并提交为 5111b3e6cedc6b2bcb77e4ffa62257044a76de83。
+- 归档表示不再是当前任务，不表示后续 OpenAPI 契约已通过最终审查。
+- 已登记历史勘误：B6 完成报告时尚未提交；B7 归档 B6 时，B6 内容已在 af7174b6ae13b0ec5d09010f87913d3abf837225 审阅快照中，当时尚未合并集成。
+
+#### B7 当前任务记录（历史）
+
+- active_task=TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-REVIEW-FIX-B7
+- task_status=review
+- 当前任务：修复固定审阅快照遗留问题并补充范围说明
+- B7 任务定义：见下方“B7 历史任务定义”
+- DEV-003 OpenAPI BUILD：尚未开始，治理整改期间继续暂停
+
+本轮交回审查时不得提前标记 completed。
+最终 GitHub 全文审阅通过前，不得宣称最终审查通过。
+提交、推送、审阅通过和合并集成应分别记录；
+只有完成实际合并并核验后，才能记录为已集成。
+
+#### B7 归档时已确认的项目状态
+
+- dev_001=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_002=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_004=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- shared_contract_fix_merge_commit=3ea67100891073f9dbaf07397b7a64e8dc02b91f
+- dev_003_openapi_build=NOT_STARTED
+- dev_005=NOT_STARTED
+- legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
+- production_loader=NOT_STARTED
+- deployment=BLOCKED
+- release=BLOCKED
+
+#### B7 核验与工作区说明
+
+- 记录日期：2026-09-07（Asia/Shanghai）
+- 当前本地分支：feat/dev-003-openapi-v1-contract
+- HEAD：af7174b6ae13b0ec5d09010f87913d3abf837225
+- local main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地 main 分支）
+- origin/main：3ea67100891073f9dbaf07397b7a64e8dc02b91f（本地远端跟踪引用，不代表本轮实时查询远端）
+- 固定审阅快照提交：af7174b6ae13b0ec5d09010f87913d3abf837225
+- B1-B6 治理修改已在本提交内，但尚未完成最终 GitHub 全文审阅
+- 本轮未重新联网核验远端；PR 和远端状态不在本轮重新查询
+- 本段描述本次记录时点，不保证后续实时工作区状态
+
+#### B7 历史任务定义
+
+- 任务编号：
+  TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-REVIEW-FIX-B7
+- 任务名称：
+  修复固定审阅快照遗留问题并补充范围说明
+- 任务类型：
+  治理文档修改
+- 当前状态：
+  以本入口 task_status 字段为准
+- 任务背景：
+  固定提交 af7174b6ae13b0ec5d09010f87913d3abf837225
+  经 GitHub 内容审阅发现三项遗留问题。
+- 当前问题：
+  AGENTS §7 completed 含义与完成判定仍需修正；
+  B5/B6 历史任务缺少可直接定位的允许修改范围；
+  AGENTS 现行规范中存在多余字面转义。
+- 任务目标：
+  修正 §7 完成判定；
+  为 B5/B6 补充缺失范围说明；
+  修正路径、状态 token 和字段名的字面转义；
+  保留 B1-B6 成果。
+- 非目标：
+  不进入 OpenAPI BUILD；
+  不修改 canonical 契约、数据模型或业务代码；
+  不完成最终 GitHub 全文审阅；
+  不提交、不推送、不合并。
+- 允许修改范围：
+  AGENTS.md §7 的 completed 含义与完成判定；
+  AGENTS.md 现行规范中代码块和行内代码内的多余字面转义；
+  docs/TASK.md 唯一入口切换、B7 完整任务定义、B6 归档及 B5/B6 缺失范围说明；
+  docs/CHANGELOG.md 新增本轮治理修正记录。
+- 禁止修改范围：
+  上述范围以外的文件和内容。
+- 实施步骤：
+  输入核验；
+  修正 AGENTS §7 与字面转义；
+  切换 TASK 入口并归档 B6；
+  补充 B5/B6 缺失范围；
+  添加 CHANGELOG 记录；
+  执行直接 diff 和文档验证；
+  交回审查。
+- 测试与验证：
+  本轮不运行业务测试、构建或服务；
+  执行直接输入输出比较、git diff --check、
+  Markdown 围栏与链接检查、范围保护核对。
+- 验收标准：
+  三项遗留问题均已修正；
+  当前入口唯一；
+  B6 已归档且 B5/B6 范围说明存在；
+  未修改范围外文件；
+  未将历史任务归档写成最终审查通过或已集成。
+- 回滚方案：
+  仅在获准后撤销 B7 增量；
+  恢复依据为本轮真实输入，而非直接恢复固定提交；
+  不覆盖后续修改或撤销 B1-B6 成果。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-BUILD-B1
+
+- B1 建立 OpenAPI/SSE 骨架并通过基础 lint/Go 检查。
+- B1 文件仍未提交、未推送、未合并。
+- R1 发现成功 DTO、错误模板、分页、SSE 枚举等缺口，由 B2 继续修复。
+- 归档不代表 B1 已通过完整契约验收。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B2
+
+- B2 建立契约矩阵、具体 DTO、逐操作错误、分页/cursor 与 SSE canonical 枚举。
+- B2 文件仍未提交、未推送、未合并。
+- R2 后续发现 Last-Event-ID 归属、Review 状态与部分 canonical 边界问题，由 B3 继续修复。
+- 归档不代表 B2 已通过完整契约验收。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B3
+
+- B3 修正 Last-Event-ID、canonical enum、TaskLimits、Review 200 与 SSE 结构化负例。
+- B3 文件仍未提交、未推送、未合并。
+- R3 后续发现认证分支、bootstrap、REST ID、export 状态与分页样例问题，由 B4 继续修复。
+- 归档不代表 B3 已通过完整契约验收。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B4
+
+- B4 核准认证分支、bootstrap 401、REST ULID、export_finished 状态和分页样例。
+- B4 文件仍未提交、未推送、未合并。
+- R4 后续发现 createSite/deleteSite/analyzeSite 认证、AuditLog 主键与 EXPIRED 事件语义问题，由 B5 继续修复。
+- 归档不代表 B4 已通过完整契约验收。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B5
+
+- B5 修复 createSite/deleteSite/analyzeSite 认证、AuditLog 主键和 export_finished 两态。
+- R5 审查报告曾给出 PASS。
+- 协调复核后续发现两个列表接口缺 scope，以及派生 403 回归检查未落实，因此进入 B6。
+- 不得改写 R5 原报告为审查者当时已提出这些结论。
+- B5 文件仍未提交、未推送、未合并。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B6
+
+- B6 补齐 listSites/listPlugins scope 并加入派生 403 回归检查。
+- R6 确认当前契约内容正确。
+- R6 因 CSRF/GET 反向与三方逐状态检查未完成而 CHANGES_REQUESTED。
+- B7 仅补强测试门禁与执行记录。
+- B6 文件仍未提交、未推送、未合并。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B7
+
+- R7 原报告给出 PASS。
+- 协调复核发现未知错误码静默跳过，与 B7 既定验收要求不一致。
+- B7-E1 仅做未知码诊断定点补充，不重开其他已通过事项。
+- B7 文件仍未提交、未推送、未合并。
 
 ### 历史冻结任务路线（TASK-019 时期，无当前执行效力）
 
