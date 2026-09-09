@@ -99,6 +99,17 @@
 - 新增 U1/U2/U3 内存负例
 - 本轮仍未提交、未推送
 
+### DEV-003 SSE Validation Coordinator Fix
+
+- validate-sse.mjs 改用 Ajv2020 draft-2020-12 校验，开启 schema validation
+- 保存 validate.errors 到局部 errors，修复作用域外 validate 变量引用
+- 新增 --verify-failure-modes：合法样例内存变体必须输出具体实例错误，
+  非法 schema 必须归类 LOAD/COMPILE FAIL
+- 现有 26 个 SSE fixture 用例通过；lint 仅保留已接受的非阻断 info-contact warning
+- 核对 README、PRODUCT_BASELINE_V1.1、CHANGELOG、TASK 的 HEAD blob ID
+  与 GitHub b780b380 内容 SHA 一致；原始 SHA-256 差异由工作区 CRLF 与 Git LF 造成
+- 本轮三个文件修改未提交、未推送；PR #11 保持 Draft
+
 ### Governance Review Fix (B7)
 
 - AGENTS §7 更新 completed 含义与完成判定边界。

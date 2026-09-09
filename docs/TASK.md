@@ -11,9 +11,10 @@
 
 ### 当前任务
 
-- active_task=TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B7-E1
-- task_status=review
-- 当前任务：修复未知错误码在验证中被静默丢弃的问题
+- active_task=TASK-CRAWLER-V1.0-V1.1-DEV-003-COORDINATOR-REMOTE-REVIEW-CHANGES-REQUESTED
+- task_status=changes_requested_implementation
+- coordinator_remote_review=CHANGES_REQUESTED
+- 当前任务：落实协调远端审查对 SSE 校验工具与文档核验的 CHANGES_REQUESTED 修复
 - 当前任务定义：[本轮任务定义](#本轮任务定义)
 - DEV-003 OpenAPI BUILD：继续；API handler、SSE 服务仍未开始
 
@@ -25,6 +26,8 @@
 - shared_contract_fix=IMPLEMENTED_REVIEWED_AND_INTEGRATED
 - governance_review_fix_merge_commit=5111b3e6cedc6b2bcb77e4ffa62257044a76de83
 - dev_003_openapi_build=IN_PROGRESS
+- dev_003_candidate_commit=b780b380a41b8806f89d1fefac4ed8967a976e0b
+- dev_003_pr=11
 - dev_005=NOT_STARTED
 - legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
 - production_loader=NOT_STARTED
@@ -33,60 +36,82 @@
 
 ### 本次核验与工作区说明
 
-- 记录日期：2026-09-08（Asia/Shanghai）
+- 记录日期：2026-09-09（Asia/Shanghai）
 - 当前本地分支：feat/dev-003-openapi-v1-build-b1
-- HEAD：5111b3e6cedc6b2bcb77e4ffa62257044a76de83
+- HEAD：b780b380a41b8806f89d1fefac4ed8967a976e0b
 - local main：5111b3e6cedc6b2bcb77e4ffa62257044a76de83（本地 main 分支）
 - origin/main：5111b3e6cedc6b2bcb77e4ffa62257044a76de83（本地远端跟踪引用）
-- B1-B7 文件仍未提交；untracked=15 是未提交 BUILD 的正常状态
-- 本轮未提交、未推送、未创建 PR
+- 20 个 DEV-003 交付文件已由本地提交 b780b380a41b8806f89d1fefac4ed8967a976e0b 提交
+- 功能分支已推送；PR #11 存在且保持 Draft，本轮不改变 Draft 状态
+- 开始工作区 clean：staged=0、unstaged=0、untracked=0
+- 本轮仅修改 tools/openapi/validate-sse.mjs、docs/TASK.md、docs/CHANGELOG.md，且不提交
 
 ### 本轮任务定义
 
 - 任务编号：
-  TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B7-E1
+  TASK-CRAWLER-V1.0-V1.1-DEV-003-COORDINATOR-REMOTE-REVIEW-CHANGES-REQUESTED
 - 任务名称：
-  修复未知错误码静默丢弃
+  应用协调远端审查 CHANGES_REQUESTED 修复
 - 任务类型：
-  测试门禁定点补充
+  协调审查修复与工具验证
 - 当前状态：
   以本入口 task_status 字段为准
 - 任务背景：
-  R7 原报告给出 PASS；协调复核发现 unknown code 在分组函数中被静默 continue 丢弃，与 B7 既定验收要求不一致。
+  已审查候选提交 b780b380a41b8806f89d1fefac4ed8967a976e0b 已创建本地提交、
+  推送功能分支并创建 Draft PR #11；
+  协调远端复核返回 DEV003_COORDINATOR_REMOTE_REVIEW_CHANGES_REQUESTED。
 - 当前问题：
-  fixtureErrorsByStatus 与 xErrorsByStatus 遇到 knownStatus 未映射的错误码时静默跳过，validateThreeWay 无法发现。
+  validate-sse.mjs 使用 draft-07 Ajv 并禁用 validateSchema；
+  失败诊断引用 try 作用域外的 validate 变量，可能产生 ReferenceError；
+  四份 CRLF 文档的原始字节 SHA-256 与 GitHub LF blob 内容哈希不一致，
+  需要核验 HEAD blob 并解释差异。
 - 任务目标：
-  让未知码产生来源/operation/code 诊断；
-  将诊断传递到 validateThreeWay；
-  增加 U1/U2/U3 内存负例；
+  validate-sse.mjs 改用 Ajv2020 并开启 schema 校验；
+  修复作用域外变量引用；
+  保持现有 26 个 SSE 用例通过；
+  验证两个内存失败路径分类正确；
+  核对 README/PRODUCT_BASELINE/CHANGELOG/TASK 的 HEAD blob 与 GitHub 值一致，
+  并解释原始字节差异；
   更新 TASK/CHANGELOG。
 - 非目标：
-  不重新设计契约；
-  不修改 OpenAPI/SSE/fixture/canonical；
-  不创建 PR、不推送、不合并。
+  不修改 OpenAPI、SSE schema、fixture、Go 测试、package.json/package-lock、
+  canonical 或业务实现；
+  不提交、不推送、不改变 PR #11 Draft 状态、不合并。
 - 允许修改范围：
-  go-spider/internal/api/openapi_contract_test.go；
+  tools/openapi/validate-sse.mjs；
   docs/TASK.md；
   docs/CHANGELOG.md。
 - 禁止修改范围：
   其他全部项目交付路径与未授权内容。
 - 实施步骤：
-  修改两个分组函数签名并返回诊断；
-  validateThreeWay 汇入诊断；
-  增加 U1/U2/U3；
-  执行 Go/gofmt/diff。
+  记录三个修改文件输入哈希并保留输入副本；
+  改写 validate-sse.mjs 为 Ajv2020、开启 schema 校验并保存实例 errors；
+  增加 --verify-failure-modes 内存失败路径验证；
+  执行 npm run validate-sse、npm run lint、npm audit、npm ls；
+  用 gh api 核对四份文档 HEAD blob ID 与 GitHub 值；
+  更新 TASK/CHANGELOG；
+  清理本任务临时资源。
 - 测试与验证：
-  go test ./internal/api -count=1 -v；
-  gofmt -d；
+  node --check；
+  npm run validate-sse（26 个用例）；
+  node validate-sse.mjs --verify-failure-modes；
+  npm run lint；
+  npm audit --audit-level=high；
+  npm ls --all；
   git diff --check。
 - 验收标准：
-  未知码不再被静默丢弃；
-  U1/U2/U3 精确命中目标 operation/code；
-  原始契约通过；
-  17 个未允许文件不变。
+  Ajv2020 且 schema 校验开启；
+  合法样例变体输出具体实例错误并产生非零退出且无 ReferenceError；
+  非法 schema 归类 LOAD/COMPILE FAIL；
+  26 个真实 SSE 用例通过；
+  四份文档本地 HEAD blob ID 与 GitHub 值一致，
+  原始字节差异解释为工作区 CRLF 与 Git LF；
+  未提交、未推送、PR #11 Draft 状态不变。
 - 回滚方案：
-  仅在获准后撤销 B7-E1 增量；保留 B1-B7 成果；
-  不覆盖未提交内容，不直接恢复 HEAD。
+  仅在获准后撤销本轮三个文件增量；
+  恢复依据为本轮真实输入，不直接恢复 HEAD；
+  保留 b780b380a41b8806f89d1fefac4ed8967a976e0b 已提交成果，
+  不覆盖其他修改。
 
 ## 历史任务与执行记录
 
@@ -561,6 +586,17 @@ review 只表示等待审查，不表示审查通过。
 - 协调复核发现未知错误码静默跳过，与 B7 既定验收要求不一致。
 - B7-E1 仅做未知码诊断定点补充，不重开其他已通过事项。
 - B7 文件仍未提交、未推送、未合并。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-FIX-B7-E1
+
+- B7-E1 完成 fixtureErrorsByStatus/xErrorsByStatus 未知码诊断传递，并新增 U1/U2/U3。
+- 独立 R7-E2 对 B7-E1 返回 PASS_WAITING_COMMIT。
+- C1 将受审 20 个交付文件提交为 b780b380a41b8806f89d1fefac4ed8967a976e0b。
+- P1 推送功能分支并创建 Draft PR #11；C1 审查通过不代表远端审查最终通过。
+- 协调远端复核随后对 SSE 校验工具与文档核验返回 CHANGES_REQUESTED，
+  当前修复工作已切换到本文件前部唯一现行任务。
+
 
 ### 历史冻结任务路线（TASK-019 时期，无当前执行效力）
 
