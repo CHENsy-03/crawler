@@ -1,0 +1,935 @@
+{
+  "contract_version": "1.0.0",
+  "operation_count": 43,
+  "operations": [
+    {
+      "method": "get",
+      "path": "/bootstrap/status",
+      "operationId": "getBootstrapStatus",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "BootstrapStatusResponse",
+      "errors": [
+        "already_initialized"
+      ],
+      "security": "public",
+      "idempotency_key": false,
+      "source": "P4 getBootstrapStatus",
+      "token_scopes": []
+    },
+    {
+      "method": "post",
+      "path": "/bootstrap",
+      "operationId": "bootstrapSystem",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "BootstrapResultResponse",
+      "errors": [
+        "unauthorized",
+        "validation_error",
+        "already_initialized",
+        "state_conflict",
+        "idempotency_conflict"
+      ],
+      "security": "public",
+      "idempotency_key": true,
+      "source": "P4 bootstrapSystem",
+      "token_scopes": []
+    },
+    {
+      "method": "post",
+      "path": "/auth/login",
+      "operationId": "login",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "SessionResponse",
+      "errors": [
+        "validation_error",
+        "invalid_credentials",
+        "over_limit"
+      ],
+      "security": "public",
+      "idempotency_key": false,
+      "source": "P4 login",
+      "token_scopes": []
+    },
+    {
+      "method": "post",
+      "path": "/auth/logout",
+      "operationId": "logout",
+      "success_status": "204",
+      "media_type": "",
+      "response_schema": "",
+      "errors": [
+        "unauthorized",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 logout",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/auth/session",
+      "operationId": "getCurrentSession",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "SessionResponse",
+      "errors": [
+        "unauthorized"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 getCurrentSession",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/auth/tokens",
+      "operationId": "listApiTokens",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "ApiTokenListResponse",
+      "errors": [
+        "unauthorized"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 listApiTokens",
+      "token_scopes": []
+    },
+    {
+      "method": "post",
+      "path": "/auth/tokens",
+      "operationId": "createApiToken",
+      "success_status": "201",
+      "media_type": "application/json",
+      "response_schema": "ApiTokenCreatedResponse",
+      "errors": [
+        "unauthorized",
+        "validation_error",
+        "token_limit_exceeded",
+        "csrf_failed",
+        "idempotency_conflict"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 createApiToken",
+      "token_scopes": []
+    },
+    {
+      "method": "delete",
+      "path": "/auth/tokens/{tokenId}",
+      "operationId": "deleteApiToken",
+      "success_status": "204",
+      "media_type": "",
+      "response_schema": "",
+      "errors": [
+        "unauthorized",
+        "not_found",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 deleteApiToken",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/dashboard/overview",
+      "operationId": "getDashboardOverview",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "DashboardOverviewResponse",
+      "errors": [
+        "unauthorized",
+        "security_policy_rejected",
+        "validation_error"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 getDashboardOverview",
+      "token_scopes": [
+        "dashboard:read"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/tasks",
+      "operationId": "listTasks",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "TaskListResponse",
+      "errors": [
+        "validation_error",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 listTasks",
+      "token_scopes": [
+        "tasks:read"
+      ]
+    },
+    {
+      "method": "post",
+      "path": "/tasks",
+      "operationId": "createTask",
+      "success_status": "201",
+      "media_type": "application/json",
+      "response_schema": "TaskCreatedResponse",
+      "errors": [
+        "unauthorized",
+        "security_policy_rejected",
+        "validation_error",
+        "site_not_found",
+        "task_limit_exceeded",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": true,
+      "source": "P4 createTask",
+      "token_scopes": [
+        "tasks:write"
+      ]
+    },
+    {
+      "method": "post",
+      "path": "/tasks/{taskId}/scope-suggestion",
+      "operationId": "suggestTaskScope",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "ScopeSuggestionResponse",
+      "errors": [
+        "unauthorized",
+        "security_policy_rejected",
+        "task_not_found",
+        "state_conflict",
+        "validation_error",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": true,
+      "source": "P4 suggestTaskScope",
+      "token_scopes": [
+        "tasks:write"
+      ]
+    },
+    {
+      "method": "post",
+      "path": "/tasks/{taskId}/confirm",
+      "operationId": "confirmTask",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "TaskResponse",
+      "errors": [
+        "unauthorized",
+        "security_policy_rejected",
+        "task_not_found",
+        "state_conflict",
+        "task_limit_exceeded",
+        "over_limit",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": true,
+      "source": "P4 confirmTask",
+      "token_scopes": [
+        "tasks:write"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/tasks/{taskId}",
+      "operationId": "getTask",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "TaskResponse",
+      "errors": [
+        "task_not_found",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 getTask",
+      "token_scopes": [
+        "tasks:read"
+      ]
+    },
+    {
+      "method": "post",
+      "path": "/tasks/{taskId}/cancel",
+      "operationId": "cancelTask",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "TaskResponse",
+      "errors": [
+        "unauthorized",
+        "security_policy_rejected",
+        "task_not_found",
+        "state_conflict",
+        "already_terminal",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": true,
+      "source": "P4 cancelTask",
+      "token_scopes": [
+        "tasks:write"
+      ]
+    },
+    {
+      "method": "post",
+      "path": "/tasks/{taskId}/retry",
+      "operationId": "retryTask",
+      "success_status": "201",
+      "media_type": "application/json",
+      "response_schema": "TaskCreatedResponse",
+      "errors": [
+        "unauthorized",
+        "security_policy_rejected",
+        "task_not_found",
+        "state_conflict",
+        "already_terminal",
+        "task_limit_exceeded",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": true,
+      "source": "P4 retryTask",
+      "token_scopes": [
+        "tasks:write"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/tasks/{taskId}/events",
+      "operationId": "streamTaskEvents",
+      "success_status": "200",
+      "media_type": "text/event-stream",
+      "response_schema": "SSEStreamResponse",
+      "errors": [
+        "task_not_found",
+        "event_history_expired",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 streamTaskEvents",
+      "token_scopes": [
+        "tasks:read"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/results",
+      "operationId": "listResults",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "ResultListResponse",
+      "errors": [
+        "validation_error",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 listResults",
+      "token_scopes": [
+        "results:read"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/results/{taskArticleId}",
+      "operationId": "getResult",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "ResultResponse",
+      "errors": [
+        "not_found",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 getResult",
+      "token_scopes": [
+        "results:read"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/results/{taskArticleId}/evidence",
+      "operationId": "downloadResultEvidence",
+      "success_status": "200",
+      "media_type": "application/octet-stream",
+      "response_schema": "BinaryResponse",
+      "errors": [
+        "not_found",
+        "evidence_hold_unavailable",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 downloadResultEvidence",
+      "token_scopes": [
+        "results:read"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/results/{taskArticleId}/reviews",
+      "operationId": "listResultReviews",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "ReviewDecisionListResponse",
+      "errors": [
+        "not_found",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 listResultReviews",
+      "token_scopes": [
+        "results:read"
+      ]
+    },
+    {
+      "method": "post",
+      "path": "/results/{taskArticleId}/review",
+      "operationId": "createResultReview",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "ReviewDecisionResponse",
+      "errors": [
+        "unauthorized",
+        "not_found",
+        "state_conflict",
+        "evidence_hold_unavailable",
+        "validation_error",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 createResultReview",
+      "token_scopes": []
+    },
+    {
+      "method": "post",
+      "path": "/export-jobs",
+      "operationId": "createExportJob",
+      "success_status": "202",
+      "media_type": "application/json",
+      "response_schema": "ExportJobResponse",
+      "errors": [
+        "unauthorized",
+        "security_policy_rejected",
+        "validation_error",
+        "export_not_supported",
+        "no_results",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": true,
+      "source": "P4 createExportJob",
+      "token_scopes": [
+        "exports:write"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/export-jobs",
+      "operationId": "listExportJobs",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "ExportJobListResponse",
+      "errors": [
+        "validation_error",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 listExportJobs",
+      "token_scopes": [
+        "exports:read"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/export-jobs/{jobId}",
+      "operationId": "getExportJob",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "ExportJobResponse",
+      "errors": [
+        "not_found",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 getExportJob",
+      "token_scopes": [
+        "exports:read"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/export-jobs/{jobId}/download",
+      "operationId": "downloadExportJob",
+      "success_status": "200",
+      "media_type": "application/octet-stream",
+      "response_schema": "BinaryResponse",
+      "errors": [
+        "not_found",
+        "export_expired",
+        "not_ready",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 downloadExportJob",
+      "token_scopes": [
+        "exports:read"
+      ]
+    },
+    {
+      "method": "get",
+      "path": "/sites",
+      "operationId": "listSites",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "SiteListResponse",
+      "errors": [
+        "validation_error",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 listSites",
+      "token_scopes": [
+        "sites:read"
+      ]
+    },
+    {
+      "method": "post",
+      "path": "/sites",
+      "operationId": "createSite",
+      "success_status": "201",
+      "media_type": "application/json",
+      "response_schema": "SiteResponse",
+      "errors": [
+        "unauthorized",
+        "validation_error",
+        "state_conflict",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 createSite",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/sites/{siteCode}",
+      "operationId": "getSite",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "SiteResponse",
+      "errors": [
+        "site_not_found",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 getSite",
+      "token_scopes": [
+        "sites:read"
+      ]
+    },
+    {
+      "method": "put",
+      "path": "/sites/{siteCode}",
+      "operationId": "updateSite",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "SiteResponse",
+      "errors": [
+        "unauthorized",
+        "site_not_found",
+        "state_conflict",
+        "validation_error",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 updateSite",
+      "token_scopes": []
+    },
+    {
+      "method": "post",
+      "path": "/sites/{siteCode}/analyze",
+      "operationId": "analyzeSite",
+      "success_status": "202",
+      "media_type": "application/json",
+      "response_schema": "SiteAnalysisAcceptedResponse",
+      "errors": [
+        "unauthorized",
+        "site_not_found",
+        "state_conflict",
+        "dependency_not_ready",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 analyzeSite",
+      "token_scopes": []
+    },
+    {
+      "method": "delete",
+      "path": "/sites/{siteCode}",
+      "operationId": "deleteSite",
+      "success_status": "204",
+      "media_type": "",
+      "response_schema": "",
+      "errors": [
+        "unauthorized",
+        "site_not_found",
+        "state_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 deleteSite",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/plugins",
+      "operationId": "listPlugins",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "PluginListResponse",
+      "errors": [
+        "validation_error",
+        "unauthorized",
+        "security_policy_rejected"
+      ],
+      "security": "sessionBearer",
+      "idempotency_key": false,
+      "source": "P4 listPlugins",
+      "token_scopes": [
+        "plugins:read"
+      ]
+    },
+    {
+      "method": "put",
+      "path": "/plugins/{pluginId}",
+      "operationId": "updatePlugin",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "PluginResponse",
+      "errors": [
+        "unauthorized",
+        "not_found",
+        "validation_error",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 updatePlugin",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/system/health",
+      "operationId": "getSystemHealth",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "SystemHealthResponse",
+      "errors": [
+        "unauthorized",
+        "dependency_not_ready"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 getSystemHealth",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/system/logs",
+      "operationId": "listSystemLogs",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "SystemLogListResponse",
+      "errors": [
+        "unauthorized",
+        "validation_error"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 listSystemLogs",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/system/audit",
+      "operationId": "listAuditLogs",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "AuditLogListResponse",
+      "errors": [
+        "unauthorized",
+        "validation_error"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 listAuditLogs",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/system/security/status",
+      "operationId": "getSecurityStatus",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "SecurityStatusResponse",
+      "errors": [
+        "unauthorized",
+        "dependency_not_ready"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 getSecurityStatus",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/system/dead-letters",
+      "operationId": "listDeadLetters",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "DeadLetterListResponse",
+      "errors": [
+        "unauthorized",
+        "validation_error"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 listDeadLetters",
+      "token_scopes": []
+    },
+    {
+      "method": "post",
+      "path": "/system/dead-letters/{deadLetterId}/replay",
+      "operationId": "replayDeadLetter",
+      "success_status": "202",
+      "media_type": "application/json",
+      "response_schema": "DeadLetterReplayAcceptedResponse",
+      "errors": [
+        "unauthorized",
+        "not_found",
+        "state_conflict",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 replayDeadLetter",
+      "token_scopes": []
+    },
+    {
+      "method": "get",
+      "path": "/system/global-blocklist",
+      "operationId": "listGlobalBlockEntries",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "GlobalBlockEntryListResponse",
+      "errors": [
+        "unauthorized",
+        "validation_error"
+      ],
+      "security": "session",
+      "idempotency_key": false,
+      "source": "P4 listGlobalBlockEntries",
+      "token_scopes": []
+    },
+    {
+      "method": "post",
+      "path": "/system/global-blocklist",
+      "operationId": "createGlobalBlockEntry",
+      "success_status": "201",
+      "media_type": "application/json",
+      "response_schema": "GlobalBlockEntryResponse",
+      "errors": [
+        "unauthorized",
+        "validation_error",
+        "evidence_missing",
+        "security_policy_rejected",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 createGlobalBlockEntry",
+      "token_scopes": []
+    },
+    {
+      "method": "put",
+      "path": "/system/global-blocklist/{blockEntryId}",
+      "operationId": "updateGlobalBlockEntry",
+      "success_status": "200",
+      "media_type": "application/json",
+      "response_schema": "GlobalBlockEntryResponse",
+      "errors": [
+        "unauthorized",
+        "not_found",
+        "state_conflict",
+        "validation_error",
+        "evidence_missing",
+        "idempotency_conflict",
+        "csrf_failed"
+      ],
+      "security": "session",
+      "idempotency_key": true,
+      "source": "P4 updateGlobalBlockEntry",
+      "token_scopes": []
+    }
+  ],
+  "behavior_samples": [
+    {
+      "name": "results-page-valid",
+      "rule": "page_mode",
+      "valid": true,
+      "data": {
+        "page": 1,
+        "page_size": 20
+      }
+    },
+    {
+      "name": "results-cursor-valid",
+      "rule": "cursor_mode",
+      "valid": true,
+      "data": {
+        "cursor": "next-cursor",
+        "page_size": 20
+      }
+    },
+    {
+      "name": "results-page-cursor-conflict",
+      "rule": "page_cursor_exclusive",
+      "valid": false,
+      "data": {
+        "page": 1,
+        "cursor": "abc"
+      },
+      "reason": "page and cursor must be mutually exclusive"
+    },
+    {
+      "name": "results-sort-unknown",
+      "rule": "sort_whitelist",
+      "valid": false,
+      "data": {
+        "sort": "random"
+      },
+      "reason": "sort must be persisted_at, relevance_score or quality_score"
+    },
+    {
+      "name": "results-no-next-cursor-null",
+      "rule": "next_cursor_terminal",
+      "valid": true,
+      "data": {
+        "next_cursor": null
+      },
+      "reason": "terminal cursor is null"
+    },
+    {
+      "name": "results-total-exact-without-counted-at",
+      "rule": "total_exact_counted_at",
+      "valid": false,
+      "data": {
+        "total_exact": false
+      },
+      "reason": "counted_at required when total_exact is false"
+    },
+    {
+      "name": "results-total-exact-with-counted-at",
+      "rule": "total_exact_counted_at",
+      "valid": true,
+      "data": {
+        "total_exact": false,
+        "counted_at": "2026-09-07T00:00:00Z"
+      }
+    },
+    {
+      "name": "review-alias-matches",
+      "rule": "review_alias_equality",
+      "valid": true,
+      "data": {
+        "current_review_decision": "APPROVED",
+        "review_status": "APPROVED"
+      }
+    },
+    {
+      "name": "review-alias-mismatch",
+      "rule": "review_alias_equality",
+      "valid": false,
+      "data": {
+        "current_review_decision": "APPROVED",
+        "review_status": "REJECTED"
+      },
+      "reason": "review_status must equal current_review_decision when present"
+    },
+    {
+      "name": "review-null-without-decision",
+      "rule": "review_null_relation",
+      "valid": true,
+      "data": {
+        "current_review_decision": null,
+        "has_review_decision": false
+      }
+    },
+    {
+      "name": "review-null-with-decision-true",
+      "rule": "review_null_relation",
+      "valid": false,
+      "data": {
+        "current_review_decision": null,
+        "has_review_decision": true
+      },
+      "reason": "has_review_decision true requires non-null decision"
+    },
+    {
+      "name": "results-cursor-wrong-type",
+      "rule": "cursor_type",
+      "valid": false,
+      "data": {
+        "cursor": 123
+      },
+      "reason": "cursor must be string"
+    }
+  ]
+}

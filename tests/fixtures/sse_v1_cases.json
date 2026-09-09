@@ -1,0 +1,421 @@
+{
+  "cases": [
+    {
+      "name": "valid-task_status_changed.schema.json",
+      "schema": "task_status_changed.schema.json",
+      "valid": true,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "from_status": "QUEUED",
+        "to_status": "RUNNING"
+      }
+    },
+    {
+      "name": "invalid-task_status_changed.schema.json",
+      "schema": "task_status_changed.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "2",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "from_status": "QUEUED",
+        "to_status": "RUNNING"
+      },
+      "reason": "event_version must be 1",
+      "expect": {
+        "keyword": "const",
+        "instancePath": "/event_version"
+      }
+    },
+    {
+      "name": "valid-stage_progress.schema.json",
+      "schema": "stage_progress.schema.json",
+      "valid": true,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "stage": "FETCH",
+        "current": 2,
+        "total": 10,
+        "percent": 20
+      }
+    },
+    {
+      "name": "invalid-stage_progress.schema.json",
+      "schema": "stage_progress.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "2",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "stage": "FETCH",
+        "current": 2,
+        "total": 10,
+        "percent": 20
+      },
+      "reason": "event_version must be 1",
+      "expect": {
+        "keyword": "const",
+        "instancePath": "/event_version"
+      }
+    },
+    {
+      "name": "valid-worker_lost.schema.json",
+      "schema": "worker_lost.schema.json",
+      "valid": true,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "attempt_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "heartbeat_expired_at": "2026-09-07T12:00:00.000Z"
+      }
+    },
+    {
+      "name": "invalid-worker_lost.schema.json",
+      "schema": "worker_lost.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "2",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "attempt_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "heartbeat_expired_at": "2026-09-07T12:00:00.000Z"
+      },
+      "reason": "event_version must be 1",
+      "expect": {
+        "keyword": "const",
+        "instancePath": "/event_version"
+      }
+    },
+    {
+      "name": "valid-result_persisted.schema.json",
+      "schema": "result_persisted.schema.json",
+      "valid": true,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "task_article_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "result_status": "accepted",
+        "article_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "article_version_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "article_key": "key-1"
+      }
+    },
+    {
+      "name": "invalid-result_persisted.schema.json",
+      "schema": "result_persisted.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "result_status": "accepted",
+        "article_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "article_version_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "article_key": "key-1"
+      },
+      "reason": "missing task_article_id",
+      "expect": {
+        "keyword": "required",
+        "missingProperty": "task_article_id"
+      }
+    },
+    {
+      "name": "valid-task_error.schema.json",
+      "schema": "task_error.schema.json",
+      "valid": true,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "error_code": "fetch_failed",
+        "retryable": true,
+        "request_id": "req-1"
+      }
+    },
+    {
+      "name": "invalid-task_error.schema.json",
+      "schema": "task_error.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "2",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "error_code": "fetch_failed",
+        "retryable": true,
+        "request_id": "req-1"
+      },
+      "reason": "event_version must be 1",
+      "expect": {
+        "keyword": "const",
+        "instancePath": "/event_version"
+      }
+    },
+    {
+      "name": "valid-export_finished.schema.json",
+      "schema": "export_finished.schema.json",
+      "valid": true,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "SUCCEEDED",
+        "download_url": "https://example.test/export.csv"
+      }
+    },
+    {
+      "name": "invalid-export_finished.schema.json",
+      "schema": "export_finished.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "2",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "SUCCEEDED",
+        "download_url": "https://example.test/export.csv"
+      },
+      "reason": "event_version must be 1",
+      "expect": {
+        "keyword": "const",
+        "instancePath": "/event_version"
+      }
+    },
+    {
+      "name": "invalid-export-succeeded-missing-download",
+      "schema": "export_finished.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "SUCCEEDED"
+      },
+      "reason": "SUCCEEDED requires download_url",
+      "expect": {
+        "keyword": "required",
+        "missingProperty": "download_url"
+      }
+    },
+    {
+      "name": "invalid-export-failed-missing-error",
+      "schema": "export_finished.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "FAILED",
+        "download_url": null
+      },
+      "reason": "FAILED requires error_code",
+      "expect": {
+        "keyword": "required",
+        "missingProperty": "error_code"
+      }
+    },
+    {
+      "name": "invalid-date-time-task-status",
+      "schema": "task_status_changed.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "not-a-date",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "from_status": "QUEUED",
+        "to_status": "RUNNING"
+      },
+      "reason": "occurred_at is not a valid date-time",
+      "expect": {
+        "keyword": "format",
+        "instancePath": "/occurred_at"
+      }
+    },
+    {
+      "name": "invalid-ulid-lowercase",
+      "schema": "task_status_changed.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01hx3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "from_status": "QUEUED",
+        "to_status": "RUNNING"
+      },
+      "reason": "task_id contains lowercase ULID",
+      "expect": {
+        "keyword": "pattern",
+        "instancePath": "/task_id"
+      }
+    },
+    {
+      "name": "invalid-task-status",
+      "schema": "task_status_changed.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "from_status": "QUEUED",
+        "to_status": "PENDING"
+      },
+      "reason": "to_status is not a canonical crawl_task status",
+      "expect": {
+        "keyword": "enum",
+        "instancePath": "/to_status"
+      }
+    },
+    {
+      "name": "invalid-stage-name",
+      "schema": "stage_progress.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "stage": "searching",
+        "current": 1,
+        "total": 10
+      },
+      "reason": "stage is not a canonical task_stage_name",
+      "expect": {
+        "keyword": "enum",
+        "instancePath": "/stage"
+      }
+    },
+    {
+      "name": "invalid-result-status",
+      "schema": "result_persisted.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "task_article_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "result_status": "succeeded",
+        "article_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "article_version_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE"
+      },
+      "reason": "result_status is not a canonical task_article status",
+      "expect": {
+        "keyword": "enum",
+        "instancePath": "/result_status"
+      }
+    },
+    {
+      "name": "invalid-error-code",
+      "schema": "task_error.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "error_code": "not_a_canonical_error"
+      },
+      "reason": "error_code is not canonical",
+      "expect": {
+        "keyword": "enum",
+        "instancePath": "/error_code"
+      }
+    },
+    {
+      "name": "invalid-export-success-both-fields",
+      "schema": "export_finished.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "SUCCEEDED",
+        "download_url": "https://example.test/export.csv",
+        "error_code": null
+      },
+      "reason": "download_url and error_code must not both appear",
+      "expect": {
+        "keyword": "not"
+      }
+    },
+    {
+      "name": "invalid-export-failed-both-fields",
+      "schema": "export_finished.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "FAILED",
+        "download_url": null,
+        "error_code": "fetch_failed"
+      },
+      "reason": "download_url and error_code must not both appear",
+      "expect": {
+        "keyword": "not"
+      }
+    },
+    {
+      "name": "invalid-export-pending-status",
+      "schema": "export_finished.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "PENDING"
+      },
+      "reason": "PENDING is not an export_finished status",
+      "expect": {
+        "keyword": "enum",
+        "instancePath": "/status"
+      }
+    },
+    {
+      "name": "invalid-export-running-status",
+      "schema": "export_finished.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "RUNNING"
+      },
+      "reason": "RUNNING is not an export_finished status",
+      "expect": {
+        "keyword": "enum",
+        "instancePath": "/status"
+      }
+    },
+    {
+      "name": "valid-export-failed",
+      "schema": "export_finished.schema.json",
+      "valid": true,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "FAILED",
+        "error_code": "fetch_failed"
+      }
+    },
+    {
+      "name": "invalid-export-expired-status",
+      "schema": "export_finished.schema.json",
+      "valid": false,
+      "data": {
+        "event_version": "1",
+        "occurred_at": "2026-09-07T12:00:00.000Z",
+        "job_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "status": "EXPIRED",
+        "error_code": "export_expired"
+      },
+      "reason": "EXPIRED is not an export_finished status",
+      "expect": {
+        "keyword": "enum",
+        "instancePath": "/status"
+      }
+    }
+  ]
+}

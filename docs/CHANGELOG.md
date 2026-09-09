@@ -26,6 +26,90 @@
 - 未重算完成度、未重跑历史测试、未修改测试门禁。
 - 本次变更尚待审查与提交，治理整改尚未完成最终 GitHub 审阅。
 
+### DEV-003 OpenAPI Build (B1)
+
+- 新增 `go-spider/openapi/v1/openapi.yaml`：43 个外部 operation，OpenAPI 3.1.0
+- 新增六个外部 SSE JSON Schema
+- 新增 Spectral/Ajv/Go contract 定向验证与正负 fixture
+- generator_status=DEFERRED_UNTIL_AUDITED_PATCHED_RELEASE
+- API handler、SSE 服务、Redis Streams/Outbox 仍未实现
+- 本轮未提交、未推送
+
+### DEV-003 OpenAPI Fix (B2)
+
+- 新增 43-operation 契约矩阵 fixture
+- JSON 成功响应改为具体 DTO 引用，消除通用开放 data
+- Results 增加 page/cursor、排序和唯一尾键约束
+- 逐 operation 裁剪错误响应，删除统一错误模板
+- SSE schema 使用 canonical 状态/阶段/结果/错误枚举
+- Task limits 改为 typed limits；导出格式改为 CSV/XLSX/JSON
+- Go/Ajv 测试增强，可拒绝开放 data 等缺陷
+- 本轮仍未提交、未推送
+
+### DEV-003 OpenAPI Fix (B3)
+
+- Last-Event-ID 从 suggestTaskScope 移除并归入 streamTaskEvents
+- REST DTO 状态/阶段/审核/结果字段改为 canonical enum
+- TaskLimits max_candidates 修正为 10000
+- createResultReview 成功状态修正为 200
+- 分页/Review/SSE 正负行为样例加入 fixture 与 Go/Ajv 测试
+- SSE 负例包含结构化 expected 约束命中检查
+- 补齐带认证 mutation 的 unauthorized/csrf_failed/idempotency_conflict 错误声明
+- export_finished 改为 download_url 与 error_code 按字段存在性互斥
+- 本轮仍未提交、未推送
+
+### DEV-003 OpenAPI Fix (B4)
+
+- updateSite/updatePlugin 改为 Session-only，移除 Bearer alternative 与 Token scope
+- bootstrapSystem 增加 bootstrap token unauthorized/401
+- Bearer 接口补齐 security_policy_rejected/403
+- 增加 REST 实体 ID canonical ULID 覆盖测试
+- export_finished fixture 覆盖 PENDING/RUNNING/SUCCEEDED/FAILED/EXPIRED
+- 分页完整 cursor 请求样例与局部子规则校验分开
+- 本轮仍未提交、未推送
+
+### DEV-003 OpenAPI Fix (B5)
+
+- createSite/deleteSite/analyzeSite 改为 Session-only，移除 Bearer 与 Token scope
+- AuditLog 公开 DTO 移除 audit_log_id
+- export_finished 状态限定为 SUCCEEDED/FAILED；ExportJob EXPIRED 与下载 410 保留
+- ADR-027 记录 export_finished owner 事件语义决定
+- 本轮仍未提交、未推送
+
+### DEV-003 OpenAPI Fix (B6)
+
+- listSites/listPlugins 补齐 sites:read/plugins:read scope
+- 正式 Go 检查枚举全部 Bearer operation，验证批准 scope 与派生 403 enum
+- 新增三个内存变体：删除 security_policy_rejected、缺失 scope、错误 scope
+- export_finished FAILED 分支去除 EXPIRED，负例名称与 reason 清理
+- 本轮仍未提交、未推送
+
+### DEV-003 OpenAPI Fix (B7)
+
+- CSRF 检查改为按实际 SessionCookie+CsrfHeader 分支判定，不再硬编码 createExportJob
+- 增加 GET 403 反向检查，禁止错误允许 csrf_failed
+- 增加 43-operation 三方逐 HTTP status 一致性检查
+- 增加 D/E/F 内存负例并断言预期诊断
+- 本轮仍未提交、未推送
+
+### DEV-003 OpenAPI Fix (B7-E1)
+
+- fixtureErrorsByStatus/xErrorsByStatus 不再静默丢弃未知错误码
+- 未知码诊断传入 validateThreeWay，可按来源/operation/code 定位
+- 新增 U1/U2/U3 内存负例
+- 本轮仍未提交、未推送
+
+### DEV-003 SSE Validation Coordinator Fix
+
+- validate-sse.mjs 改用 Ajv2020 draft-2020-12 校验，开启 schema validation
+- 保存 validate.errors 到局部 errors，修复作用域外 validate 变量引用
+- 新增 --verify-failure-modes：合法样例内存变体必须输出具体实例错误，
+  非法 schema 必须归类 LOAD/COMPILE FAIL
+- 现有 26 个 SSE fixture 用例通过；lint 仅保留已接受的非阻断 info-contact warning
+- 核对 README、PRODUCT_BASELINE_V1.1、CHANGELOG、TASK 的 HEAD blob ID
+  与 GitHub b780b380 内容 SHA 一致；原始 SHA-256 差异由工作区 CRLF 与 Git LF 造成
+- 本轮三个文件修改未提交、未推送；PR #11 保持 Draft
+
 ### Governance Review Fix (B7)
 
 - AGENTS §7 更新 completed 含义与完成判定边界。

@@ -83,3 +83,5 @@ DEV-002 只冻结契约地基，不表示 API、数据库、Redis Streams 或状
 - [migrations/mysql/0002_v1_0_v1_1_22_entities.down.sql](../migrations/mysql/0002_v1_0_v1_1_22_entities.down.sql)
 
 DEV-004 的数据模型、MySQL migration、Go 字段模型和契约验证已经独立审查并集成；这不表示业务 API、Redis Streams、Outbox dispatcher、状态机、部署或发布已实现。0002 只支持空的 0001 前置状态，非空 legacy 数据与不可变存储迁移仍被阻断。
+
+DEV-003 OpenAPI/SSE 契约文件已建立，但 API handler、SSE 服务和 Redis Streams/Outbox 仍未实现；发布状态仍为 RELEASE_BLOCKED。

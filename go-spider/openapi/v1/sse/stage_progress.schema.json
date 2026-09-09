@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stage_progress.schema.json",
+  "title": "stage_progress",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_version",
+    "occurred_at",
+    "task_id",
+    "stage",
+    "current",
+    "total"
+  ],
+  "properties": {
+    "event_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 26,
+      "maxLength": 26,
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "DISCOVERY",
+        "FETCH",
+        "PARSE",
+        "SCORE",
+        "FILTER",
+        "DEDUP",
+        "PERSIST"
+      ]
+    },
+    "current": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "percent": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    }
+  }
+}

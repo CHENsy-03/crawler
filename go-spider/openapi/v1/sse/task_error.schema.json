@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "task_error.schema.json",
+  "title": "task_error",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_version",
+    "occurred_at",
+    "task_id",
+    "error_code"
+  ],
+  "properties": {
+    "event_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 26,
+      "maxLength": 26,
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "error_code": {
+      "type": "string",
+      "enum": [
+        "validation_error",
+        "unauthorized",
+        "csrf_failed",
+        "state_conflict",
+        "idempotency_conflict",
+        "dependency_not_ready",
+        "site_not_ready",
+        "scope_expired",
+        "over_limit",
+        "security_policy_rejected",
+        "search_failed",
+        "no_executable_plan",
+        "fetch_failed",
+        "parse_failed",
+        "unsupported_format",
+        "evidence_missing",
+        "not_retryable",
+        "export_expired",
+        "worker_lost",
+        "parser_memory_limit_exceeded",
+        "parser_timeout",
+        "parser_process_lost",
+        "parser_deadline_exceeded",
+        "evidence_hold_unavailable",
+        "evidence_checksum_mismatch",
+        "global_blocked",
+        "stream_drain_only",
+        "storage_capacity_blocked",
+        "export_temp_space_exhausted",
+        "js_csp_blocked",
+        "js_cors_critical_resource_failed",
+        "js_cross_origin_iframe_unsupported",
+        "js_content_timeout",
+        "invalid_target_url",
+        "invalid_keyword",
+        "empty_keywords",
+        "invalid_integer",
+        "invalid_message",
+        "invalid_json",
+        "missing_protocol_version",
+        "invalid_type",
+        "unknown_field",
+        "unknown_protocol_version",
+        "invalid_boolean",
+        "invalid_path",
+        "invalid_pairs",
+        "invalid_json_value",
+        "invalid_json_template",
+        "no_results",
+        "no_candidate",
+        "analysis_failed",
+        "publish_failure",
+        "already_initialized",
+        "invalid_credentials",
+        "token_limit_exceeded",
+        "task_not_found",
+        "site_not_found",
+        "not_found",
+        "export_not_supported",
+        "not_ready",
+        "already_terminal",
+        "task_limit_exceeded",
+        "event_history_expired"
+      ]
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "request_id": {
+      "type": "string",
+      "maxLength": 128
+    }
+  }
+}

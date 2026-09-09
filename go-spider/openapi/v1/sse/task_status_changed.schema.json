@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "task_status_changed.schema.json",
+  "title": "task_status_changed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_version",
+    "occurred_at",
+    "task_id",
+    "from_status",
+    "to_status"
+  ],
+  "properties": {
+    "event_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 26,
+      "maxLength": 26,
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "from_status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "PENDING_CONFIRMATION",
+        "QUEUED",
+        "RUNNING",
+        "RETRY_WAIT",
+        "RECOVERING",
+        "CANCELLING",
+        "SUCCEEDED",
+        "PARTIAL_SUCCEEDED",
+        "FAILED",
+        "CANCELLED",
+        "TIMED_OUT"
+      ]
+    },
+    "to_status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "PENDING_CONFIRMATION",
+        "QUEUED",
+        "RUNNING",
+        "RETRY_WAIT",
+        "RECOVERING",
+        "CANCELLING",
+        "SUCCEEDED",
+        "PARTIAL_SUCCEEDED",
+        "FAILED",
+        "CANCELLED",
+        "TIMED_OUT"
+      ]
+    }
+  }
+}

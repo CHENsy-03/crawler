@@ -1,0 +1,2580 @@
+openapi: 3.1.0
+info:
+  title: Crawler External API
+  version: 1.0.0
+  description: DEV-003 frozen /api/v1 external contract.
+servers:
+  - url: /api/v1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+tags:
+  - name: Bootstrap
+  - name: Authentication
+  - name: Dashboard
+  - name: Tasks
+  - name: Results
+  - name: Export
+  - name: Sites
+  - name: Plugins
+  - name: System
+paths:
+  /bootstrap/status:
+    get:
+      operationId: getBootstrapStatus
+      description: getBootstrapStatus endpoint.
+      tags: [Bootstrap]
+      security: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      responses:
+        '200':
+          description: getBootstrapStatus success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BootstrapStatusResponse"}
+        '409':
+          description: already_initialized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getBootstrapStatus_409"}
+      x-errors:
+        - already_initialized
+
+  /bootstrap:
+    post:
+      operationId: bootstrapSystem
+      description: bootstrapSystem endpoint.
+      tags: [Bootstrap]
+      security: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BootstrapRequest"}
+      responses:
+        '200':
+          description: bootstrapSystem success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BootstrapResultResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_bootstrapSystem_400"}
+        '409':
+          description: already_initialized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_bootstrapSystem_409"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_bootstrapSystem_401"}
+      x-errors:
+        - unauthorized
+        - validation_error
+        - already_initialized
+        - state_conflict
+        - idempotency_conflict
+
+  /auth/login:
+    post:
+      operationId: login
+      description: login endpoint.
+      tags: [Authentication]
+      security: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/LoginRequest"}
+      responses:
+        '200':
+          description: login success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SessionResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_login_400"}
+        '401':
+          description: invalid_credentials
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_login_401"}
+        '429':
+          description: over_limit
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_login_429"}
+      x-errors:
+        - validation_error
+        - invalid_credentials
+        - over_limit
+
+  /auth/logout:
+    post:
+      operationId: logout
+      description: logout endpoint.
+      tags: [Authentication]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      responses:
+        '204':
+          description: logout success
+          content: {}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_logout_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_logout_403"}
+      x-errors:
+        - unauthorized
+        - csrf_failed
+
+  /auth/session:
+    get:
+      operationId: getCurrentSession
+      description: getCurrentSession endpoint.
+      tags: [Authentication]
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      responses:
+        '200':
+          description: getCurrentSession success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SessionResponse"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getCurrentSession_401"}
+      x-errors:
+        - unauthorized
+
+  /auth/tokens:
+    get:
+      operationId: listApiTokens
+      description: listApiTokens endpoint.
+      tags: [Authentication]
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      responses:
+        '200':
+          description: listApiTokens success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ApiTokenListResponse"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listApiTokens_401"}
+      x-errors:
+        - unauthorized
+
+    post:
+      operationId: createApiToken
+      description: createApiToken endpoint.
+      tags: [Authentication]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ApiTokenCreateRequest"}
+      responses:
+        '201':
+          description: createApiToken success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ApiTokenCreatedResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createApiToken_400"}
+        '429':
+          description: token_limit_exceeded
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createApiToken_429"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createApiToken_403"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createApiToken_401"}
+        '409':
+          description: idempotency_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createApiToken_409"}
+      x-errors:
+        - unauthorized
+        - validation_error
+        - token_limit_exceeded
+        - csrf_failed
+        - idempotency_conflict
+
+  /auth/tokens/{tokenId}:
+    delete:
+      operationId: deleteApiToken
+      description: deleteApiToken endpoint.
+      tags: [Authentication]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: tokenId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '204':
+          description: deleteApiToken success
+          content: {}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_deleteApiToken_401"}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_deleteApiToken_404"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_deleteApiToken_403"}
+      x-errors:
+        - unauthorized
+        - not_found
+        - csrf_failed
+
+  /dashboard/overview:
+    get:
+      operationId: getDashboardOverview
+      description: getDashboardOverview endpoint.
+      tags: [Dashboard]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["dashboard:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      responses:
+        '200':
+          description: getDashboardOverview success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DashboardOverviewResponse"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getDashboardOverview_401"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getDashboardOverview_400"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getDashboardOverview_403"}
+      x-errors:
+        - unauthorized
+        - security_policy_rejected
+        - validation_error
+
+  /tasks:
+    get:
+      operationId: listTasks
+      description: listTasks endpoint.
+      tags: [Tasks]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["tasks:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: listTasks success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TaskListResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listTasks_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listTasks_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listTasks_403"}
+      x-errors:
+        - validation_error
+        - unauthorized
+        - security_policy_rejected
+
+    post:
+      operationId: createTask
+      description: createTask endpoint.
+      tags: [Tasks]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["tasks:write"]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/TaskCreateRequest"}
+      responses:
+        '201':
+          description: createTask success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TaskCreatedResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createTask_400"}
+        '404':
+          description: site_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createTask_404"}
+        '422':
+          description: task_limit_exceeded
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createTask_422"}
+        '409':
+          description: idempotency_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createTask_409"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createTask_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createTask_403"}
+      x-errors:
+        - unauthorized
+        - security_policy_rejected
+        - validation_error
+        - site_not_found
+        - task_limit_exceeded
+        - idempotency_conflict
+        - csrf_failed
+
+  /tasks/{taskId}/scope-suggestion:
+    post:
+      operationId: suggestTaskScope
+      description: suggestTaskScope endpoint.
+      tags: [Tasks]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["tasks:write"]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: suggestTaskScope success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ScopeSuggestionResponse"}
+        '404':
+          description: task_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_suggestTaskScope_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_suggestTaskScope_409"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_suggestTaskScope_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_suggestTaskScope_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_suggestTaskScope_403"}
+      x-errors:
+        - unauthorized
+        - security_policy_rejected
+        - task_not_found
+        - state_conflict
+        - validation_error
+        - idempotency_conflict
+        - csrf_failed
+
+  /tasks/{taskId}/confirm:
+    post:
+      operationId: confirmTask
+      description: confirmTask endpoint.
+      tags: [Tasks]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["tasks:write"]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: confirmTask success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TaskResponse"}
+        '404':
+          description: task_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_confirmTask_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_confirmTask_409"}
+        '422':
+          description: task_limit_exceeded
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_confirmTask_422"}
+        '429':
+          description: over_limit
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_confirmTask_429"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_confirmTask_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_confirmTask_403"}
+      x-errors:
+        - unauthorized
+        - security_policy_rejected
+        - task_not_found
+        - state_conflict
+        - task_limit_exceeded
+        - over_limit
+        - idempotency_conflict
+        - csrf_failed
+
+  /tasks/{taskId}:
+    get:
+      operationId: getTask
+      description: getTask endpoint.
+      tags: [Tasks]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["tasks:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: getTask success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TaskResponse"}
+        '404':
+          description: task_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getTask_404"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getTask_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getTask_403"}
+      x-errors:
+        - task_not_found
+        - unauthorized
+        - security_policy_rejected
+
+  /tasks/{taskId}/cancel:
+    post:
+      operationId: cancelTask
+      description: cancelTask endpoint.
+      tags: [Tasks]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["tasks:write"]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: cancelTask success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TaskResponse"}
+        '404':
+          description: task_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_cancelTask_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_cancelTask_409"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_cancelTask_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_cancelTask_403"}
+      x-errors:
+        - unauthorized
+        - security_policy_rejected
+        - task_not_found
+        - state_conflict
+        - already_terminal
+        - idempotency_conflict
+        - csrf_failed
+
+  /tasks/{taskId}/retry:
+    post:
+      operationId: retryTask
+      description: retryTask endpoint.
+      tags: [Tasks]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["tasks:write"]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '201':
+          description: retryTask success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TaskCreatedResponse"}
+        '404':
+          description: task_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_retryTask_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_retryTask_409"}
+        '422':
+          description: task_limit_exceeded
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_retryTask_422"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_retryTask_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_retryTask_403"}
+      x-errors:
+        - unauthorized
+        - security_policy_rejected
+        - task_not_found
+        - state_conflict
+        - already_terminal
+        - task_limit_exceeded
+        - idempotency_conflict
+        - csrf_failed
+
+  /tasks/{taskId}/events:
+    get:
+      operationId: streamTaskEvents
+      description: streamTaskEvents endpoint.
+      tags: [Tasks]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["tasks:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: Last-Event-ID
+          in: header
+          required: false
+          description: Canonical TaskEvent ULID for SSE resumption.
+          schema: {$ref: "#/components/schemas/ULID"}
+        - name: taskId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: streamTaskEvents success
+          content:
+            text/event-stream:
+              schema: {type: string}
+        '404':
+          description: task_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_streamTaskEvents_404"}
+        '410':
+          description: event_history_expired
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_streamTaskEvents_410"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_streamTaskEvents_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_streamTaskEvents_403"}
+      x-errors:
+        - task_not_found
+        - event_history_expired
+        - unauthorized
+        - security_policy_rejected
+      x-sse-event-schemas:
+        task_status_changed: sse/task_status_changed.schema.json
+        stage_progress: sse/stage_progress.schema.json
+        worker_lost: sse/worker_lost.schema.json
+        result_persisted: sse/result_persisted.schema.json
+        task_error: sse/task_error.schema.json
+        export_finished: sse/export_finished.schema.json
+
+  /results:
+    get:
+      operationId: listResults
+      description: listResults endpoint.
+      tags: [Results]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["results:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+        - name: cursor
+          in: query
+          description: Opaque cursor, mutually exclusive with page.
+          schema: {type: string, maxLength: 512}
+        - name: sort
+          in: query
+          schema: {type: string, enum: [persisted_at, relevance_score, quality_score]}
+        - name: order
+          in: query
+          schema: {type: string, enum: [asc, desc]}
+      x-mutually-exclusive-parameters: [page, cursor]
+      x-contract-invariants: ["RESULT_NEXT_CURSOR_NULL_WHEN_NO_NEXT","RESULT_TOTAL_EXACT_REQUIRES_COUNTED_AT","RESULT_SORT_UNIQUE_TASK_ARTICLE_ID_TAIL"]
+      responses:
+        '200':
+          description: listResults success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ResultListResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listResults_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listResults_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listResults_403"}
+      x-errors:
+        - validation_error
+        - unauthorized
+        - security_policy_rejected
+
+  /results/{taskArticleId}:
+    get:
+      operationId: getResult
+      description: getResult endpoint.
+      tags: [Results]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["results:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskArticleId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: getResult success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ResultResponse"}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getResult_404"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getResult_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getResult_403"}
+      x-errors:
+        - not_found
+        - unauthorized
+        - security_policy_rejected
+
+  /results/{taskArticleId}/evidence:
+    get:
+      operationId: downloadResultEvidence
+      description: downloadResultEvidence endpoint.
+      tags: [Results]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["results:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskArticleId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: downloadResultEvidence success
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadResultEvidence_404"}
+        '503':
+          description: evidence_hold_unavailable
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadResultEvidence_503"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadResultEvidence_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadResultEvidence_403"}
+      x-errors:
+        - not_found
+        - evidence_hold_unavailable
+        - unauthorized
+        - security_policy_rejected
+
+  /results/{taskArticleId}/reviews:
+    get:
+      operationId: listResultReviews
+      description: listResultReviews endpoint.
+      tags: [Results]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["results:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskArticleId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: listResultReviews success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ReviewDecisionListResponse"}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listResultReviews_404"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listResultReviews_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listResultReviews_403"}
+      x-errors:
+        - not_found
+        - unauthorized
+        - security_policy_rejected
+
+  /results/{taskArticleId}/review:
+    post:
+      operationId: createResultReview
+      description: createResultReview endpoint.
+      tags: [Results]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: taskArticleId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ReviewCreateRequest"}
+      responses:
+        '200':
+          description: createResultReview success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ReviewDecisionResponse"}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createResultReview_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createResultReview_409"}
+        '503':
+          description: evidence_hold_unavailable
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createResultReview_503"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createResultReview_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createResultReview_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createResultReview_403"}
+      x-errors:
+        - unauthorized
+        - not_found
+        - state_conflict
+        - evidence_hold_unavailable
+        - validation_error
+        - idempotency_conflict
+        - csrf_failed
+
+  /export-jobs:
+    post:
+      operationId: createExportJob
+      description: createExportJob endpoint.
+      tags: [Export]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["exports:write"]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ExportJobCreateRequest"}
+      responses:
+        '202':
+          description: createExportJob success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ExportJobResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createExportJob_400"}
+        '422':
+          description: export_not_supported
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createExportJob_422"}
+        '404':
+          description: no_results
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createExportJob_404"}
+        '409':
+          description: idempotency_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createExportJob_409"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createExportJob_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createExportJob_403"}
+      x-errors:
+        - unauthorized
+        - security_policy_rejected
+        - validation_error
+        - export_not_supported
+        - no_results
+        - idempotency_conflict
+        - csrf_failed
+
+    get:
+      operationId: listExportJobs
+      description: listExportJobs endpoint.
+      tags: [Export]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["exports:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: listExportJobs success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ExportJobListResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listExportJobs_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listExportJobs_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listExportJobs_403"}
+      x-errors:
+        - validation_error
+        - unauthorized
+        - security_policy_rejected
+
+  /export-jobs/{jobId}:
+    get:
+      operationId: getExportJob
+      description: getExportJob endpoint.
+      tags: [Export]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["exports:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: jobId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: getExportJob success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ExportJobResponse"}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getExportJob_404"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getExportJob_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getExportJob_403"}
+      x-errors:
+        - not_found
+        - unauthorized
+        - security_policy_rejected
+
+  /export-jobs/{jobId}/download:
+    get:
+      operationId: downloadExportJob
+      description: downloadExportJob endpoint.
+      tags: [Export]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["exports:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: jobId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: downloadExportJob success
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadExportJob_404"}
+        '410':
+          description: export_expired
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadExportJob_410"}
+        '503':
+          description: not_ready
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadExportJob_503"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadExportJob_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_downloadExportJob_403"}
+      x-errors:
+        - not_found
+        - export_expired
+        - not_ready
+        - unauthorized
+        - security_policy_rejected
+
+  /sites:
+    get:
+      operationId: listSites
+      description: listSites endpoint.
+      tags: [Sites]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["sites:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: listSites success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SiteListResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listSites_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listSites_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listSites_403"}
+      x-errors:
+        - validation_error
+        - unauthorized
+        - security_policy_rejected
+
+    post:
+      operationId: createSite
+      description: createSite endpoint.
+      tags: [Sites]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SiteCreateRequest"}
+      responses:
+        '201':
+          description: createSite success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SiteResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createSite_400"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createSite_409"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createSite_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createSite_403"}
+      x-errors:
+        - unauthorized
+        - validation_error
+        - state_conflict
+        - idempotency_conflict
+        - csrf_failed
+
+  /sites/{siteCode}:
+    get:
+      operationId: getSite
+      description: getSite endpoint.
+      tags: [Sites]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["sites:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: siteCode
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: getSite success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SiteResponse"}
+        '404':
+          description: site_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getSite_404"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getSite_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getSite_403"}
+      x-errors:
+        - site_not_found
+        - unauthorized
+        - security_policy_rejected
+
+    put:
+      operationId: updateSite
+      description: updateSite endpoint.
+      tags: [Sites]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: siteCode
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SiteUpdateRequest"}
+      responses:
+        '200':
+          description: updateSite success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SiteResponse"}
+        '404':
+          description: site_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateSite_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateSite_409"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateSite_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateSite_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateSite_403"}
+      x-errors:
+        - unauthorized
+        - site_not_found
+        - state_conflict
+        - validation_error
+        - idempotency_conflict
+        - csrf_failed
+
+    delete:
+      operationId: deleteSite
+      description: deleteSite endpoint.
+      tags: [Sites]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: siteCode
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '204':
+          description: deleteSite success
+          content: {}
+        '404':
+          description: site_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_deleteSite_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_deleteSite_409"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_deleteSite_403"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_deleteSite_401"}
+      x-errors:
+        - unauthorized
+        - site_not_found
+        - state_conflict
+        - csrf_failed
+
+  /sites/{siteCode}/analyze:
+    post:
+      operationId: analyzeSite
+      description: analyzeSite endpoint.
+      tags: [Sites]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: siteCode
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '202':
+          description: analyzeSite success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SiteAnalysisAcceptedResponse"}
+        '404':
+          description: site_not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_analyzeSite_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_analyzeSite_409"}
+        '503':
+          description: dependency_not_ready
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_analyzeSite_503"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_analyzeSite_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_analyzeSite_403"}
+      x-errors:
+        - unauthorized
+        - site_not_found
+        - state_conflict
+        - dependency_not_ready
+        - idempotency_conflict
+        - csrf_failed
+
+  /plugins:
+    get:
+      operationId: listPlugins
+      description: listPlugins endpoint.
+      tags: [Plugins]
+      security:
+        - SessionCookie: []
+        - BearerAuth: []
+      x-required-api-token-scopes: ["plugins:read"]
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: listPlugins success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PluginListResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listPlugins_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listPlugins_401"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listPlugins_403"}
+      x-errors:
+        - validation_error
+        - unauthorized
+        - security_policy_rejected
+
+  /plugins/{pluginId}:
+    put:
+      operationId: updatePlugin
+      description: updatePlugin endpoint.
+      tags: [Plugins]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: pluginId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '200':
+          description: updatePlugin success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PluginResponse"}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updatePlugin_404"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updatePlugin_400"}
+        '409':
+          description: idempotency_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updatePlugin_409"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updatePlugin_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updatePlugin_403"}
+      x-errors:
+        - unauthorized
+        - not_found
+        - validation_error
+        - idempotency_conflict
+        - csrf_failed
+
+  /system/health:
+    get:
+      operationId: getSystemHealth
+      description: getSystemHealth endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      responses:
+        '200':
+          description: getSystemHealth success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemHealthResponse"}
+        '503':
+          description: dependency_not_ready
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getSystemHealth_503"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getSystemHealth_401"}
+      x-errors:
+        - unauthorized
+        - dependency_not_ready
+
+  /system/logs:
+    get:
+      operationId: listSystemLogs
+      description: listSystemLogs endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: listSystemLogs success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SystemLogListResponse"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listSystemLogs_401"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listSystemLogs_400"}
+      x-errors:
+        - unauthorized
+        - validation_error
+
+  /system/audit:
+    get:
+      operationId: listAuditLogs
+      description: listAuditLogs endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: listAuditLogs success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AuditLogListResponse"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listAuditLogs_401"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listAuditLogs_400"}
+      x-errors:
+        - unauthorized
+        - validation_error
+
+  /system/security/status:
+    get:
+      operationId: getSecurityStatus
+      description: getSecurityStatus endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      responses:
+        '200':
+          description: getSecurityStatus success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SecurityStatusResponse"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getSecurityStatus_401"}
+        '503':
+          description: dependency_not_ready
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_getSecurityStatus_503"}
+      x-errors:
+        - unauthorized
+        - dependency_not_ready
+
+  /system/dead-letters:
+    get:
+      operationId: listDeadLetters
+      description: listDeadLetters endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: listDeadLetters success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DeadLetterListResponse"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listDeadLetters_401"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listDeadLetters_400"}
+      x-errors:
+        - unauthorized
+        - validation_error
+
+  /system/dead-letters/{deadLetterId}/replay:
+    post:
+      operationId: replayDeadLetter
+      description: replayDeadLetter endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: deadLetterId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      responses:
+        '202':
+          description: replayDeadLetter success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DeadLetterReplayAcceptedResponse"}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_replayDeadLetter_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_replayDeadLetter_409"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_replayDeadLetter_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_replayDeadLetter_403"}
+      x-errors:
+        - unauthorized
+        - not_found
+        - state_conflict
+        - idempotency_conflict
+        - csrf_failed
+
+  /system/global-blocklist:
+    get:
+      operationId: listGlobalBlockEntries
+      description: listGlobalBlockEntries endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: listGlobalBlockEntries success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/GlobalBlockEntryListResponse"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listGlobalBlockEntries_401"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_listGlobalBlockEntries_400"}
+      x-errors:
+        - unauthorized
+        - validation_error
+
+    post:
+      operationId: createGlobalBlockEntry
+      description: createGlobalBlockEntry endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/GlobalBlockEntryCreateRequest"}
+      responses:
+        '201':
+          description: createGlobalBlockEntry success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/GlobalBlockEntryResponse"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createGlobalBlockEntry_400"}
+        '409':
+          description: evidence_missing
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createGlobalBlockEntry_409"}
+        '403':
+          description: security_policy_rejected
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createGlobalBlockEntry_403"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_createGlobalBlockEntry_401"}
+      x-errors:
+        - unauthorized
+        - validation_error
+        - evidence_missing
+        - security_policy_rejected
+        - idempotency_conflict
+        - csrf_failed
+
+  /system/global-blocklist/{blockEntryId}:
+    put:
+      operationId: updateGlobalBlockEntry
+      description: updateGlobalBlockEntry endpoint.
+      tags: [System]
+      security:
+        - SessionCookie: []
+          CsrfHeader: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema: {type: string, maxLength: 128}
+        - name: blockEntryId
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/ULID"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/GlobalBlockEntryUpdateRequest"}
+      responses:
+        '200':
+          description: updateGlobalBlockEntry success
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/GlobalBlockEntryResponse"}
+        '404':
+          description: not_found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateGlobalBlockEntry_404"}
+        '409':
+          description: state_conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateGlobalBlockEntry_409"}
+        '400':
+          description: validation_error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateGlobalBlockEntry_400"}
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateGlobalBlockEntry_401"}
+        '403':
+          description: csrf_failed
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorEnvelope_updateGlobalBlockEntry_403"}
+      x-errors:
+        - unauthorized
+        - not_found
+        - state_conflict
+        - validation_error
+        - evidence_missing
+        - idempotency_conflict
+        - csrf_failed
+
+components:
+  securitySchemes:
+    SessionCookie: {type: apiKey, in: cookie, name: crawler_session}
+    CsrfHeader: {type: apiKey, in: header, name: X-CSRF-Token}
+    BearerAuth: {type: http, scheme: bearer}
+  schemas:
+    BootstrapStatusResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/BootstrapStatus"}}}
+    BootstrapResultResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/BootstrapResult"}}}
+    SessionResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/Session"}}}
+    ApiTokenListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/ApiTokenList"}}}
+    ApiTokenCreatedResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/ApiTokenCreated"}}}
+    DashboardOverviewResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/DashboardOverview"}}}
+    TaskResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/Task"}}}
+    TaskCreatedResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/Task"}}}
+    TaskListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/TaskList"}}}
+    ScopeSuggestionResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/ScopeSuggestion"}}}
+    ResultResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/Result"}}}
+    ResultListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/ResultList"}}}
+    ReviewDecisionResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/ReviewDecision"}}}
+    ReviewDecisionListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/ReviewDecisionList"}}}
+    ExportJobResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/ExportJob"}}}
+    ExportJobListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/ExportJobList"}}}
+    SiteResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/Site"}}}
+    SiteListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/SiteList"}}}
+    PluginResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/Plugin"}}}
+    PluginListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/PluginList"}}}
+    SystemHealthResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/SystemHealth"}}}
+    SystemLogListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/SystemLogList"}}}
+    AuditLogListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/AuditLogList"}}}
+    SecurityStatusResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/SecurityStatus"}}}
+    DeadLetterListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/DeadLetterList"}}}
+    DeadLetterReplayAcceptedResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/DeadLetterReplayAccepted"}}}
+    GlobalBlockEntryResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/GlobalBlockEntry"}}}
+    GlobalBlockEntryListResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/GlobalBlockEntryList"}}}
+    BootstrapStatus:
+      {"type":"object","additionalProperties":false,"required":["initialized"],"properties":{"initialized":{"type":"boolean"}}}
+    BootstrapResult:
+      {"type":"object","additionalProperties":false,"required":["initialized"],"properties":{"initialized":{"type":"boolean"},"admin_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"}}}
+    Session:
+      {"type":"object","additionalProperties":false,"required":["admin_id","session_id","expires_at"],"properties":{"admin_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"session_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"expires_at":{"type":"string","format":"date-time"}}}
+    ApiToken:
+      {"type":"object","additionalProperties":false,"required":["token_id","name","created_at"],"properties":{"token_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"name":{"type":"string","minLength":1,"maxLength":128},"scopes":{"type":"array","items":{"type":"string","minLength":1,"maxLength":128}},"created_at":{"type":"string","format":"date-time"},"expires_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}]}}}
+    ApiTokenCreated:
+      {"type":"object","additionalProperties":false,"required":["token_id","secret","name"],"properties":{"token_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"secret":{"type":"string","minLength":1,"maxLength":1024,"writeOnly":true},"name":{"type":"string","minLength":1,"maxLength":128}}}
+    DashboardOverview:
+      {"type":"object","additionalProperties":false,"required":["task_counts"],"properties":{"task_counts":{"type":"object","additionalProperties":true}}}
+    Task:
+      {"type":"object","additionalProperties":false,"required":["task_id","site_code","status","stage","created_at"],"properties":{"task_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"site_code":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"status":{"type":"string","minLength":1,"maxLength":64,"enum":["DRAFT","PENDING_CONFIRMATION","QUEUED","RUNNING","RETRY_WAIT","RECOVERING","CANCELLING","SUCCEEDED","PARTIAL_SUCCEEDED","FAILED","CANCELLED","TIMED_OUT"]},"stage":{"type":"string","minLength":1,"maxLength":64,"enum":["DISCOVERY","FETCH","PARSE","SCORE","FILTER","DEDUP","PERSIST"]},"keywords":{"type":"array","items":{"type":"string","minLength":1,"maxLength":255}},"created_at":{"type":"string","format":"date-time"}}}
+    TaskList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/Task"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    ScopeSuggestion:
+      {"type":"object","additionalProperties":false,"required":["task_id","candidate_count"],"properties":{"task_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"candidate_count":{"type":"integer","minimum":0}}}
+    Result:
+      {"type":"object","additionalProperties":false,"required":["task_article_id","task_id","result_status","title","source_host","published_at","content"],"properties":{"task_article_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"task_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"result_status":{"type":"string","minLength":1,"maxLength":64,"enum":["accepted","review_required","irrelevant","extract_failed","unsupported_format"]},"title":{"type":"string","minLength":1,"maxLength":500},"source_host":{"type":"string","minLength":1,"maxLength":255},"published_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}]},"content":{"type":"string","minLength":1,"maxLength":1000000}}}
+    ResultList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total","total_exact","counted_at","next_cursor"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/Result"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0},"total_exact":{"type":"boolean"},"counted_at":{"type":"string","format":"date-time"},"next_cursor":{"anyOf":[{"type":"string","minLength":1,"maxLength":512},{"type":"null"}]}}}
+    ReviewDecision:
+      {"type":"object","additionalProperties":false,"required":["decision_id","task_article_id","current_review_decision","has_review_decision"],"properties":{"decision_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"task_article_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"current_review_decision":{"type":"string","minLength":1,"maxLength":64,"enum":["APPROVED","REJECTED","NEEDS_REVIEW"]},"has_review_decision":{"type":"boolean"},"review_status":{"type":"string","minLength":1,"maxLength":64,"enum":["APPROVED","REJECTED","NEEDS_REVIEW"],"deprecated":true}}}
+    ReviewDecisionList:
+      {"type":"object","additionalProperties":false,"required":["items"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/ReviewDecision"}}}}
+    ExportJob:
+      {"type":"object","additionalProperties":false,"required":["job_id","format","status","created_at","expires_at"],"properties":{"job_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"format":{"type":"string","minLength":1,"maxLength":16,"enum":["CSV","XLSX","JSON"]},"status":{"type":"string","minLength":1,"maxLength":64,"enum":["PENDING","RUNNING","SUCCEEDED","FAILED","EXPIRED"]},"download_url":{"anyOf":[{"type":"string","minLength":1,"maxLength":2048},{"type":"null"}]},"created_at":{"type":"string","format":"date-time"},"expires_at":{"type":"string","format":"date-time"}}}
+    ExportJobList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/ExportJob"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    Site:
+      {"type":"object","additionalProperties":false,"required":["site_code","name","status"],"properties":{"site_code":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"name":{"type":"string","minLength":1,"maxLength":255},"status":{"type":"string","minLength":1,"maxLength":64,"enum":["DRAFT","ANALYZING","NEEDS_CONFIRMATION","READY","BLOCKED","DISABLED","MIGRATION_PENDING"]},"site_version":{"type":"integer","minimum":1}}}
+    SiteList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/Site"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    Plugin:
+      {"type":"object","additionalProperties":false,"required":["plugin_id","plugin_key","plugin_version","plugin_type","enabled"],"properties":{"plugin_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"plugin_key":{"type":"string","minLength":1,"maxLength":128},"plugin_version":{"type":"string","minLength":1,"maxLength":32},"plugin_type":{"type":"string","minLength":1,"maxLength":32},"enabled":{"type":"boolean"}}}
+    PluginList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/Plugin"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    SystemHealth:
+      {"type":"object","additionalProperties":false,"required":["status"],"properties":{"status":{"type":"string","minLength":1,"maxLength":32,"enum":["ready","not_ready"]}}}
+    SystemLog:
+      {"type":"object","additionalProperties":false,"required":["log_id","created_at","message"],"properties":{"log_id":{"type":"string","minLength":1,"maxLength":255},"created_at":{"type":"string","format":"date-time"},"message":{"type":"string","minLength":1,"maxLength":4000}}}
+    SystemLogList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/SystemLog"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    AuditLog:
+      {"type":"object","additionalProperties":false,"required":["created_at","action"],"properties":{"created_at":{"type":"string","format":"date-time"},"action":{"type":"string","minLength":1,"maxLength":255}}}
+    AuditLogList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/AuditLog"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    SecurityStatus:
+      {"type":"object","additionalProperties":false,"required":["status"],"properties":{"status":{"type":"string","minLength":1,"maxLength":64}}}
+    DeadLetter:
+      {"type":"object","additionalProperties":false,"required":["dead_letter_id","status","created_at"],"properties":{"dead_letter_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"status":{"type":"string","minLength":1,"maxLength":64,"enum":["OPEN","REPLAYED","RESOLVED","DISCARDED"]},"created_at":{"type":"string","format":"date-time"}}}
+    DeadLetterList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/DeadLetter"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    DeadLetterReplayAccepted:
+      {"type":"object","additionalProperties":false,"required":["dead_letter_id","status"],"properties":{"dead_letter_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"status":{"type":"string","minLength":1,"maxLength":64}}}
+    GlobalBlockEntry:
+      {"type":"object","additionalProperties":false,"required":["block_entry_id","match_type","pattern_normalized","reason_code","reason_summary","status","effective_at"],"properties":{"block_entry_id":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"match_type":{"type":"string","minLength":1,"maxLength":32},"pattern_normalized":{"type":"string","minLength":1,"maxLength":512},"reason_code":{"type":"string","minLength":1,"maxLength":32},"reason_summary":{"type":"string","minLength":1,"maxLength":255},"status":{"type":"string","minLength":1,"maxLength":32,"enum":["ACTIVE","EXPIRED","REVOKED"]},"has_evidence":{"type":"boolean"},"effective_at":{"type":"string","format":"date-time"},"expires_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}]},"version":{"type":"integer","minimum":1},"impacted_site_count":{"type":"integer","minimum":0},"impacted_task_count":{"type":"integer","minimum":0}}}
+    GlobalBlockEntryList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/GlobalBlockEntry"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    ULID:
+      {"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"}
+    LoginRequest:
+      {"type":"object","additionalProperties":false,"required":["username","password"],"properties":{"username":{"type":"string","minLength":1,"maxLength":255},"password":{"type":"string","minLength":8,"maxLength":512,"writeOnly":true}}}
+    BootstrapRequest:
+      {"type":"object","additionalProperties":false,"required":["username","password","bootstrap_token"],"properties":{"username":{"type":"string","minLength":1,"maxLength":255},"password":{"type":"string","minLength":8,"maxLength":512,"writeOnly":true},"bootstrap_token":{"type":"string","minLength":16,"maxLength":1024,"writeOnly":true}}}
+    TaskCreateRequest:
+      {"type":"object","additionalProperties":false,"required":["site_code","keywords","limits"],"properties":{"site_code":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"keywords":{"type":"array","minItems":1,"maxItems":20,"items":{"type":"string","minLength":1,"maxLength":255}},"mode":{"type":"string","minLength":1,"maxLength":16,"enum":["fast","professional"]},"limits":{"$ref":"#/components/schemas/TaskLimits"}}}
+    TaskLimits:
+      {"type":"object","additionalProperties":false,"required":["max_keywords","max_pages","max_candidates"],"properties":{"max_keywords":{"type":"integer","minimum":1,"maximum":20},"max_pages":{"type":"integer","minimum":1,"maximum":100},"max_candidates":{"type":"integer","minimum":1,"maximum":10000}}}
+    ApiTokenCreateRequest:
+      {"type":"object","additionalProperties":false,"required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":128},"scopes":{"type":"array","maxItems":50,"items":{"type":"string","minLength":1,"maxLength":128}}}}
+    ReviewCreateRequest:
+      {"type":"object","additionalProperties":false,"required":["current_review_decision"],"properties":{"current_review_decision":{"type":"string","minLength":1,"maxLength":64,"enum":["APPROVED","REJECTED","NEEDS_REVIEW"]},"review_status":{"type":"string","minLength":1,"maxLength":64,"deprecated":true},"comment":{"type":"string","minLength":1,"maxLength":4000}}}
+    SiteCreateRequest:
+      {"type":"object","additionalProperties":false,"required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":255},"status":{"type":"string","minLength":1,"maxLength":64,"enum":["DRAFT","READY"]}}}
+    SiteUpdateRequest:
+      {"type":"object","additionalProperties":false,"required":["expected_version"],"properties":{"name":{"type":"string","minLength":1,"maxLength":255},"status":{"type":"string","minLength":1,"maxLength":64},"expected_version":{"type":"integer","minimum":1}}}
+    ExportJobCreateRequest:
+      {"type":"object","additionalProperties":false,"required":["format"],"properties":{"format":{"type":"string","minLength":1,"maxLength":16,"enum":["CSV","XLSX","JSON"]},"filters":{"type":"object","additionalProperties":true}}}
+    GlobalBlockEntryCreateRequest:
+      {"type":"object","additionalProperties":false,"required":["match_type","pattern_normalized","reason_code","reason_summary","evidence_handle","confirm"],"properties":{"match_type":{"type":"string","minLength":1,"maxLength":32},"pattern_normalized":{"type":"string","minLength":1,"maxLength":512},"reason_code":{"type":"string","minLength":1,"maxLength":32},"reason_summary":{"type":"string","minLength":1,"maxLength":255},"evidence_handle":{"type":"string","minLength":16,"maxLength":512,"writeOnly":true},"confirm":{"type":"boolean","const":true},"effective_at":{"type":"string","format":"date-time"},"expires_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}]}}}
+    GlobalBlockEntryUpdateRequest:
+      {"type":"object","additionalProperties":false,"required":["expected_version","confirm"],"properties":{"expected_version":{"type":"integer","minimum":1},"confirm":{"type":"boolean","const":true},"reason_code":{"type":"string","minLength":1,"maxLength":32},"reason_summary":{"type":"string","minLength":1,"maxLength":255},"evidence_handle":{"type":"string","minLength":16,"maxLength":512,"writeOnly":true}}}
+    Error:
+      {"type":"object","additionalProperties":false,"required":["code","message","retryable"],"properties":{"code":{"type":"string","minLength":1,"maxLength":128},"message":{"type":"string","minLength":1,"maxLength":500},"fields":{"type":"object","additionalProperties":{"type":"array","items":{"type":"string"}}},"retryable":{"type":"boolean"}}}
+    ErrorEnvelope:
+      {"type":"object","additionalProperties":false,"required":["request_id","error"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"error":{"$ref":"#/components/schemas/Error"}}}
+    ApiTokenList:
+      {"type":"object","additionalProperties":false,"required":["items","page","page_size","total"],"properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/ApiToken"}},"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100},"total":{"type":"integer","minimum":0}}}
+    SiteAnalysisAccepted:
+      {"type":"object","additionalProperties":false,"required":["site_code","status"],"properties":{"site_code":{"type":"string","minLength":26,"maxLength":26,"pattern":"^[0-7][0-9A-HJKMNP-TV-Z]{25}$"},"status":{"type":"string"},"started_at":{"type":"string","format":"date-time"}}}
+    SiteAnalysisAcceptedResponse:
+      {"type":"object","additionalProperties":false,"required":["request_id","data"],"properties":{"request_id":{"type":"string","minLength":1,"maxLength":128},"data":{"$ref":"#/components/schemas/SiteAnalysisAccepted"}}}
+    ErrorEnvelope_getBootstrapStatus_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["already_initialized"]}}}}}]}
+    ErrorEnvelope_bootstrapSystem_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_bootstrapSystem_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["already_initialized","state_conflict","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_login_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_login_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["invalid_credentials"]}}}}}]}
+    ErrorEnvelope_login_429:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["over_limit"]}}}}}]}
+    ErrorEnvelope_logout_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_logout_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_getCurrentSession_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_listApiTokens_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createApiToken_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createApiToken_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_createApiToken_429:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["token_limit_exceeded"]}}}}}]}
+    ErrorEnvelope_createApiToken_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_createApiToken_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_deleteApiToken_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_deleteApiToken_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_deleteApiToken_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_getDashboardOverview_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_getDashboardOverview_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_listTasks_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_listTasks_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createTask_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createTask_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_createTask_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["site_not_found"]}}}}}]}
+    ErrorEnvelope_createTask_422:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_limit_exceeded"]}}}}}]}
+    ErrorEnvelope_createTask_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_createTask_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected","csrf_failed"]}}}}}]}
+    ErrorEnvelope_suggestTaskScope_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_suggestTaskScope_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_not_found"]}}}}}]}
+    ErrorEnvelope_suggestTaskScope_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_suggestTaskScope_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_suggestTaskScope_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected","csrf_failed"]}}}}}]}
+    ErrorEnvelope_confirmTask_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_confirmTask_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_not_found"]}}}}}]}
+    ErrorEnvelope_confirmTask_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_confirmTask_422:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_limit_exceeded"]}}}}}]}
+    ErrorEnvelope_confirmTask_429:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["over_limit"]}}}}}]}
+    ErrorEnvelope_confirmTask_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected","csrf_failed"]}}}}}]}
+    ErrorEnvelope_getTask_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_not_found"]}}}}}]}
+    ErrorEnvelope_getTask_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_cancelTask_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_cancelTask_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_not_found"]}}}}}]}
+    ErrorEnvelope_cancelTask_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","already_terminal","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_cancelTask_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected","csrf_failed"]}}}}}]}
+    ErrorEnvelope_retryTask_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_retryTask_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_not_found"]}}}}}]}
+    ErrorEnvelope_retryTask_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","already_terminal","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_retryTask_422:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_limit_exceeded"]}}}}}]}
+    ErrorEnvelope_retryTask_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected","csrf_failed"]}}}}}]}
+    ErrorEnvelope_streamTaskEvents_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["task_not_found"]}}}}}]}
+    ErrorEnvelope_streamTaskEvents_410:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["event_history_expired"]}}}}}]}
+    ErrorEnvelope_streamTaskEvents_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_listResults_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_listResults_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_getResult_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_getResult_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_downloadResultEvidence_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_downloadResultEvidence_503:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["evidence_hold_unavailable"]}}}}}]}
+    ErrorEnvelope_downloadResultEvidence_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_listResultReviews_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_listResultReviews_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createResultReview_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createResultReview_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_createResultReview_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_createResultReview_503:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["evidence_hold_unavailable"]}}}}}]}
+    ErrorEnvelope_createResultReview_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_createResultReview_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_createExportJob_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createExportJob_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_createExportJob_422:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["export_not_supported"]}}}}}]}
+    ErrorEnvelope_createExportJob_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["no_results"]}}}}}]}
+    ErrorEnvelope_createExportJob_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_createExportJob_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected","csrf_failed"]}}}}}]}
+    ErrorEnvelope_listExportJobs_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_listExportJobs_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_getExportJob_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_getExportJob_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_downloadExportJob_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_downloadExportJob_410:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["export_expired"]}}}}}]}
+    ErrorEnvelope_downloadExportJob_503:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_ready"]}}}}}]}
+    ErrorEnvelope_downloadExportJob_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_listSites_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_listSites_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createSite_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createSite_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_createSite_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_createSite_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_getSite_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["site_not_found"]}}}}}]}
+    ErrorEnvelope_getSite_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_updateSite_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_updateSite_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["site_not_found"]}}}}}]}
+    ErrorEnvelope_updateSite_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_updateSite_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_updateSite_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_analyzeSite_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_analyzeSite_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["site_not_found"]}}}}}]}
+    ErrorEnvelope_analyzeSite_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_analyzeSite_503:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["dependency_not_ready"]}}}}}]}
+    ErrorEnvelope_analyzeSite_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_deleteSite_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_deleteSite_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["site_not_found"]}}}}}]}
+    ErrorEnvelope_deleteSite_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict"]}}}}}]}
+    ErrorEnvelope_deleteSite_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_listPlugins_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_listPlugins_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_updatePlugin_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_updatePlugin_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_updatePlugin_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_updatePlugin_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_updatePlugin_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_getSystemHealth_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_getSystemHealth_503:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["dependency_not_ready"]}}}}}]}
+    ErrorEnvelope_listSystemLogs_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_listSystemLogs_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_listAuditLogs_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_listAuditLogs_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_getSecurityStatus_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_getSecurityStatus_503:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["dependency_not_ready"]}}}}}]}
+    ErrorEnvelope_listDeadLetters_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_listDeadLetters_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_replayDeadLetter_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_replayDeadLetter_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_replayDeadLetter_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_replayDeadLetter_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_listGlobalBlockEntries_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_listGlobalBlockEntries_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_createGlobalBlockEntry_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_createGlobalBlockEntry_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_createGlobalBlockEntry_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["evidence_missing","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_createGlobalBlockEntry_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected","csrf_failed"]}}}}}]}
+    ErrorEnvelope_updateGlobalBlockEntry_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_updateGlobalBlockEntry_404:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["not_found"]}}}}}]}
+    ErrorEnvelope_updateGlobalBlockEntry_409:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["state_conflict","evidence_missing","idempotency_conflict"]}}}}}]}
+    ErrorEnvelope_updateGlobalBlockEntry_400:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["validation_error"]}}}}}]}
+    ErrorEnvelope_updateGlobalBlockEntry_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["csrf_failed"]}}}}}]}
+    ErrorEnvelope_bootstrapSystem_401:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["unauthorized"]}}}}}]}
+    ErrorEnvelope_getDashboardOverview_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_listTasks_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_getTask_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_streamTaskEvents_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_listResults_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_getResult_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_downloadResultEvidence_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_listResultReviews_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_listExportJobs_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_getExportJob_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_downloadExportJob_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_listSites_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_getSite_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
+    ErrorEnvelope_listPlugins_403:
+      {"allOf":[{"$ref":"#/components/schemas/ErrorEnvelope"},{"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["security_policy_rejected"]}}}}}]}
