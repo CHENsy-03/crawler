@@ -1264,6 +1264,229 @@
         "min": 0,
         "max": 4294967295
       }
+    },
+    {
+      "name": "valid-number-level-space-colon",
+      "stream": "crawler:search",
+      "schema": "search_requested.schema.json",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic",
+        "exact_number"
+      ],
+      "data": {
+        "protocol_version": "3.0",
+        "type": "search_requested",
+        "event_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDF",
+        "message_id": "MSG-00000001",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "aggregate_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "idempotency_key": "idem-0001",
+        "causation_id": "MSG-00000000",
+        "correlation_id": "corr-0001",
+        "attempt_no": 0,
+        "timestamp": "2026-09-09T00:00:00Z",
+        "work_class": "ROOT",
+        "payload": {
+          "target_url": "https://example.gov.cn/search",
+          "keywords": [
+            "低空经济",
+            "无人机"
+          ],
+          "level": 1,
+          "max_pages": 5
+        }
+      },
+      "raw": "{\"protocol_version\":\"3.0\",\"type\":\"search_requested\",\"event_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDF\",\"message_id\":\"MSG-00000001\",\"task_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"aggregate_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"idempotency_key\":\"idem-0001\",\"causation_id\":\"MSG-00000000\",\"correlation_id\":\"corr-0001\",\"attempt_no\":0,\"timestamp\":\"2026-09-09T00:00:00Z\",\"work_class\":\"ROOT\",\"payload\":{\"target_url\":\"https://example.gov.cn/search\",\"keywords\":[\"低空经济\",\"无人机\"],\"level\" : 1,\"max_pages\":5}}",
+      "numberCheck": {
+        "field": "payload.level",
+        "min": 0,
+        "max": 4294967295
+      }
+    },
+    {
+      "name": "invalid-number-level-space-colon",
+      "stream": "crawler:search",
+      "schema": "search_requested.schema.json",
+      "valid": false,
+      "layer": [
+        "exact_number"
+      ],
+      "raw": "{\"protocol_version\":\"3.0\",\"type\":\"search_requested\",\"event_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDF\",\"message_id\":\"MSG-00000001\",\"task_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"aggregate_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"idempotency_key\":\"idem-0001\",\"causation_id\":\"MSG-00000000\",\"correlation_id\":\"corr-0001\",\"attempt_no\":0,\"timestamp\":\"2026-09-09T00:00:00Z\",\"work_class\":\"ROOT\",\"payload\":{\"target_url\":\"https://example.gov.cn/search\",\"keywords\":[\"低空经济\",\"无人机\"],\"level\" : 1.0000000000000001,\"max_pages\":5}}",
+      "numberCheck": {
+        "field": "payload.level",
+        "min": 0,
+        "max": 4294967295
+      },
+      "expect": {
+        "layer": "exact_number",
+        "failure": "not_integer",
+        "field": "payload.level",
+        "code": "INVALID_INTEGER",
+        "reason_marker": "level"
+      }
+    },
+    {
+      "name": "valid-number-level-tab-newline",
+      "stream": "crawler:search",
+      "schema": "search_requested.schema.json",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic",
+        "exact_number"
+      ],
+      "data": {
+        "protocol_version": "3.0",
+        "type": "search_requested",
+        "event_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDF",
+        "message_id": "MSG-00000001",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "aggregate_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "idempotency_key": "idem-0001",
+        "causation_id": "MSG-00000000",
+        "correlation_id": "corr-0001",
+        "attempt_no": 0,
+        "timestamp": "2026-09-09T00:00:00Z",
+        "work_class": "ROOT",
+        "payload": {
+          "target_url": "https://example.gov.cn/search",
+          "keywords": [
+            "低空经济",
+            "无人机"
+          ],
+          "level": 1,
+          "max_pages": 5
+        }
+      },
+      "raw": "{\"protocol_version\":\"3.0\",\"type\":\"search_requested\",\"event_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDF\",\"message_id\":\"MSG-00000001\",\"task_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"aggregate_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"idempotency_key\":\"idem-0001\",\"causation_id\":\"MSG-00000000\",\"correlation_id\":\"corr-0001\",\"attempt_no\":0,\"timestamp\":\"2026-09-09T00:00:00Z\",\"work_class\":\"ROOT\",\"payload\":{\"target_url\":\"https://example.gov.cn/search\",\"keywords\":[\"低空经济\",\"无人机\"],\"level\"\t:\n1,\"max_pages\":5}}",
+      "numberCheck": {
+        "field": "payload.level",
+        "min": 0,
+        "max": 4294967295
+      }
+    },
+    {
+      "name": "invalid-number-level-tab-newline",
+      "stream": "crawler:search",
+      "schema": "search_requested.schema.json",
+      "valid": false,
+      "layer": [
+        "exact_number"
+      ],
+      "raw": "{\"protocol_version\":\"3.0\",\"type\":\"search_requested\",\"event_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDF\",\"message_id\":\"MSG-00000001\",\"task_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"aggregate_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"idempotency_key\":\"idem-0001\",\"causation_id\":\"MSG-00000000\",\"correlation_id\":\"corr-0001\",\"attempt_no\":0,\"timestamp\":\"2026-09-09T00:00:00Z\",\"work_class\":\"ROOT\",\"payload\":{\"target_url\":\"https://example.gov.cn/search\",\"keywords\":[\"低空经济\",\"无人机\"],\"level\"\t:\n1.0000000000000001,\"max_pages\":5}}",
+      "numberCheck": {
+        "field": "payload.level",
+        "min": 0,
+        "max": 4294967295
+      },
+      "expect": {
+        "layer": "exact_number",
+        "failure": "not_integer",
+        "field": "payload.level",
+        "code": "INVALID_INTEGER",
+        "reason_marker": "level"
+      }
+    },
+    {
+      "name": "valid-number-level-escaped-key",
+      "stream": "crawler:search",
+      "schema": "search_requested.schema.json",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic",
+        "exact_number"
+      ],
+      "data": {
+        "protocol_version": "3.0",
+        "type": "search_requested",
+        "event_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDF",
+        "message_id": "MSG-00000001",
+        "task_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "aggregate_id": "01HX3Y8Z2K6N9Q4RV7T0A5BCDE",
+        "idempotency_key": "idem-0001",
+        "causation_id": "MSG-00000000",
+        "correlation_id": "corr-0001",
+        "attempt_no": 0,
+        "timestamp": "2026-09-09T00:00:00Z",
+        "work_class": "ROOT",
+        "payload": {
+          "target_url": "https://example.gov.cn/search",
+          "keywords": [
+            "低空经济",
+            "无人机"
+          ],
+          "level": 1,
+          "max_pages": 5
+        }
+      },
+      "raw": "{\"protocol_version\":\"3.0\",\"type\":\"search_requested\",\"event_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDF\",\"message_id\":\"MSG-00000001\",\"task_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"aggregate_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"idempotency_key\":\"idem-0001\",\"causation_id\":\"MSG-00000000\",\"correlation_id\":\"corr-0001\",\"attempt_no\":0,\"timestamp\":\"2026-09-09T00:00:00Z\",\"work_class\":\"ROOT\",\"payload\":{\"target_url\":\"https://example.gov.cn/search\",\"keywords\":[\"低空经济\",\"无人机\"],\"le\\u0076el\":1,\"max_pages\":5}}",
+      "numberCheck": {
+        "field": "payload.level",
+        "min": 0,
+        "max": 4294967295
+      }
+    },
+    {
+      "name": "invalid-number-level-escaped-key",
+      "stream": "crawler:search",
+      "schema": "search_requested.schema.json",
+      "valid": false,
+      "layer": [
+        "exact_number"
+      ],
+      "raw": "{\"protocol_version\":\"3.0\",\"type\":\"search_requested\",\"event_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDF\",\"message_id\":\"MSG-00000001\",\"task_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"aggregate_id\":\"01HX3Y8Z2K6N9Q4RV7T0A5BCDE\",\"idempotency_key\":\"idem-0001\",\"causation_id\":\"MSG-00000000\",\"correlation_id\":\"corr-0001\",\"attempt_no\":0,\"timestamp\":\"2026-09-09T00:00:00Z\",\"work_class\":\"ROOT\",\"payload\":{\"target_url\":\"https://example.gov.cn/search\",\"keywords\":[\"低空经济\",\"无人机\"],\"le\\u0076el\":1.0000000000000001,\"max_pages\":5}}",
+      "numberCheck": {
+        "field": "payload.level",
+        "min": 0,
+        "max": 4294967295
+      },
+      "expect": {
+        "layer": "exact_number",
+        "failure": "not_integer",
+        "field": "payload.level",
+        "code": "INVALID_INTEGER",
+        "reason_marker": "level"
+      }
+    }
+  ],
+  "locator_cases": [
+    {
+      "name": "locator-target-found",
+      "raw": "{\"payload\":{\"level\":1}}",
+      "field": "payload.level",
+      "expect": {
+        "status": "found",
+        "token": "1"
+      }
+    },
+    {
+      "name": "locator-skips-other-object",
+      "raw": "{\"other\":{\"level\":9},\"payload\":{\"level\":1}}",
+      "field": "payload.level",
+      "expect": {
+        "status": "found",
+        "token": "1"
+      }
+    },
+    {
+      "name": "locator-skips-string-text",
+      "raw": "{\"note\":\"\\\"payload.level\\\": 999\",\"payload\":{\"level\":1}}",
+      "field": "payload.level",
+      "expect": {
+        "status": "found",
+        "token": "1"
+      }
+    },
+    {
+      "name": "locator-target-missing",
+      "raw": "{\"payload\":{}}",
+      "field": "payload.level",
+      "expect": {
+        "status": "missing"
+      }
     }
   ]
 }

@@ -11,9 +11,9 @@
 
 ### 当前任务
 
-- active_task=TASK-CRAWLER-V1.0-V1.1-DEV-005-FIX-B2-E1
+- active_task=TASK-CRAWLER-V1.0-V1.1-DEV-005-COORDINATOR-FIX-B3
 - task_status=review
-- 当前任务：关闭 C:foo 盘符相对路径不一致并修复 Node 原始数字检查
+- 当前任务：修复 JSON 原始数字 token 的路径定位、空白与转义字段名处理
 - 当前任务定义：[本轮任务定义](#本轮任务定义)
 - DEV-005：IN_PROGRESS；未实施 producer/consumer、Outbox 或运行时迁移
 
@@ -45,45 +45,38 @@
 ### 本轮任务定义
 
 - 任务编号：
-  TASK-CRAWLER-V1.0-V1.1-DEV-005-FIX-B2-E1
+  TASK-CRAWLER-V1.0-V1.1-DEV-005-COORDINATOR-FIX-B3
 - 任务名称：
-  C:foo 盘符相对路径修复与 Node 精确数字检查解耦
+  JSON 原始数字 token 路径定位修复
 - 任务类型：
-  DEV-005 定点一致性补充
+  DEV-005 验证器定点修复
 - 当前状态：
   以本入口 task_status 字段为准
 - 任务背景：
-  R2 发现 artifact_ref=C:foo 在 schema 与实际 Python/Go 判断不一致；
-  并提示 Node 精确数字检查可能只适用于预期合法 fixture。
+  R2 协调复核发现 exactRawInteger 仅按叶字段名正则定位，
+  不能按完整路径处理合法空白、转义字段名，并可能命中字符串伪文本。
 - 任务目标：
-  统一 `^[A-Za-z]:` 盘符前缀拒绝；增加共同 fixture；
-  让 Node 精确数字检查与 `c.valid` 解耦，
-  让 valid:false 与 valid:true 对原始非整数得到相同实际拒绝。
-- 证据快照：
-  B2-FINAL/input 是 B2 收口阶段既有输入，不是 E1 开始时新建；
-  E1 修改前输入已保存到 scope 内 `.task_tmp/.../node-fix-input`。
+  使用同一正式实现按完整对象路径定位原始 token；
+  支持 JSON 空格、制表符、换行和字段名转义；
+  跳过字符串和其他对象的同名字段；保持精确整数/范围检查。
 - 非目标：
-  不修改 schema 放宽 C:foo；
-  不重开运行时实现或其他 B2 范围。
+  不修改 Python/Go codec、schema、canonical、旧运行链或依赖；
+  不改已批准数值范围；不提交、不推送、不改 Draft PR。
 - 允许修改范围：
-  validate-stream.mjs、Stream/Capacity fixture、TASK/CHANGELOG；
-  保留既有 Python/Go codec 与测试。
-- 只读核验：
-  validate-stream.mjs、相关 schema 与 fixture 上下文。
+  tools/openapi/validate-stream.mjs；两份 fixture；TASK/CHANGELOG。
 - 测试与验证：
+  node tools/openapi/validate-stream.mjs；
   python -m pytest tests/test_redis_stream_v3.py -q；
   go test ./internal/protocol -count=1；
-  gofmt -d 两份 Go 文件；
-  node tools/openapi/validate-stream.mjs；
-  git diff --check；Node 内存数字探针。
+  git diff --check；正式内存双变体与 locator 结构用例。
 - 验收标准：
-  C:foo、C:x、c:foo 三端拒绝；
-  既有合法/非法 artifact_ref 规则不回归；
-  Node 对所有 numberCheck 用例先做原始词法/整数/范围检查；
-  valid:false 通过、valid:true 非零退出；
-  工具错误与业务拒绝分层。
+  四种目标数字写法均能定位 payload.level；
+  1.0000000000000001 统一按 exact_number/not_integer/level 拒绝；
+  字符串伪字段和其他对象不误定位；
+  字段缺失报告 token_missing/tool_failure；
+  工具错误不冒充业务负例通过。
 - 回滚方案：
-  保留 B1/B2 成果，仅在获准后撤销 E1 增量；不恢复 HEAD。
+  保留 C1/P1/B2 成果，仅在获准后撤销 B3 增量；不 amend/rebase。
 ## 历史任务与执行记录
 
 以下记录保留各自写入时点的状态，包括完成、失败、停止和待审查。
@@ -108,6 +101,15 @@
 - R2 返回 PASS 记录，但后续定点复核发现 C:foo 盘符相对路径仍不一致，
   且 Node 精确检查存在覆盖边界；由 B2-E1 继续。
 - 2026-09-10 所有者补充批准 level 及 capacity 数值传输边界。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-005-FIX-B2-E1
+
+- B2-E1 统一 Python/Go 盘符前缀规则，拒绝 C:foo、C:x、c:foo。
+- Node numberCheck 与 c.valid 解耦，原始小数双变体按 exact_number 拒绝。
+- R2-E2 定向复审通过，C1 创建本地提交，P1 推送并创建 Draft PR #12。
+- 后续协调复核发现 token 定位不遵守完整 JSON 路径/空白/转义语法，
+  由 B3 继续修复。
 
 
 ### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-COORDINATOR-REMOTE-REVIEW-CHANGES-REQUESTED

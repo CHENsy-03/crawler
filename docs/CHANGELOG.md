@@ -153,6 +153,15 @@
 - 内存双变体验证：同一 `1.0000000000000001` 输入在 valid:false
   下按 exact_number/not_integer/level 通过；valid:true 下产生非零退出
 
+### DEV-005 Stream Contract Fix (B3)
+
+- 原始 JSON 数字定位改为完整对象路径扫描，不再依赖叶字段名正则
+- 支持 JSON 合法空格、制表符、换行及字段名 `\u` 转义
+- 跳过字符串伪字段和其他对象中的同名字段；保留原始数字 token
+- 新增定位结构 fixture，字段缺失报告 token_missing/tool_failure
+- 新增四种合法数字写法及对应 `1.0000000000000001` 负例
+- 数值范围、c.valid 分离和工具失败语义保持不变
+
 ### Governance Review Fix (B7)
 
 - AGENTS §7 更新 completed 含义与完成判定边界。

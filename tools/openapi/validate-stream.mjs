@@ -33,18 +33,164 @@ function numberFailure(field, failure, reason, token = null) {
   return { ok: false, field, failure, reason, token };
 }
 
+function skipJSONWhitespace(raw, index) {
+  while (index < raw.length && (raw[index] === " " || raw[index] === "\t" || raw[index] === "\n" || raw[index] === "\r")) {
+    index++;
+  }
+  return index;
+}
+
+function parseJSONStringToken(raw, index) {
+  if (raw[index] !== '"') {
+    return null;
+  }
+  let cursor = index + 1;
+  while (cursor < raw.length) {
+    if (raw[cursor] === "\\") {
+      cursor += 2;
+      continue;
+    }
+    if (raw[cursor] === '"') {
+      const token = raw.slice(index, cursor + 1);
+      return { token, value: JSON.parse(token), end: cursor + 1 };
+    }
+    cursor++;
+  }
+  return null;
+}
+
+function parseJSONNumberToken(raw, index) {
+  const match = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(raw.slice(index));
+  if (!match) {
+    return null;
+  }
+  const token = match[0];
+  const end = index + token.length;
+  if (end < raw.length && ![" ", "\t", "\n", "\r", ",", "}", "]"].includes(raw[end])) {
+    return null;
+  }
+  return { token, end };
+}
+
+function skipJSONValue(raw, index) {
+  index = skipJSONWhitespace(raw, index);
+  if (raw[index] === '"') {
+    return parseJSONStringToken(raw, index)?.end ?? null;
+  }
+  if (raw[index] === "{") {
+    index = skipJSONWhitespace(raw, index + 1);
+    if (raw[index] === "}") return index + 1;
+    while (index < raw.length) {
+      const key = parseJSONStringToken(raw, index);
+      if (!key) return null;
+      index = skipJSONWhitespace(raw, key.end);
+      if (raw[index] !== ":") return null;
+      index = skipJSONWhitespace(raw, index + 1);
+      index = skipJSONValue(raw, index);
+      if (index === null) return null;
+      index = skipJSONWhitespace(raw, index);
+      if (raw[index] === "}") return index + 1;
+      if (raw[index] !== ",") return null;
+      index = skipJSONWhitespace(raw, index + 1);
+    }
+    return null;
+  }
+  if (raw[index] === "[") {
+    index = skipJSONWhitespace(raw, index + 1);
+    if (raw[index] === "]") return index + 1;
+    while (index < raw.length) {
+      index = skipJSONValue(raw, index);
+      if (index === null) return null;
+      index = skipJSONWhitespace(raw, index);
+      if (raw[index] === "]") return index + 1;
+      if (raw[index] !== ",") return null;
+      index = skipJSONWhitespace(raw, index + 1);
+    }
+    return null;
+  }
+  for (const literal of ["true", "false", "null"]) {
+    if (raw.startsWith(literal, index)) {
+      return index + literal.length;
+    }
+  }
+  return parseJSONNumberToken(raw, index)?.end ?? null;
+}
+
+// Locate a value by full object path while preserving the original number token.
+export function locateJSONValue(raw, path) {
+  if (!Array.isArray(path) || path.length === 0) {
+    return { status: "invalid_metadata", reason: "path must be a non-empty array" };
+  }
+  function locateAt(index, remaining) {
+    index = skipJSONWhitespace(raw, index);
+    if (raw[index] !== "{") {
+      return { status: "missing" };
+    }
+    let found = { status: "missing" };
+    index = skipJSONWhitespace(raw, index + 1);
+    if (raw[index] === "}") return found;
+    while (index < raw.length) {
+      const key = parseJSONStringToken(raw, index);
+      if (!key) return { status: "syntax_error", reason: "invalid object key" };
+      index = skipJSONWhitespace(raw, key.end);
+      if (raw[index] !== ":") return { status: "syntax_error", reason: "missing object colon" };
+      const valueStart = skipJSONWhitespace(raw, index + 1);
+      if (key.value === remaining[0]) {
+        if (remaining.length === 1) {
+          if (raw[valueStart] === '"') {
+            const stringValue = parseJSONStringToken(raw, valueStart);
+            if (!stringValue) return { status: "syntax_error", reason: "invalid string value" };
+            found = { status: "not_number", token: stringValue.token };
+          } else {
+            const numberValue = parseJSONNumberToken(raw, valueStart);
+            if (numberValue) {
+              found = { status: "found", token: numberValue.token };
+            } else {
+              const end = skipJSONValue(raw, valueStart);
+              if (end === null) return { status: "syntax_error", reason: "invalid value" };
+              found = { status: "not_number", token: raw.slice(valueStart, end) };
+            }
+          }
+        } else {
+          const nested = locateAt(valueStart, remaining.slice(1));
+          if (nested.status !== "missing") {
+            found = nested;
+          }
+        }
+      }
+      index = skipJSONValue(raw, valueStart);
+      if (index === null) return { status: "syntax_error", reason: "invalid value" };
+      index = skipJSONWhitespace(raw, index);
+      if (raw[index] === "}") return found;
+      if (raw[index] !== ",") return { status: "syntax_error", reason: "invalid object separator" };
+      index = skipJSONWhitespace(raw, index + 1);
+    }
+    return { status: "syntax_error", reason: "unterminated object" };
+  }
+  try {
+    return locateAt(skipJSONWhitespace(raw, 0), path);
+  } catch (err) {
+    return { status: "syntax_error", reason: err.message };
+  }
+}
+
 // Parse the original JSON number token without converting it through Number.
 export function exactRawInteger(raw, spec) {
   if (!spec || typeof spec.field !== "string" || !Number.isInteger(spec.min) || !Number.isInteger(spec.max) || spec.min > spec.max) {
     return { ok: false, field: spec?.field ?? null, failure: "invalid_metadata", reason: "invalid numberCheck metadata" };
   }
   const field = spec.field;
-  const leaf = field.split(".").pop();
-  const match = raw.match(new RegExp(`"${leaf}":\\s*([^,}\\]\\s]+)`));
-  if (!match) {
+  const located = locateJSONValue(raw, field.split("."));
+  if (located.status === "missing") {
     return { ok: false, field, failure: "token_missing", reason: "raw number token could not be located" };
   }
-  const token = match[1];
+  if (located.status === "syntax_error") {
+    return { ok: false, field, failure: "checker_error", reason: located.reason };
+  }
+  if (located.status === "not_number") {
+    return numberFailure(field, "not_a_number", "raw token is not a JSON number", located.token);
+  }
+  const token = located.token;
   if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(token)) {
     return numberFailure(field, "not_a_number", "raw token is not a JSON number", token);
   }
@@ -181,6 +327,24 @@ export async function validateCases(ajv, cases) {
   return { failures, results };
 }
 
+export function validateLocatorCases(cases) {
+  let failures = 0;
+  const results = [];
+  for (const c of cases.locator_cases ?? []) {
+    const actual = locateJSONValue(c.raw, c.field.split("."));
+    let ok = actual.status === c.expect.status;
+    if (ok && Object.hasOwn(c.expect, "token")) {
+      ok = actual.token === c.expect.token;
+    }
+    if (!ok) {
+      failures++;
+      console.error(`LOCATOR CASE FAIL ${c.name}: expected=${JSON.stringify(c.expect)} actual=${JSON.stringify(actual)}`);
+    }
+    results.push({ name: c.name, expected: c.expect, actual, ok });
+  }
+  return { failures, results };
+}
+
 export async function createStreamValidator() {
   const ajv = new Ajv2020({ strict: true, allErrors: true, validateSchema: true });
   addFormats(ajv);
@@ -211,7 +375,8 @@ async function main() {
   const capacityCases = await loadJson(capacityCasesPath);
   const stream = await validateCases(ajv, streamCases);
   const capacity = await validateCases(ajv, capacityCases);
-  const failures = stream.failures + capacity.failures;
+  const locator = validateLocatorCases(streamCases);
+  const failures = stream.failures + capacity.failures + locator.failures;
   if (failures) {
     process.exit(1);
   }
@@ -219,6 +384,7 @@ async function main() {
   const c = summarize(capacity.results);
   console.log(`Stream v3 cases: accepted=${s.accepted} notApplicable=${s.notApplicable} jsonRejected=${s.jsonRejected} exactNumberRejected=${s.exactNumberRejected} schemaRejected=${s.schemaRejected} toolFailures=${s.toolFailures}`);
   console.log(`Capacity v1 cases: accepted=${c.accepted} notApplicable=${c.notApplicable} jsonRejected=${c.jsonRejected} exactNumberRejected=${c.exactNumberRejected} schemaRejected=${c.schemaRejected} toolFailures=${c.toolFailures}`);
+  console.log(`Locator cases: passed=${locator.results.filter((item) => item.ok).length} failed=${locator.failures}`);
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
