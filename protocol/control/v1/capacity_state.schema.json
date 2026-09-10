@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capacity_state.schema.json",
+  "title": "capacity control event v1",
+  "description": "Independent internal control payload for canonical capacity events. state_version is a monotonic revision of the authoritative capacity state, not a schema version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "event_type",
+    "state",
+    "state_version",
+    "emergency_reserve_bytes",
+    "effective_at"
+  ],
+  "properties": {
+    "protocol_version": { "type": "string", "const": "1.0" },
+    "event_type": {
+      "type": "string",
+      "enum": ["capacity_normal", "capacity_warning", "capacity_blocked", "stream_drain_only"]
+    },
+    "state": {
+      "type": "string",
+      "enum": ["NORMAL", "WARNING", "BLOCKED", "DRAIN_ONLY"]
+    },
+    "state_version": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "emergency_reserve_bytes": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "effective_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event_type": { "const": "capacity_normal" } }, "required": ["event_type"] },
+      "then": { "properties": { "state": { "const": "NORMAL" } } }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "capacity_warning" } }, "required": ["event_type"] },
+      "then": { "properties": { "state": { "const": "WARNING" } } }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "capacity_blocked" } }, "required": ["event_type"] },
+      "then": { "properties": { "state": { "const": "BLOCKED" } } }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "stream_drain_only" } }, "required": ["event_type"] },
+      "then": { "properties": { "state": { "const": "DRAIN_ONLY" } } }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.1",
+  "contract_version": "1.2",
   "baseline_bundle": {
     "v1_0": {
       "file": "docs/baselines/通用型爬虫_Python-Go_产品设计与开发基线说明书_V1.0.docx",
@@ -194,6 +194,11 @@
     {"event_type":"html","family":"STREAM_MESSAGE","transport":"redis_stream","version":"2","producer":"python_fetch_worker","consumer":"python_parser_worker","normative_source":"V1.0 13.1 and REDIS_PROTOCOL","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
     {"event_type":"result","family":"STREAM_MESSAGE","transport":"redis_stream","version":"2","producer":"python_parser_worker","consumer":"go_result_consumer","normative_source":"V1.0 13.1 and REDIS_PROTOCOL","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
     {"event_type":"error","family":"STREAM_MESSAGE","transport":"redis_stream","version":"1","producer":"go_or_python","consumer":"go_monitor","normative_source":"REDIS_PROTOCOL","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
+    {"event_type":"search_requested","family":"STREAM_MESSAGE","transport":"redis_stream","version":"3","producer":"go_dispatcher","consumer":"python_search_worker","normative_source":"V1.0 13.2 and DEV-005 ADR-028","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
+    {"event_type":"url","family":"STREAM_MESSAGE","transport":"redis_stream","version":"3","producer":"python_search_worker","consumer":"go_url_coordinator","normative_source":"V1.0 13.2 and DEV-005 ADR-028","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
+    {"event_type":"html","family":"STREAM_MESSAGE","transport":"redis_stream","version":"3","producer":"python_fetch_worker","consumer":"python_parser_worker","normative_source":"V1.0 13.2 and DEV-005 ADR-028","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
+    {"event_type":"result","family":"STREAM_MESSAGE","transport":"redis_stream","version":"3","producer":"python_parser_worker","consumer":"go_result_consumer","normative_source":"V1.0 13.2 and DEV-005 ADR-028","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
+    {"event_type":"error","family":"STREAM_MESSAGE","transport":"redis_stream","version":"3","producer":"go_or_python","consumer":"go_monitor","normative_source":"V1.0 13.2 and DEV-005 ADR-028","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
     {"event_type":"cache_invalidated","family":"CONTROL_EVENT","transport":"internal_control","version":"1","producer":"go_api","consumer":"python_search_worker","normative_source":"V1.0 8.5 and V1.1 10","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
     {"event_type":"review_hold_ready","family":"CONTROL_EVENT","transport":"internal_control","version":"1","producer":"review_service","consumer":"cleanup_service","normative_source":"V1.1 4","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},
     {"event_type":"review_hold_quarantined","family":"CONTROL_EVENT","transport":"internal_control","version":"1","producer":"review_service","consumer":"cleanup_service","normative_source":"V1.1 4","payload_contract_owner":"DEV-005","compatibility_class":"CANONICAL"},

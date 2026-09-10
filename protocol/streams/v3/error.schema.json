@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "error.schema.json",
+  "title": "error v3",
+  "type": "object",
+  "allOf": [
+    { "$ref": "envelope.schema.json" },
+    {
+      "properties": {
+        "type": { "const": "error" },
+        "work_class": { "const": "TERMINAL" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stage", "site", "keyword", "level", "url", "error_code", "error", "retryable"],
+          "properties": {
+            "stage": { "type": "string", "enum": ["search", "download", "parse", "store"] },
+            "site": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "keyword": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "level": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+            "url": { "type": "string", "maxLength": 2048 },
+            "error_code": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "error": { "type": "string", "minLength": 1, "maxLength": 2048 },
+            "retryable": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["payload"]
+    }
+  ]
+}

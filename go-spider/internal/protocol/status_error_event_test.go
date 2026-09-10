@@ -266,7 +266,7 @@ func TestStatusErrorEventDictionaryErrorMetadataAndCounts(t *testing.T) {
 
 func TestStatusErrorEventDictionaryScenarioErrorMetadata(t *testing.T) {
 	fixture := loadDictionaryFixture(t)
-	if fixture.ContractVersion != "1.1" {
+	if fixture.ContractVersion != "1.2" {
 		t.Fatalf("contract version %q", fixture.ContractVersion)
 	}
 	byCode := map[string]fixtureError{}
@@ -298,7 +298,7 @@ func TestStatusErrorEventDictionaryScenarioErrorMetadata(t *testing.T) {
 
 func TestStatusErrorEventDictionaryEventMetadataAndCounts(t *testing.T) {
 	fixture := loadDictionaryFixture(t)
-	if len(fixture.Events) != 22 {
+	if len(fixture.Events) != 27 {
 		t.Fatalf("event count %d", len(fixture.Events))
 	}
 	counts := map[string]int{}
@@ -310,7 +310,7 @@ func TestStatusErrorEventDictionaryEventMetadataAndCounts(t *testing.T) {
 		}
 		counts[item.Family]++
 	}
-	expected := map[string]int{"TASK_EVENT": 7, "STREAM_MESSAGE": 6, "AUDIT_EVENT": 1, "CONTROL_EVENT": 4, "OPERATIONAL_EVENT": 4}
+	expected := map[string]int{"TASK_EVENT": 7, "STREAM_MESSAGE": 11, "AUDIT_EVENT": 1, "CONTROL_EVENT": 4, "OPERATIONAL_EVENT": 4}
 	for family, count := range expected {
 		if counts[family] != count {
 			t.Fatalf("family %s count %d want %d", family, counts[family], count)

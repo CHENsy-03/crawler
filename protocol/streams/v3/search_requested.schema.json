@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "search_requested.schema.json",
+  "title": "search_requested v3",
+  "type": "object",
+  "allOf": [
+    { "$ref": "envelope.schema.json" },
+    {
+      "properties": {
+        "type": { "const": "search_requested" },
+        "work_class": { "const": "ROOT" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target_url", "keywords", "level", "max_pages"],
+          "properties": {
+            "target_url": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "format": "uri",
+              "pattern": "^https?://\\S+$"
+            },
+            "keywords": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": { "type": "string", "minLength": 1, "maxLength": 500 }
+            },
+            "level": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+            "max_pages": { "type": "integer", "minimum": 1, "maximum": 100 }
+          }
+        }
+      },
+      "required": ["payload"]
+    }
+  ]
+}

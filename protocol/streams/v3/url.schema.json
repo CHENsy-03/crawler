@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "url.schema.json",
+  "title": "url v3",
+  "type": "object",
+  "allOf": [
+    { "$ref": "envelope.schema.json" },
+    {
+      "properties": {
+        "type": { "const": "url" },
+        "work_class": { "const": "ROOT" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hit_id",
+            "plan_id",
+            "original_query",
+            "query_term",
+            "url",
+            "title",
+            "snippet",
+            "published_at",
+            "source",
+            "level"
+          ],
+          "properties": {
+            "hit_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^\\S+$" },
+            "plan_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^\\S+$" },
+            "original_query": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "query_term": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "format": "uri",
+              "pattern": "^https?://\\S+$"
+            },
+            "title": { "type": "string", "maxLength": 500 },
+            "snippet": { "type": "string", "maxLength": 2000 },
+            "published_at": {
+              "anyOf": [
+                { "const": "" },
+                { "type": "string", "format": "date" }
+              ]
+            },
+            "source": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "level": { "type": "integer", "minimum": 0, "maximum": 4294967295 }
+          }
+        }
+      },
+      "required": ["payload"]
+    }
+  ]
+}
