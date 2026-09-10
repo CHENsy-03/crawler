@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "envelope.schema.json",
+  "title": "DEV-005 v3 stream message envelope",
+  "description": "Common v3 envelope per V1.0 13.2. Business payloads live in payload; the Redis stream name is transport context and is not carried as a message field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "type",
+    "event_id",
+    "message_id",
+    "task_id",
+    "idempotency_key",
+    "correlation_id",
+    "attempt_no",
+    "timestamp",
+    "work_class",
+    "payload"
+  ],
+  "properties": {
+    "protocol_version": { "type": "string", "const": "3.0" },
+    "type": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "event_id": { "$ref": "#/$defs/entity_id" },
+    "message_id": { "$ref": "#/$defs/message_id" },
+    "task_id": { "$ref": "#/$defs/entity_id" },
+    "aggregate_id": { "$ref": "#/$defs/entity_id" },
+    "idempotency_key": { "$ref": "#/$defs/idempotency_key" },
+    "causation_id": { "$ref": "#/$defs/message_id" },
+    "correlation_id": { "$ref": "#/$defs/association_id" },
+    "attempt_no": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "work_class": {
+      "type": "string",
+      "enum": ["ROOT", "CONTINUATION", "TERMINAL", "OPTIONAL"]
+    },
+    "payload": { "type": "object" }
+  },
+  "$defs": {
+    "entity_id": {
+      "type": "string",
+      "minLength": 26,
+      "maxLength": 26,
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "message_id": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"
+    },
+    "association_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+    }
+  }
+}

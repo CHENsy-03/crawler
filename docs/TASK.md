@@ -11,12 +11,11 @@
 
 ### 当前任务
 
-- active_task=TASK-CRAWLER-V1.0-V1.1-DEV-003-COORDINATOR-REMOTE-REVIEW-CHANGES-REQUESTED
-- task_status=changes_requested_implementation
-- coordinator_remote_review=CHANGES_REQUESTED
-- 当前任务：落实协调远端审查对 SSE 校验工具与文档核验的 CHANGES_REQUESTED 修复
+- active_task=TASK-CRAWLER-V1.0-V1.1-DEV-005-COORDINATOR-FIX-B3
+- task_status=review
+- 当前任务：修复 JSON 原始数字 token 的路径定位、空白与转义字段名处理
 - 当前任务定义：[本轮任务定义](#本轮任务定义)
-- DEV-003 OpenAPI BUILD：继续；API handler、SSE 服务仍未开始
+- DEV-005：IN_PROGRESS；未实施 producer/consumer、Outbox 或运行时迁移
 
 ### 已确认的项目状态
 
@@ -25,10 +24,9 @@
 - dev_004=IMPLEMENTED_REVIEWED_AND_INTEGRATED
 - shared_contract_fix=IMPLEMENTED_REVIEWED_AND_INTEGRATED
 - governance_review_fix_merge_commit=5111b3e6cedc6b2bcb77e4ffa62257044a76de83
-- dev_003_openapi_build=IN_PROGRESS
-- dev_003_candidate_commit=b780b380a41b8806f89d1fefac4ed8967a976e0b
-- dev_003_pr=11
-- dev_005=NOT_STARTED
+- dev_003=IMPLEMENTED_REVIEWED_AND_INTEGRATED
+- dev_003_merge_commit=43f492dbcf3409719a109b93c3e16a07ae7f4492
+- dev_005_build=IN_PROGRESS
 - legacy_content_migration=BLOCKED_PENDING_IMMUTABLE_STORAGE_CONTRACT
 - production_loader=NOT_STARTED
 - deployment=BLOCKED
@@ -36,83 +34,49 @@
 
 ### 本次核验与工作区说明
 
-- 记录日期：2026-09-09（Asia/Shanghai）
-- 当前本地分支：feat/dev-003-openapi-v1-build-b1
-- HEAD：b780b380a41b8806f89d1fefac4ed8967a976e0b
-- local main：5111b3e6cedc6b2bcb77e4ffa62257044a76de83（本地 main 分支）
-- origin/main：5111b3e6cedc6b2bcb77e4ffa62257044a76de83（本地远端跟踪引用）
-- 20 个 DEV-003 交付文件已由本地提交 b780b380a41b8806f89d1fefac4ed8967a976e0b 提交
-- 功能分支已推送；PR #11 存在且保持 Draft，本轮不改变 Draft 状态
-- 开始工作区 clean：staged=0、unstaged=0、untracked=0
-- 本轮仅修改 tools/openapi/validate-sse.mjs、docs/TASK.md、docs/CHANGELOG.md，且不提交
+- 记录日期：2026-09-10（Asia/Shanghai）
+- 当前本地分支：feat/dev-005-stream-contract-b1
+- HEAD：43f492dbcf3409719a109b93c3e16a07ae7f4492
+- local main：43f492dbcf3409719a109b93c3e16a07ae7f4492（本地 main 分支）
+- origin/main：43f492dbcf3409719a109b93c3e16a07ae7f4492（本地远端跟踪引用）
+- DEV-003 已通过 PR #11 集成，merge commit=43f492dbcf3409719a109b93c3e16a07ae7f4492
+- B2 保留 B1 成果；本轮仅修改 FIX-B2 允许路径，不提交
 
 ### 本轮任务定义
 
 - 任务编号：
-  TASK-CRAWLER-V1.0-V1.1-DEV-003-COORDINATOR-REMOTE-REVIEW-CHANGES-REQUESTED
+  TASK-CRAWLER-V1.0-V1.1-DEV-005-COORDINATOR-FIX-B3
 - 任务名称：
-  应用协调远端审查 CHANGES_REQUESTED 修复
+  JSON 原始数字 token 路径定位修复
 - 任务类型：
-  协调审查修复与工具验证
+  DEV-005 验证器定点修复
 - 当前状态：
   以本入口 task_status 字段为准
 - 任务背景：
-  已审查候选提交 b780b380a41b8806f89d1fefac4ed8967a976e0b 已创建本地提交、
-  推送功能分支并创建 Draft PR #11；
-  协调远端复核返回 DEV003_COORDINATOR_REMOTE_REVIEW_CHANGES_REQUESTED。
-- 当前问题：
-  validate-sse.mjs 使用 draft-07 Ajv 并禁用 validateSchema；
-  失败诊断引用 try 作用域外的 validate 变量，可能产生 ReferenceError；
-  四份 CRLF 文档的原始字节 SHA-256 与 GitHub LF blob 内容哈希不一致，
-  需要核验 HEAD blob 并解释差异。
+  R2 协调复核发现 exactRawInteger 仅按叶字段名正则定位，
+  不能按完整路径处理合法空白、转义字段名，并可能命中字符串伪文本。
 - 任务目标：
-  validate-sse.mjs 改用 Ajv2020 并开启 schema 校验；
-  修复作用域外变量引用；
-  保持现有 26 个 SSE 用例通过；
-  验证两个内存失败路径分类正确；
-  核对 README/PRODUCT_BASELINE/CHANGELOG/TASK 的 HEAD blob 与 GitHub 值一致，
-  并解释原始字节差异；
-  更新 TASK/CHANGELOG。
+  使用同一正式实现按完整对象路径定位原始 token；
+  支持 JSON 空格、制表符、换行和字段名转义；
+  跳过字符串和其他对象的同名字段；保持精确整数/范围检查。
 - 非目标：
-  不修改 OpenAPI、SSE schema、fixture、Go 测试、package.json/package-lock、
-  canonical 或业务实现；
-  不提交、不推送、不改变 PR #11 Draft 状态、不合并。
+  不修改 Python/Go codec、schema、canonical、旧运行链或依赖；
+  不改已批准数值范围；不提交、不推送、不改 Draft PR。
 - 允许修改范围：
-  tools/openapi/validate-sse.mjs；
-  docs/TASK.md；
-  docs/CHANGELOG.md。
-- 禁止修改范围：
-  其他全部项目交付路径与未授权内容。
-- 实施步骤：
-  记录三个修改文件输入哈希并保留输入副本；
-  改写 validate-sse.mjs 为 Ajv2020、开启 schema 校验并保存实例 errors；
-  增加 --verify-failure-modes 内存失败路径验证；
-  执行 npm run validate-sse、npm run lint、npm audit、npm ls；
-  用 gh api 核对四份文档 HEAD blob ID 与 GitHub 值；
-  更新 TASK/CHANGELOG；
-  清理本任务临时资源。
+  tools/openapi/validate-stream.mjs；两份 fixture；TASK/CHANGELOG。
 - 测试与验证：
-  node --check；
-  npm run validate-sse（26 个用例）；
-  node validate-sse.mjs --verify-failure-modes；
-  npm run lint；
-  npm audit --audit-level=high；
-  npm ls --all；
-  git diff --check。
+  node tools/openapi/validate-stream.mjs；
+  python -m pytest tests/test_redis_stream_v3.py -q；
+  go test ./internal/protocol -count=1；
+  git diff --check；正式内存双变体与 locator 结构用例。
 - 验收标准：
-  Ajv2020 且 schema 校验开启；
-  合法样例变体输出具体实例错误并产生非零退出且无 ReferenceError；
-  非法 schema 归类 LOAD/COMPILE FAIL；
-  26 个真实 SSE 用例通过；
-  四份文档本地 HEAD blob ID 与 GitHub 值一致，
-  原始字节差异解释为工作区 CRLF 与 Git LF；
-  未提交、未推送、PR #11 Draft 状态不变。
+  四种目标数字写法均能定位 payload.level；
+  1.0000000000000001 统一按 exact_number/not_integer/level 拒绝；
+  字符串伪字段和其他对象不误定位；
+  字段缺失报告 token_missing/tool_failure；
+  工具错误不冒充业务负例通过。
 - 回滚方案：
-  仅在获准后撤销本轮三个文件增量；
-  恢复依据为本轮真实输入，不直接恢复 HEAD；
-  保留 b780b380a41b8806f89d1fefac4ed8967a976e0b 已提交成果，
-  不覆盖其他修改。
-
+  保留 C1/P1/B2 成果，仅在获准后撤销 B3 增量；不 amend/rebase。
 ## 历史任务与执行记录
 
 以下记录保留各自写入时点的状态，包括完成、失败、停止和待审查。
@@ -122,6 +86,38 @@
 本区域边界覆盖本文件后续历史任务记录。
 其中引用的独立规范资产不因归档而被删除或改写；
 现行适用性仍按 AGENTS.md §3 及对应资产说明判断。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-005-BUILD-B1
+
+- B1 实现五类 v3 Stream、capacity v1、canonical 1.2、Python/Go codec 与 Ajv fixture。
+- R1 返回三项缺口：artifact_ref 文法、整数精度、非有限数；由 B2 处理。
+- B1 成果保留，历史“未提交/未接线”表述不改为已提交或已集成。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-005-FIX-B2
+
+- B2 统一 artifact_ref 基础文法、精确整数解析与非有限数拒绝。
+- R2 返回 PASS 记录，但后续定点复核发现 C:foo 盘符相对路径仍不一致，
+  且 Node 精确检查存在覆盖边界；由 B2-E1 继续。
+- 2026-09-10 所有者补充批准 level 及 capacity 数值传输边界。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-005-FIX-B2-E1
+
+- B2-E1 统一 Python/Go 盘符前缀规则，拒绝 C:foo、C:x、c:foo。
+- Node numberCheck 与 c.valid 解耦，原始小数双变体按 exact_number 拒绝。
+- R2-E2 定向复审通过，C1 创建本地提交，P1 推送并创建 Draft PR #12。
+- 后续协调复核发现 token 定位不遵守完整 JSON 路径/空白/转义语法，
+  由 B3 继续修复。
+
+
+### 历史任务：TASK-CRAWLER-V1.0-V1.1-DEV-003-COORDINATOR-REMOTE-REVIEW-CHANGES-REQUESTED
+
+- 协调远端审查要求修复 SSE validator Ajv2020/schema validation 与失败路径。
+- C2 本地提交并推送，PR #11 随后由 GitHub merge 集成。
+- DEV-003 merge commit：43f492dbcf3409719a109b93c3e16a07ae7f4492。
+- 历史记录保留原 B1-E1/C2/Review 事实，不把历史“未提交”改写成“已提交”。
 
 
 ### 历史任务：TASK-CRAWLER-V1.0-V1.1-GOVERNANCE-TASK-ENTRY-FIX-B4

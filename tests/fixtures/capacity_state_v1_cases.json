@@ -1,0 +1,303 @@
+{
+  "fixture_version": "1.0",
+  "schema": "capacity_state.schema.json",
+  "events": [
+    {
+      "event_type": "capacity_normal",
+      "state": "NORMAL"
+    },
+    {
+      "event_type": "capacity_warning",
+      "state": "WARNING"
+    },
+    {
+      "event_type": "capacity_blocked",
+      "state": "BLOCKED"
+    },
+    {
+      "event_type": "stream_drain_only",
+      "state": "DRAIN_ONLY"
+    }
+  ],
+  "cases": [
+    {
+      "name": "valid-capacity-normal",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "capacity_normal",
+        "state": "NORMAL",
+        "state_version": 12,
+        "emergency_reserve_bytes": 2147483648,
+        "effective_at": "2026-09-09T00:00:00Z"
+      }
+    },
+    {
+      "name": "valid-capacity-warning",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "capacity_warning",
+        "state": "WARNING",
+        "state_version": 13,
+        "emergency_reserve_bytes": 2147483648,
+        "effective_at": "2026-09-09T00:01:00Z"
+      }
+    },
+    {
+      "name": "valid-capacity-blocked",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "capacity_blocked",
+        "state": "BLOCKED",
+        "state_version": 14,
+        "emergency_reserve_bytes": 2147483648,
+        "effective_at": "2026-09-09T00:02:00Z"
+      }
+    },
+    {
+      "name": "valid-stream-drain-only",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "stream_drain_only",
+        "state": "DRAIN_ONLY",
+        "state_version": 15,
+        "emergency_reserve_bytes": 2147483648,
+        "effective_at": "2026-09-09T00:03:00Z"
+      }
+    },
+    {
+      "name": "invalid-event-state-mismatch",
+      "valid": false,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "expect": {
+        "code": "INVALID_MESSAGE",
+        "reason_marker": "event_type/state"
+      },
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "capacity_normal",
+        "state": "DRAIN_ONLY",
+        "state_version": 16,
+        "emergency_reserve_bytes": 2147483648,
+        "effective_at": "2026-09-09T00:04:00Z"
+      }
+    },
+    {
+      "name": "invalid-zero-emergency-reserve",
+      "valid": false,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "expect": {
+        "code": "INVALID_MESSAGE",
+        "reason_marker": "emergency_reserve_bytes"
+      },
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "stream_drain_only",
+        "state": "DRAIN_ONLY",
+        "state_version": 17,
+        "emergency_reserve_bytes": 0,
+        "effective_at": "2026-09-09T00:05:00Z"
+      }
+    },
+    {
+      "name": "invalid-missing-state-version",
+      "valid": false,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "expect": {
+        "code": "INVALID_MESSAGE",
+        "reason_marker": "state_version"
+      },
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "capacity_blocked",
+        "state": "BLOCKED",
+        "emergency_reserve_bytes": 2147483648,
+        "effective_at": "2026-09-09T00:06:00Z"
+      }
+    },
+    {
+      "name": "invalid-unknown-schema-version",
+      "valid": false,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "expect": {
+        "code": "UNKNOWN_PROTOCOL_VERSION",
+        "reason_marker": "protocol_version"
+      },
+      "data": {
+        "protocol_version": "3.0",
+        "event_type": "capacity_normal",
+        "state": "NORMAL",
+        "state_version": 18,
+        "emergency_reserve_bytes": 2147483648,
+        "effective_at": "2026-09-09T00:07:00Z"
+      }
+    },
+    {
+      "name": "valid-capacity-state-version-max",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "capacity_normal",
+        "state": "NORMAL",
+        "state_version": 9007199254740991,
+        "emergency_reserve_bytes": 2147483648,
+        "effective_at": "2026-09-09T00:00:00Z"
+      },
+      "raw": "{\"protocol_version\":\"1.0\",\"event_type\":\"capacity_normal\",\"state\":\"NORMAL\",\"state_version\":9007199254740991,\"emergency_reserve_bytes\":2147483648,\"effective_at\":\"2026-09-09T00:00:00Z\"}"
+    },
+    {
+      "name": "valid-capacity-emergency-1e0",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "capacity_normal",
+        "state": "NORMAL",
+        "state_version": 12,
+        "emergency_reserve_bytes": 1,
+        "effective_at": "2026-09-09T00:00:00Z"
+      },
+      "raw": "{\"protocol_version\":\"1.0\",\"event_type\":\"capacity_normal\",\"state\":\"NORMAL\",\"state_version\":12,\"emergency_reserve_bytes\":1e0,\"effective_at\":\"2026-09-09T00:00:00Z\"}",
+      "numberCheck": {
+        "field": "emergency_reserve_bytes",
+        "min": 1,
+        "max": 9007199254740991
+      }
+    },
+    {
+      "name": "invalid-capacity-state-version-fraction",
+      "valid": false,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "raw": "{\"protocol_version\":\"1.0\",\"event_type\":\"capacity_normal\",\"state\":\"NORMAL\",\"state_version\":1.5,\"emergency_reserve_bytes\":2147483648,\"effective_at\":\"2026-09-09T00:00:00Z\"}",
+      "expect": {
+        "layer": "exact_number",
+        "failure": "not_integer",
+        "field": "state_version",
+        "code": "INVALID_INTEGER",
+        "reason_marker": "state_version"
+      },
+      "numberCheck": {
+        "field": "state_version",
+        "min": 1,
+        "max": 9007199254740991
+      }
+    },
+    {
+      "name": "invalid-capacity-emergency-nonfinite-json",
+      "valid": false,
+      "layer": [
+        "json"
+      ],
+      "expect": {
+        "code": "INVALID_JSON",
+        "reason_marker": "non-standard"
+      },
+      "raw": "{\"protocol_version\":\"1.0\",\"event_type\":\"capacity_normal\",\"state\":\"NORMAL\",\"state_version\":12,\"emergency_reserve_bytes\":Infinity,\"effective_at\":\"2026-09-09T00:00:00Z\"}"
+    },
+    {
+      "name": "invalid-capacity-state-version-max-plus-one",
+      "valid": false,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "expect": {
+        "layer": "exact_number",
+        "failure": "out_of_range",
+        "field": "state_version",
+        "code": "INVALID_INTEGER",
+        "reason_marker": "state_version"
+      },
+      "raw": "{\"protocol_version\":\"1.0\",\"event_type\":\"capacity_normal\",\"state\":\"NORMAL\",\"state_version\":9007199254740992,\"emergency_reserve_bytes\":2147483648,\"effective_at\":\"2026-09-09T00:00:00Z\"}",
+      "numberCheck": {
+        "field": "state_version",
+        "min": 1,
+        "max": 9007199254740991
+      }
+    },
+    {
+      "name": "valid-capacity-emergency-max",
+      "valid": true,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "data": {
+        "protocol_version": "1.0",
+        "event_type": "capacity_normal",
+        "state": "NORMAL",
+        "state_version": 9007199254740991,
+        "emergency_reserve_bytes": 9007199254740991,
+        "effective_at": "2026-09-09T00:00:00Z"
+      },
+      "raw": "{\"protocol_version\":\"1.0\",\"event_type\":\"capacity_normal\",\"state\":\"NORMAL\",\"state_version\":9007199254740991,\"emergency_reserve_bytes\":9007199254740991,\"effective_at\":\"2026-09-09T00:00:00Z\"}",
+      "numberCheck": {
+        "field": "emergency_reserve_bytes",
+        "min": 1,
+        "max": 9007199254740991
+      }
+    },
+    {
+      "name": "invalid-capacity-emergency-max-plus-one",
+      "valid": false,
+      "layer": [
+        "schema",
+        "semantic"
+      ],
+      "expect": {
+        "layer": "exact_number",
+        "failure": "out_of_range",
+        "field": "emergency_reserve_bytes",
+        "code": "INVALID_INTEGER",
+        "reason_marker": "emergency_reserve_bytes"
+      },
+      "raw": "{\"protocol_version\":\"1.0\",\"event_type\":\"capacity_normal\",\"state\":\"NORMAL\",\"state_version\":9007199254740991,\"emergency_reserve_bytes\":9007199254740992,\"effective_at\":\"2026-09-09T00:00:00Z\"}",
+      "numberCheck": {
+        "field": "emergency_reserve_bytes",
+        "min": 1,
+        "max": 9007199254740991
+      }
+    }
+  ]
+}

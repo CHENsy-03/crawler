@@ -15,6 +15,8 @@
 
 - 当前版本为 v1，protocol_version 固定为 "1.0"。
 - v2 使用显式 protocol_version "2.0"，用于 SearchRequested 和 ArticleResult 消息族；v1 保持不变。
+- v3 是 DEV-005 冻结的 Stream 独立信封，protocol_version="3.0"，
+  本文件 §21 描述其 schema/fixture；当前运行链仍使用 v1/v2 list。
 - 兼容的字段增补允许向后兼容。
 - 不兼容的变更必须提升主版本号。
 
@@ -444,3 +446,26 @@ TASK-019B-4 已接通 Python 侧 v2 详情链：
 - v2 下载链仅接受 `text/html` 与 `application/xhtml+xml`。
 - PDF/Office MIME 在 Go `FetchHTML` 阶段拒绝，不产生 `crawler:html` 或 `crawler:result`。
 - `unsupported_format` 只是协议状态，当前不由正式链生成。
+
+## 21. DEV-005 v3 Stream 契约（未接线）
+
+- v3 公共信封：`protocol/streams/v3/envelope.schema.json`；
+  `protocol_version="3.0"`，业务字段位于 `payload`。
+- 五类消息：`search_requested`、`url`、`html`、`result`、`error`，
+  外层 type 与 canonical event_type 一致，work_class 固定映射。
+- v3 html 使用 `artifact_ref/checksum/content_type/byte_size`，
+  不提供内联 HTML 兼容分支；旧 v2 HTMLMessage 行为不变。
+- artifact_ref 为内部相对正斜杠对象键，拒绝空白、反斜杠、绝对路径、
+  盘符、空段、尾随斜杠及独立 `.`/`..` 段。
+- capacity control：`protocol/control/v1/capacity_state.schema.json`，
+  protocol_version 固定 `1.0`，与业务 v3 信封独立。
+- canonical dictionary contract_version=1.2，新增五条
+  `STREAM_MESSAGE/version="3"`；v1/v2 记录保持原样。
+- B2 数字解析为精确数学整数：Python Decimal、Go big.Rat；
+  NaN/Infinity 在 JSON 解析层拒绝；已确定范围见 ADR-028。
+- owner 批准传输边界：level 0..4294967295；
+  state_version 1..9007199254740991；
+  emergency_reserve_bytes 1..9007199254740991。
+- 共享 fixture：`tests/fixtures/redis_stream_v3_cases.json`、
+  `tests/fixtures/capacity_state_v1_cases.json`。
+- 本契约未接线 Redis Streams/consumer/ACK/Outbox/worker。

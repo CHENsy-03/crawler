@@ -216,7 +216,7 @@ def test_scenario_error_metadata_and_boundaries():
         assert item["client_exposable"] is True
         assert item["compatibility_class"] == "CANONICAL"
         assert item["http_status"] == status
-    assert fixture["contract_version"] == "1.1"
+    assert fixture["contract_version"] == "1.2"
     assert len(fixture["compatibility_decisions"]) == 6
 
 
@@ -241,12 +241,12 @@ def test_event_metadata_and_counts():
         counts[item["family"]] = counts.get(item["family"], 0) + 1
     assert counts == {
         "TASK_EVENT": 7,
-        "STREAM_MESSAGE": 6,
+        "STREAM_MESSAGE": 11,
         "AUDIT_EVENT": 1,
         "CONTROL_EVENT": 4,
         "OPERATIONAL_EVENT": 4,
     }
-    assert len(fixture["events"]) == 22
+    assert len(fixture["events"]) == 27
     audit = [item for item in fixture["events"] if item["family"] == "AUDIT_EVENT"]
     assert len(audit) == 1
     expected_audit = audit[0]

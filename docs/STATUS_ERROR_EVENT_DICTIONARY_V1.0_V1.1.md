@@ -65,17 +65,17 @@ Go/Python 枚举与 canonical fixture 精确一致；本文件只提供来源导
 - CONDITIONAL：9
 - 无公开 HTTP 映射的内部错误：4
 
-事件共 22 项：
+事件共 27 项：
 
 - TASK_EVENT：7
-- STREAM_MESSAGE：6
+- STREAM_MESSAGE：11
 - AUDIT_EVENT：1
 - CONTROL_EVENT：4
 - OPERATIONAL_EVENT：4
 
 legacy alias 共 16 项，兼容决策共 6 项。
 
-字典 contract_version：`1.1`。新增兼容决策 `DEV003_CONTRACT_FIX_001`，保留 DEV-002 原有五项决策不变。
+字典 contract_version：`1.2`。DEV-005 新增五条 `STREAM_MESSAGE/version=3` 记录，保留原 v1/v2 记录不变；原 DEV-002 五项决策及 `DEV003_CONTRACT_FIX_001` 继续保留。
 
 ## 4.1 场景专用错误
 

@@ -110,6 +110,58 @@
   与 GitHub b780b380 内容 SHA 一致；原始 SHA-256 差异由工作区 CRLF 与 Git LF 造成
 - 本轮三个文件修改未提交、未推送；PR #11 保持 Draft
 
+### DEV-003 Integrated
+
+- PR #11 已通过 GitHub merge 集成至 main。
+- merge commit：43f492dbcf3409719a109b93c3e16a07ae7f4492。
+- 该集成只表示 OpenAPI/SSE 契约资产进入 main，
+  API handler、SSE 服务与运行时仍未实现。
+
+### DEV-005 Stream Contract (B1)
+
+- 新增五类 v3 Stream 消息 schema、共享 envelope、Python/Go codec 与共同 fixture
+- 新增独立 capacity control v1 schema 与 fixture
+- v3 html 使用 artifact_ref/checksum/content_type/byte_size，无内联 HTML 分支
+- canonical dictionary contract_version 更新为 1.2，events 22→27，
+  新增五条 STREAM_MESSAGE/version=3，保留旧记录
+- 新增 ADR-028 与 validate-stream.mjs（复用 Ajv2020）
+- 本轮未接线 producer/consumer、Outbox 或旧 worker；DEV-005 整体未完成
+
+### DEV-005 Stream Contract Fix (B2)
+
+- 统一 v3 html artifact_ref 为内部相对正斜杠对象键，拒绝路径穿越/盘符/空段
+- Python Decimal、Go big.Rat 精确解析 JSON 数字，拒绝 float64 中间舍入
+- JSON NaN/Infinity 在解析层拒绝；matched_evidence.weight 保持有限非负
+- 新增 artifact_ref、原始 JSON 数字与非有限数共同 fixture 用例
+- validate-stream 输出改为 invalidInstanceSchemaLayer 并校验关键 case ID
+- owner 批准传输边界：level 0..4294967295；
+  state_version/emergency_reserve_bytes 1..9007199254740991
+- 证据勘误：上一 B2 增量实际为 14 个文件变化、9 个文件未变；
+  记录 B2_INPUT_CONTENT_NOT_RETAINED，直接增量改为
+  基于 B1/B2 哈希的文件身份比较，不补造行级 diff
+
+### DEV-005 Stream Contract Fix (B2-E1)
+
+- Python/Go artifact_ref 盘符前缀统一为 `^[A-Za-z]:`，
+  拒绝 C:foo、C:x、c:foo；schema 不放宽
+- 新增上述共同 fixture case 与必跑 case ID 集合
+- 新增原始 `level=1.0000000000000001` 语义负例，Python/Go 正式入口拒绝
+- validate-stream 精确数字检查与 `c.valid` 解耦：
+  所有带 numberCheck 的用例均先做原始词法、整数和范围检查
+- 新增失败层次：JSON、exact_number、schema、tool_failure、
+  not_applicable；检查器错误不冒充业务负例通过
+- 内存双变体验证：同一 `1.0000000000000001` 输入在 valid:false
+  下按 exact_number/not_integer/level 通过；valid:true 下产生非零退出
+
+### DEV-005 Stream Contract Fix (B3)
+
+- 原始 JSON 数字定位改为完整对象路径扫描，不再依赖叶字段名正则
+- 支持 JSON 合法空格、制表符、换行及字段名 `\u` 转义
+- 跳过字符串伪字段和其他对象中的同名字段；保留原始数字 token
+- 新增定位结构 fixture，字段缺失报告 token_missing/tool_failure
+- 新增四种合法数字写法及对应 `1.0000000000000001` 负例
+- 数值范围、c.valid 分离和工具失败语义保持不变
+
 ### Governance Review Fix (B7)
 
 - AGENTS §7 更新 completed 含义与完成判定边界。
